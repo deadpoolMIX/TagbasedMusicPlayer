@@ -24,7 +24,6 @@ import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -68,22 +67,19 @@ fun PlaylistScreen(
                         style = MaterialTheme.typography.titleLarge
                     )
                 },
+                actions = {
+                    IconButton(onClick = { viewModel.showCreateDialog() }) {
+                        Icon(
+                            imageVector = Icons.Default.Add,
+                            contentDescription = "创建歌单",
+                            tint = MaterialTheme.colorScheme.primary
+                        )
+                    }
+                },
                 colors = TopAppBarDefaults.topAppBarColors(
                     containerColor = MaterialTheme.colorScheme.background
                 )
             )
-        },
-        floatingActionButton = {
-            FloatingActionButton(
-                onClick = { viewModel.showCreateDialog() },
-                containerColor = MaterialTheme.colorScheme.primary
-            ) {
-                Icon(
-                    imageVector = Icons.Default.Add,
-                    contentDescription = "创建歌单",
-                    tint = MaterialTheme.colorScheme.onPrimary
-                )
-            }
         },
         modifier = modifier
     ) { paddingValues ->
