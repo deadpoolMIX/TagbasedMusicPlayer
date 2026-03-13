@@ -1,6 +1,5 @@
 package com.tagplayer.musicplayer.data.scanner
 
-import android.media.MediaMetadataRetriever
 import android.content.ContentResolver
 import android.content.Context
 import android.database.Cursor
@@ -150,12 +149,6 @@ class MusicScanner @Inject constructor(
         val file = java.io.File(filePath)
         if (!file.exists()) return null
 
-        // 首先尝试读取内嵌歌词
-        val embeddedLyrics = readEmbeddedLyrics(filePath)
-        if (!embeddedLyrics.isNullOrBlank()) {
-            return embeddedLyrics
-        }
-
         // 尝试查找同名的 .lrc 文件
         val parentDir = file.parentFile ?: return null
         val fileNameWithoutExt = file.nameWithoutExtension
@@ -190,23 +183,5 @@ class MusicScanner @Inject constructor(
         }
 
         return null
-    }
-
-    private fun readEmbeddedLyrics(filePath: String): String? {
-        val retriever = MediaMetadataRetriever()
-        return try {
-            retriever.setDataSource(filePath)
-            // 尝试读取内嵌歌词 (Android 不支持标准 LYRICS 标签，尝试读取 COMMENT 或自定义标签)
-            var lyrics = retriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_LYRICS)
-            if (lyrics.isNullOrBlank()) {
-                // 尝试其他可能的元数据字段
-                lyrics = retriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_COMMENT)
-            }
-            lyrics
-        } catch (e: Exception) {
-            null
-        } finally {
-            retriever.release()
-        }
     }
 }

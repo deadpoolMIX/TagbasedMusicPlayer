@@ -928,15 +928,39 @@ ScanFolder (扫描文件夹)
 
 ## 播放问题修复
 
-### 修复1: 进度条不跟随歌曲进度
-- [x] 修改 PlayerScreen.kt 的 ProgressBar 组件
-  - 移除 LaunchedEffect，改用直接的 remember 计算
-  - 使用 if-else 逻辑：拖动时显示拖动位置，否则显示播放位置
-  - 修复 sliderPosition 和 positionFraction 的同步问题
+### 修复1: 内嵌歌词解析
+- [x] 修改 MusicScanner.kt
+  - 添加 `readEmbeddedLyrics()` 方法使用 MediaMetadataRetriever
+  - 优先读取音频文件内嵌歌词，其次查找 .lrc 文件
+  - 支持 METADATA_KEY_LYRICS 和 METADATA_KEY_COMMENT
 
-### 修复2: 添加到下一首播放时列表不更新
-- [x] 修改 PlaybackQueue.kt
-  - getQueue() 返回列表副本 `.toList()` 而非原列表引用
+### 修复2: 进度条跳动问题（状态分离）
+- [x] 修改 PlayerScreen.kt 的 ProgressBar 组件
+  - 引入 `isDragging` 标志位控制状态分离
+  - `sliderValue` 独立管理 UI 进度
+  - LaunchedEffect 监听真实进度，仅在非拖拽时同步
+  - onValueChange 设置 isDragging = true 拦截底层更新
+  - onValueChangeFinished 触发 seekTo 并恢复 isDragging = false
+
+### 修复3: 播放列表拖拽中断（稳定Key + 状态提升）
+- [x] 重写 PlaybackQueueSheet.kt
+  - 稳定的 Item Key：`items(key = { song.id })` 使用唯一 ID
+  - 固定的 pointerInput Key：`.pointerInput(song.id)` 确保协程存活
+  - 状态提升：`draggedItemId`、`draggedItemIndex`、`dragOffsetY` 由父级管理
+  - 支持单次长按、连续跨越多行平滑排序
+
+### 修改的文件
+| 文件 | 修改内容 |
+|------|----------|
+| MusicScanner.kt | 添加内嵌歌词解析 |
+| PlayerScreen.kt | 修复 ProgressBar 状态分离 |
+| PlaybackQueueSheet.kt | 修复拖拽中断问题 |
+
+---
+
+- **0029bb3** - 修复内嵌歌词、进度条跳动、播放列表拖拽中断
+
+
   - 确保 StateFlow 能检测到列表变化并触发重组
 
 ### 修复3: 播放列表长按拖拽排序
