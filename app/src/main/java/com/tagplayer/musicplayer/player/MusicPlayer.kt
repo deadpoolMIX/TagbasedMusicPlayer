@@ -16,10 +16,11 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.receiveAsFlow
 import javax.inject.Inject
 import javax.inject.Singleton
-
 import com.tagplayer.musicplayer.data.repository.SongRepository
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
 @Singleton
@@ -29,6 +30,9 @@ class MusicPlayer @Inject constructor(
 ) {
     private var exoPlayer: ExoPlayer? = null
     private val scope = CoroutineScope(Dispatchers.IO)
+
+    // 位置更新任务
+    private var positionUpdateJob: Job? = null
 
     private val _playbackState = MutableStateFlow(PlaybackState())
     val playbackState: StateFlow<PlaybackState> = _playbackState.asStateFlow()
@@ -53,6 +57,11 @@ class MusicPlayer @Inject constructor(
     private val playerListener = object : Player.Listener {
         override fun onIsPlayingChanged(isPlaying: Boolean) {
             _playbackState.value = _playbackState.value.copy(isPlaying = isPlaying)
+            if (isPlaying) {
+                startPositionUpdates()
+            } else {
+                stopPositionUpdates()
+            }
         }
 
         override fun onPlaybackStateChanged(playbackState: Int) {
@@ -102,6 +111,7 @@ class MusicPlayer @Inject constructor(
     }
 
     fun releasePlayer() {
+        stopPositionUpdates()
         exoPlayer?.removeListener(playerListener)
         exoPlayer?.release()
         exoPlayer = null
@@ -246,6 +256,21 @@ class MusicPlayer @Inject constructor(
         exoPlayer?.let {
             _currentPosition.value = it.currentPosition
         }
+    }
+
+    private fun startPositionUpdates() {
+        stopPositionUpdates()
+        positionUpdateJob = scope.launch {
+            while (true) {
+                updatePosition()
+                delay(500L)
+            }
+        }
+    }
+
+    private fun stopPositionUpdates() {
+        positionUpdateJob?.cancel()
+        positionUpdateJob = null
     }
 
     private fun playSong(song: com.tagplayer.musicplayer.data.local.entity.Song) {

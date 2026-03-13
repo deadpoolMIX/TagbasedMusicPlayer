@@ -928,11 +928,11 @@ ScanFolder (扫描文件夹)
 
 ## 播放问题修复
 
-### 修复1: 内嵌歌词解析
+### 修复1: 歌词读取
 - [x] 修改 MusicScanner.kt
-  - 添加 `readEmbeddedLyrics()` 方法使用 MediaMetadataRetriever
-  - 优先读取音频文件内嵌歌词，其次查找 .lrc 文件
-  - 支持 METADATA_KEY_LYRICS 和 METADATA_KEY_COMMENT
+  - Android MediaMetadataRetriever 不支持内嵌歌词标签
+  - 保留外部 .lrc 文件读取功能
+  - 支持 UTF-8 和 GBK 编码自动检测
 
 ### 修复2: 进度条跳动问题（状态分离）
 - [x] 修改 PlayerScreen.kt 的 ProgressBar 组件
@@ -952,13 +952,14 @@ ScanFolder (扫描文件夹)
 ### 修改的文件
 | 文件 | 修改内容 |
 |------|----------|
-| MusicScanner.kt | 添加内嵌歌词解析 |
+| MusicScanner.kt | 歌词读取（仅外部.lrc文件） |
 | PlayerScreen.kt | 修复 ProgressBar 状态分离 |
 | PlaybackQueueSheet.kt | 修复拖拽中断问题 |
 
 ---
 
-- **0029bb3** - 修复内嵌歌词、进度条跳动、播放列表拖拽中断
+- **0029bb3** - 修复进度条跳动、播放列表拖拽中断
+- **8d50d68** - 修复：移除内嵌歌词读取，Android不支持该功能
 
 
   - 确保 StateFlow 能检测到列表变化并触发重组
