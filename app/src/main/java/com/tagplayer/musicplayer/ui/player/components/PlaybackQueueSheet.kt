@@ -23,8 +23,6 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Delete
-import androidx.compose.material.icons.filled.KeyboardArrowDown
-import androidx.compose.material.icons.filled.KeyboardArrowUp
 import androidx.compose.material.icons.filled.MusicNote
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -175,7 +173,8 @@ private fun QueueContent(
         HorizontalDivider()
         Spacer(modifier = Modifier.height(8.dp))
 
-        // Queue List
+        // Queue List - 只显示当前播放及之后的歌曲
+        val visibleQueue = queue.drop(currentIndex.coerceAtLeast(0))
         LazyColumn(
             state = rememberLazyListState(),
             modifier = Modifier
@@ -184,18 +183,17 @@ private fun QueueContent(
             contentPadding = PaddingValues(vertical = 8.dp)
         ) {
             itemsIndexed(
-                items = queue,
+                items = visibleQueue,
                 key = { _, song -> song.id }
-            ) { index, song ->
+            ) { relativeIndex, song ->
+                val actualIndex = currentIndex + relativeIndex
                 QueueItem(
                     song = song,
-                    isPlaying = index == currentIndex,
-                    canMoveUp = index > 0,
-                    canMoveDown = index < queue.size - 1,
-                    onClick = { onSongClick(index) },
-                    onRemove = { onRemoveSong(index) },
-                    onMoveUp = { onMoveSong(index, index - 1) },
-                    onMoveDown = { onMoveSong(index, index + 1) }
+                    isPlaying = actualIndex == currentIndex,
+                    canMoveUp = false, // 播放队列中不显示上移
+                    canMoveDown = false, // 播放队列中不显示下移
+                    onClick = { onSongClick(actualIndex) },
+                    onRemove = { onRemoveSong(actualIndex) }
                 )
             }
         }
@@ -206,12 +204,8 @@ private fun QueueContent(
 private fun QueueItem(
     song: Song,
     isPlaying: Boolean,
-    canMoveUp: Boolean,
-    canMoveDown: Boolean,
     onClick: () -> Unit,
-    onRemove: () -> Unit,
-    onMoveUp: () -> Unit,
-    onMoveDown: () -> Unit
+    onRemove: () -> Unit
 ) {
     Row(
         modifier = Modifier
@@ -269,38 +263,6 @@ private fun QueueItem(
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis
-            )
-        }
-
-        // 上移按钮
-        IconButton(
-            onClick = onMoveUp,
-            enabled = canMoveUp
-        ) {
-            Icon(
-                imageVector = Icons.Default.KeyboardArrowUp,
-                contentDescription = "上移",
-                tint = if (canMoveUp) {
-                    MaterialTheme.colorScheme.onSurfaceVariant
-                } else {
-                    MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.3f)
-                }
-            )
-        }
-
-        // 下移按钮
-        IconButton(
-            onClick = onMoveDown,
-            enabled = canMoveDown
-        ) {
-            Icon(
-                imageVector = Icons.Default.KeyboardArrowDown,
-                contentDescription = "下移",
-                tint = if (canMoveDown) {
-                    MaterialTheme.colorScheme.onSurfaceVariant
-                } else {
-                    MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.3f)
-                }
             )
         }
 
