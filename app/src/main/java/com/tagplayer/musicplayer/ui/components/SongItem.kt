@@ -1,6 +1,9 @@
 package com.tagplayer.musicplayer.ui.components
 
+import android.content.ContentResolver
+import android.content.ContentUris
 import android.net.Uri
+import android.provider.MediaStore
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
@@ -92,9 +95,13 @@ fun AlbumArt(
 ) {
     val context = LocalContext.current
 
-    // 使用 MediaStore 获取专辑封面 URI
+    // 使用正确的 MediaStore URI 获取专辑封面
     val albumArtUri = remember(albumId) {
-        Uri.parse("content://media/external/audio/albumart/$albumId")
+        if (albumId <= 0) null
+        else ContentUris.withAppendedId(
+            Uri.parse("content://media/external/audio/albumart"),
+            albumId
+        )
     }
 
     Box(
@@ -103,40 +110,49 @@ fun AlbumArt(
             .background(MaterialTheme.colorScheme.surfaceVariant),
         contentAlignment = Alignment.Center
     ) {
-        SubcomposeAsyncImage(
-            model = ImageRequest.Builder(context)
-                .data(albumArtUri)
-                .crossfade(true)
-                .build(),
-            contentDescription = "专辑封面",
-            contentScale = contentScale,
-            modifier = Modifier.matchParentSize(),
-            loading = {
-                Box(
-                    modifier = Modifier.fillMaxWidth(),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.MusicNote,
-                        contentDescription = null,
-                        tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f),
-                        modifier = Modifier.size(24.dp)
-                    )
+        if (albumArtUri != null) {
+            SubcomposeAsyncImage(
+                model = ImageRequest.Builder(context)
+                    .data(albumArtUri)
+                    .crossfade(true)
+                    .build(),
+                contentDescription = "专辑封面",
+                contentScale = contentScale,
+                modifier = Modifier.matchParentSize(),
+                loading = {
+                    Box(
+                        modifier = Modifier.fillMaxWidth(),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.MusicNote,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f),
+                            modifier = Modifier.size(24.dp)
+                        )
+                    }
+                },
+                error = {
+                    Box(
+                        modifier = Modifier.fillMaxWidth(),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.MusicNote,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f),
+                            modifier = Modifier.size(24.dp)
+                        )
+                    }
                 }
-            },
-            error = {
-                Box(
-                    modifier = Modifier.fillMaxWidth(),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.MusicNote,
-                        contentDescription = null,
-                        tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f),
-                        modifier = Modifier.size(24.dp)
-                    )
-                }
-            }
-        )
+            )
+        } else {
+            Icon(
+                imageVector = Icons.Default.MusicNote,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f),
+                modifier = Modifier.size(24.dp)
+            )
+        }
     }
 }

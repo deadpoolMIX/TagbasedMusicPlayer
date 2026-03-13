@@ -1,5 +1,6 @@
 package com.tagplayer.musicplayer.ui.player.screen
 
+import android.content.ContentUris
 import android.net.Uri
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.background
@@ -328,9 +329,13 @@ private fun AlbumArt(
 ) {
     val context = LocalContext.current
 
-    // 使用 MediaStore 获取专辑封面 URI
+    // 使用正确的 MediaStore URI 获取专辑封面
     val albumArtUri = remember(albumId) {
-        Uri.parse("content://media/external/audio/albumart/$albumId")
+        if (albumId <= 0) null
+        else ContentUris.withAppendedId(
+            Uri.parse("content://media/external/audio/albumart"),
+            albumId
+        )
     }
 
     Box(
@@ -338,39 +343,47 @@ private fun AlbumArt(
             .background(MaterialTheme.colorScheme.surfaceVariant),
         contentAlignment = Alignment.Center
     ) {
-        SubcomposeAsyncImage(
-            model = ImageRequest.Builder(context)
-                .data(albumArtUri)
-                .crossfade(true)
-                .build(),
-            contentDescription = "专辑封面",
-            contentScale = ContentScale.Crop,
-            modifier = Modifier.fillMaxSize(),
-            loading = {
-                Box(
-                    modifier = Modifier.fillMaxSize(),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Text(
-                        text = "♪",
-                        style = MaterialTheme.typography.displayLarge,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)
-                    )
+        if (albumArtUri != null) {
+            SubcomposeAsyncImage(
+                model = ImageRequest.Builder(context)
+                    .data(albumArtUri)
+                    .crossfade(true)
+                    .build(),
+                contentDescription = "专辑封面",
+                contentScale = ContentScale.Crop,
+                modifier = Modifier.fillMaxSize(),
+                loading = {
+                    Box(
+                        modifier = Modifier.fillMaxSize(),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(
+                            text = "♪",
+                            style = MaterialTheme.typography.displayLarge,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)
+                        )
+                    }
+                },
+                error = {
+                    Box(
+                        modifier = Modifier.fillMaxSize(),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(
+                            text = "♪",
+                            style = MaterialTheme.typography.displayLarge,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)
+                        )
+                    }
                 }
-            },
-            error = {
-                Box(
-                    modifier = Modifier.fillMaxSize(),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Text(
-                        text = "♪",
-                        style = MaterialTheme.typography.displayLarge,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)
-                    )
-                }
-            }
-        )
+            )
+        } else {
+            Text(
+                text = "♪",
+                style = MaterialTheme.typography.displayLarge,
+                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)
+            )
+        }
     }
 }
 
