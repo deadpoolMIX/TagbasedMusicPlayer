@@ -1,0 +1,34 @@
+<resources>
+    <string name="app_name">标签音乐</string>
+    <string name="nav_home">首页</string>
+    <string name="nav_playlist">歌单</string>
+    <string name="nav_tags">标签</string>
+    <string name="nav_filter">筛选</string>
+    <string name="playing_from">来自 %1$s</string>
+    <string name="now_playing">正在播放</string>
+    <string name="song_count">%1$d 首歌曲</string>
+    <string name="playlist_count">%1$d 个歌单</string>
+    <string name="tag_count">%1$d 个标签</string>
+    <string name="search_hint">在曲库中搜索</string>
+    <string name="search_tag_hint">搜索标签…</string>
+    <string name="create_tag">创建标签 "%1$s"</string>
+    <string name="matching_results">匹配结果</string>
+    <string name="common_tags">常用标签</string>
+    <string name="current_tags">当前标签</string>
+    <string name="add_tag">添加标签</string>
+    <string name="logic_filter">逻辑筛选</string>
+    <string name="box_a">框 A：包含标签</string>
+    <string name="box_b">框 B：可选标签</string>
+    <string name="box_c">框 C：排除标签</string>
+    <string name="filter_result">筛选结果</string>
+    <string name="play_all">播放全部</string>
+    <string name="save_as_playlist">保存为歌单</string>
+    <string name="settings">设置</string>
+    <string name="theme">主题</string>
+    <string name="dark_mode">暗色模式</string>
+    <string name="follow_system">跟随系统</string>
+    <string name="backup">备份</string>
+    <string name="restore">恢复</string>
+    <string name="folder_management">文件夹管理</string>
+    <string name="about">关于</string>
+</resources>

@@ -1,0 +1,206 @@
+<!DOCTYPE html>
+
+<html class="" lang="zh-CN"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>音乐逻辑筛选</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">tailwind.config = {darkMode: "class", theme: {extend: {colors: {primary: "#1978e5", "background-light": "#f6f7f8", "background-dark": "#111821"}, fontFamily: {display: "Inter"}, borderRadius: {DEFAULT: "0.25rem", lg: "0.5rem", xl: "0.75rem", full: "9999px"}}}};</script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        .material-symbols-outlined.fill {
+            font-variation-settings: 'FILL' 1;
+        }
+        body {
+            min-height: max(884px, 100dvh);
+        }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+</head>
+<body class="bg-background-light dark:bg-background-dark font-display text-slate-900 dark:text-slate-100 min-h-screen flex flex-col">
+<!-- Header -->
+<header class="sticky top-0 z-20 bg-background-light/80 dark:bg-background-dark/80 backdrop-blur-md border-b border-slate-200 dark:border-slate-800">
+<div class="flex items-center p-4 justify-between max-w-2xl mx-auto w-full">
+<div class="flex items-center gap-4">
+<span class="material-symbols-outlined cursor-pointer">arrow_back</span>
+<h1 class="text-lg font-bold tracking-tight">逻辑筛选</h1>
+</div>
+<div class="bg-primary/10 text-primary px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider">
+                高级模式
+            </div>
+</div>
+</header>
+<main class="flex-1 max-w-2xl mx-auto w-full pb-32">
+<!-- Logic Explanation -->
+<div class="px-4 py-6 text-center">
+<h2 class="text-slate-500 dark:text-slate-400 text-sm font-semibold mb-1 uppercase tracking-widest">当前逻辑</h2>
+<div class="inline-block bg-slate-200 dark:bg-slate-800 px-6 py-3 rounded-xl">
+<span class="text-xl font-mono font-bold text-primary">(A ∪ B) — C</span>
+</div>
+</div>
+<!-- Logic Workspace -->
+<div class="px-4 space-y-4">
+<!-- Box A -->
+<div class="bg-slate-50 dark:bg-slate-900 p-4 rounded-xl border border-slate-200 dark:border-slate-800">
+<label class="block mb-2 text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-tighter">框 A：包含标签</label>
+<div class="flex gap-2">
+<div class="flex-1 flex items-center bg-white dark:bg-background-dark border border-slate-300 dark:border-slate-700 rounded-lg px-3 py-2">
+<span class="text-primary text-sm font-medium mr-2">#Rock</span>
+<input class="bg-transparent border-none focus:ring-0 text-sm p-0 w-full placeholder-slate-500" placeholder="添加标签..." type="text"/>
+</div>
+<button class="bg-primary text-white p-2 rounded-lg flex items-center justify-center">
+<span class="material-symbols-outlined">add</span>
+</button>
+</div>
+</div>
+<!-- Union Symbol -->
+<div class="flex justify-center -my-2 relative z-10">
+<div class="bg-primary text-white size-8 rounded-full flex items-center justify-center shadow-lg border-4 border-background-light dark:border-background-dark">
+<span class="material-symbols-outlined text-sm">add</span>
+</div>
+</div>
+<!-- Box B -->
+<div class="bg-slate-50 dark:bg-slate-900 p-4 rounded-xl border border-slate-200 dark:border-slate-800">
+<label class="block mb-2 text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-tighter">框 B：可选标签</label>
+<div class="flex gap-2">
+<div class="flex-1 flex items-center bg-white dark:bg-background-dark border border-slate-300 dark:border-slate-700 rounded-lg px-3 py-2">
+<span class="text-primary text-sm font-medium mr-2">#80s</span>
+<input class="bg-transparent border-none focus:ring-0 text-sm p-0 w-full placeholder-slate-500" placeholder="添加标签..." type="text"/>
+</div>
+<button class="bg-primary text-white p-2 rounded-lg flex items-center justify-center">
+<span class="material-symbols-outlined">add</span>
+</button>
+</div>
+</div>
+<!-- Difference Symbol -->
+<div class="flex justify-center -my-2 relative z-10">
+<div class="bg-red-500 text-white size-8 rounded-full flex items-center justify-center shadow-lg border-4 border-background-light dark:border-background-dark">
+<span class="material-symbols-outlined text-sm">remove</span>
+</div>
+</div>
+<!-- Box C -->
+<div class="bg-slate-50 dark:bg-slate-900 p-4 rounded-xl border border-slate-200 dark:border-slate-800">
+<label class="block mb-2 text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-tighter">框 C：排除标签</label>
+<div class="flex gap-2">
+<div class="flex-1 flex items-center bg-white dark:bg-background-dark border border-slate-300 dark:border-slate-700 rounded-lg px-3 py-2">
+<span class="text-red-500 text-sm font-medium mr-2">#Live</span>
+<input class="bg-transparent border-none focus:ring-0 text-sm p-0 w-full placeholder-slate-500" placeholder="添加标签..." type="text"/>
+</div>
+<button class="bg-primary text-white p-2 rounded-lg flex items-center justify-center">
+<span class="material-symbols-outlined">add</span>
+</button>
+</div>
+</div>
+</div>
+<!-- Results Header -->
+<div class="px-4 pt-10 pb-4 flex items-center justify-between gap-3">
+<div>
+<h3 class="text-lg font-bold">筛选结果</h3>
+<p class="text-sm text-slate-500 dark:text-slate-400">45 首歌曲</p>
+</div>
+<div class="flex items-center gap-2">
+<button class="bg-primary/10 hover:bg-primary/20 text-primary p-2.5 rounded-full flex items-center justify-center transition-colors border border-primary/20" title="保存为歌单">
+<span class="material-symbols-outlined">add</span>
+</button>
+<button class="bg-primary hover:bg-primary/90 text-white px-6 py-2.5 rounded-full font-bold flex items-center gap-2 transition-colors">
+<span class="material-symbols-outlined">play_arrow</span>
+                    播放全部
+                </button>
+</div>
+</div>
+<!-- Songs List -->
+<div class="px-2 space-y-1">
+<!-- Song Item 1 -->
+<div class="flex items-center gap-4 p-2 hover:bg-slate-100 dark:hover:bg-slate-800/50 rounded-xl cursor-pointer transition-colors group">
+<div class="relative size-12 rounded-lg overflow-hidden shrink-0">
+<img alt="Album cover" class="object-cover w-full h-auto" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBh1sIAU0ILJoSXQ5zwyj0Uem_ng6QzpnOxyVoE69pJ1IhC6VMMXXgDZyNQEcKEMCoduthBvxooU2j5GssMRKhWy73DI9pYhdjI0e5z1P6Fag1PBGx2K2ZqH3xuV-FC94I-Q2leyoguN9pWOcGyUYp16Q5Fr68FBJsVXvU6nkpla2VjTmt_fvuojQR3fBUvvLKXq36O7HXUvZGMcwIg9epKSmbckft6KPR_ELV9RUrt6PwDbs-zha1SwXQcISI1USA2EvKMA2w3Zkw"/>
+</div>
+<div class="flex-1 min-w-0">
+<p class="font-semibold truncate">Midnight City</p>
+<p class="text-xs text-slate-500 dark:text-slate-400 truncate">M83 • Hurry Up, We're Dreaming</p>
+</div>
+<div class="flex items-center gap-3">
+<span class="text-xs text-slate-500">4:03</span>
+<span class="material-symbols-outlined text-slate-400 group-hover:text-primary">more_vert</span>
+</div>
+</div>
+<!-- Song Item 2 -->
+<div class="flex items-center gap-4 p-2 hover:bg-slate-100 dark:hover:bg-slate-800/50 rounded-xl cursor-pointer transition-colors group">
+<div class="relative size-12 rounded-lg overflow-hidden shrink-0">
+<img alt="Album cover" class="object-cover w-full h-auto" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCuffi0LfbdeX-OaBlEQRLvXl1AOCwUbebjdCMbPtVGWoNeGJc09nAVpKG13fvroVn2FntXBvgL3iI0N7roQJDbDft_jR6sBIYY113EWuDPPqClfwc26sr79G1ixsmXXB86CyWWBNH97_8w_cuCKMjgf3tl1rwblOwYA4i4RRIGjNLwV9zealDn9TEuqlZ-Q7b_KquKplnQZpSXNU1aP3wtZ6XbsZOzm5vNSUZdiBvRh6zdVTwqiPRGWPD7YV0ABkj_F8QUdgcCIW4"/>
+</div>
+<div class="flex-1 min-w-0">
+<p class="font-semibold truncate">Under Pressure</p>
+<p class="text-xs text-slate-500 dark:text-slate-400 truncate">Queen, David Bowie • Hot Space</p>
+</div>
+<div class="flex items-center gap-3">
+<span class="text-xs text-slate-500">3:56</span>
+<span class="material-symbols-outlined text-slate-400 group-hover:text-primary">more_vert</span>
+</div>
+</div>
+<!-- Song Item 3 -->
+<div class="flex items-center gap-4 p-2 hover:bg-slate-100 dark:hover:bg-slate-800/50 rounded-xl cursor-pointer transition-colors group">
+<div class="relative size-12 rounded-lg overflow-hidden shrink-0">
+<img alt="Album cover" class="object-cover w-full h-auto" src="https://lh3.googleusercontent.com/aida-public/AB6AXuAG2Up6bIpRbjIYZoaYwwoFSCoEEgJe4UB4qrezvSZ_MbLbsmjH3b7jtGCqjLKsWH30FCBVfg__i_aIpzMhkT_PbzknUqsf7nLReQ-pHn9Z4gYAJs8Go2hTXm5IDl_2NJmhXhhNVNX3rOdTx5nfHkrvNYJiedZn6DVQxzu3sUg59TV47hphDsFmQIDubXVu7jmPl-oEvhwqmB3r2989o5NaqyU_16QcblA0fOgF1Bd02ODxYmLtYptyWWv3JDz0O0WRN2p-HocK5bs"/>
+</div>
+<div class="flex-1 min-w-0">
+<p class="font-semibold truncate">Blue Monday</p>
+<p class="text-xs text-slate-500 dark:text-slate-400 truncate">New Order • Power, Corruption &amp; Lies</p>
+</div>
+<div class="flex items-center gap-3">
+<span class="text-xs text-slate-500">7:29</span>
+<span class="material-symbols-outlined text-slate-400 group-hover:text-primary">more_vert</span>
+</div>
+</div>
+</div>
+</main>
+<!-- Mini Player & Bottom Nav -->
+<div class="fixed bottom-0 left-0 right-0 z-30">
+<!-- Mini Player -->
+<div class="max-w-2xl mx-auto px-2 pb-2">
+<div class="bg-slate-900 border border-slate-700 rounded-xl p-2 flex items-center gap-3 shadow-2xl relative">
+<img class="size-10 rounded-lg" src="https://lh3.googleusercontent.com/aida-public/AB6AXuB9Ssy2RYbPKJLGY94pp9m4l2YBRMdB3FYKoQEANglckbFUL1LCVHGOiTxts25hell4xt1gQAPkUeqBWv77CBSac9uY7BG5_XMYbLZLzJsq3IjCLCS1Vghkaams1tmhQkTo2Lxuy1ehP0aezAiOfx30pHtpFrZY9NOIxgKzNvaoDd5D-oI5QuMpNce4LTvvpgpiP8FDG7nfXtLdjIFZ2b8vB0D2gUll-zGaDFQhNokQFPs26_4bCn24CnZbHIeHmWLt6IVCVgGticY"/>
+<div class="flex-1 min-w-0">
+<p class="text-sm font-bold truncate text-white">Midnight City</p>
+<p class="text-[10px] text-slate-400 truncate">M83</p>
+</div>
+<div class="flex items-center gap-2 pr-2">
+<span class="material-symbols-outlined text-white cursor-pointer">skip_previous</span>
+<span class="material-symbols-outlined text-white text-3xl cursor-pointer">play_circle</span>
+<span class="material-symbols-outlined text-white cursor-pointer">skip_next</span>
+</div>
+<div class="absolute bottom-0 left-2 right-2 h-0.5 bg-slate-800 overflow-hidden rounded-full">
+<div class="bg-primary w-1/3 h-full"></div>
+</div>
+</div>
+</div>
+<!-- Bottom Navigation -->
+<nav class="bg-background-light dark:bg-background-dark border-t border-slate-200 dark:border-slate-800 px-4 py-2 pb-6">
+<div class="flex max-w-2xl mx-auto"><a class="flex-1 flex flex-col items-center gap-1 py-2 text-slate-500 dark:text-slate-400" href="#">
+<span class="material-symbols-outlined">home</span>
+<span class="text-[10px] font-medium">首页</span>
+</a>
+<a class="flex-1 flex flex-col items-center gap-1 py-2 text-slate-500 dark:text-slate-400" href="#">
+<span class="material-symbols-outlined">queue_music</span>
+<span class="text-[10px] font-medium">歌单</span>
+</a>
+<a class="flex-1 flex flex-col items-center gap-1 py-2 text-slate-500 dark:text-slate-400" href="#">
+<span class="material-symbols-outlined">sell</span>
+<span class="text-[10px] font-medium">标签</span>
+</a>
+<a class="flex-1 flex flex-col items-center gap-1 py-2 text-primary" href="#">
+<span class="material-symbols-outlined fill">tune</span>
+<span class="text-[10px] font-medium">筛选</span>
+</a></div>
+</nav>
+</div>
+</body></html>

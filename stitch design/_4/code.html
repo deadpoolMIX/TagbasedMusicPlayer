@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+
+<html class="" lang="zh-Hans"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>标签管理 - Music App</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">tailwind.config = {darkMode: "class", theme: {extend: {colors: {primary: "#1978e5", "background-light": "#f6f7f8", "background-dark": "#111821"}, fontFamily: {display: "Inter"}, borderRadius: {DEFAULT: "0.25rem", lg: "0.5rem", xl: "0.75rem", full: "9999px"}}}};</script>
+<style>
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        .active-icon {
+            font-variation-settings: 'FILL' 1;
+        }
+    </style>
+<style>
+        body {
+            min-height: max(884px, 100dvh);
+        }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+</head>
+<body class="bg-background-light dark:bg-background-dark text-slate-900 dark:text-slate-100 min-h-screen flex flex-col">
+<!-- Header -->
+<header class="sticky top-0 z-10 bg-background-light/80 dark:bg-background-dark/80 backdrop-blur-md border-b border-slate-200 dark:border-slate-800">
+<div class="flex items-center p-4 gap-4">
+<button class="p-2 hover:bg-slate-200 dark:hover:bg-slate-800 rounded-full transition-colors">
+<span class="material-symbols-outlined">arrow_back</span>
+</button>
+<h1 class="text-xl font-bold tracking-tight">标签管理</h1>
+<div class="ml-auto">
+<button class="p-2 hover:bg-slate-200 dark:hover:bg-slate-800 rounded-full">
+<span class="material-symbols-outlined">add</span>
+</button>
+</div>
+</div>
+<!-- Search Bar Area -->
+<div class="px-4 pb-4">
+<div class="relative group">
+<div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+<span class="material-symbols-outlined text-slate-400 group-focus-within:text-primary transition-colors">search</span>
+</div>
+<input class="block w-full pl-10 pr-4 py-3 bg-slate-200/50 dark:bg-slate-800/50 border-none rounded-xl focus:ring-2 focus:ring-primary focus:bg-white dark:focus:bg-slate-800 text-sm placeholder-slate-500 transition-all" placeholder="搜索标签..." type="text"/>
+</div>
+</div>
+</header>
+<!-- Content Area -->
+<main class="flex-1 overflow-y-auto">
+<div class="p-4 space-y-1">
+<!-- Tag Items -->
+<a class="flex items-center justify-between p-4 bg-transparent hover:bg-slate-200/50 dark:hover:bg-slate-800/50 rounded-xl transition-colors group" href="#">
+<div class="flex items-center gap-4">
+<div class="flex items-center justify-center w-10 h-10 rounded-lg bg-primary/10 text-primary">
+<span class="material-symbols-outlined">tag</span>
+</div>
+<div>
+<p class="font-medium">Acoustic Sessions</p>
+<p class="text-xs text-slate-500">2天前更新</p>
+</div>
+</div>
+<div class="flex items-center gap-2">
+<span class="text-sm font-semibold bg-slate-200 dark:bg-slate-800 px-2 py-1 rounded text-slate-600 dark:text-slate-400">128</span>
+<span class="material-symbols-outlined text-slate-400 group-hover:translate-x-1 transition-transform">chevron_right</span>
+</div>
+</a>
+<a class="flex items-center justify-between p-4 bg-transparent hover:bg-slate-200/50 dark:hover:bg-slate-800/50 rounded-xl transition-colors group" href="#">
+<div class="flex items-center gap-4">
+<div class="flex items-center justify-center w-10 h-10 rounded-lg bg-primary/10 text-primary">
+<span class="material-symbols-outlined">tag</span>
+</div>
+<div>
+<p class="font-medium">Deep Focus</p>
+<p class="text-xs text-slate-500">5天前更新</p>
+</div>
+</div>
+<div class="flex items-center gap-2">
+<span class="text-sm font-semibold bg-slate-200 dark:bg-slate-800 px-2 py-1 rounded text-slate-600 dark:text-slate-400">85</span>
+<span class="material-symbols-outlined text-slate-400 group-hover:translate-x-1 transition-transform">chevron_right</span>
+</div>
+</a>
+<a class="flex items-center justify-between p-4 bg-transparent hover:bg-slate-200/50 dark:hover:bg-slate-800/50 rounded-xl transition-colors group" href="#">
+<div class="flex items-center gap-4">
+<div class="flex items-center justify-center w-10 h-10 rounded-lg bg-primary/10 text-primary">
+<span class="material-symbols-outlined">tag</span>
+</div>
+<div>
+<p class="font-medium">Lo-Fi Hip Hop</p>
+<p class="text-xs text-slate-500">今天更新</p>
+</div>
+</div>
+<div class="flex items-center gap-2">
+<span class="text-sm font-semibold bg-slate-200 dark:bg-slate-800 px-2 py-1 rounded text-slate-600 dark:text-slate-400">242</span>
+<span class="material-symbols-outlined text-slate-400 group-hover:translate-x-1 transition-transform">chevron_right</span>
+</div>
+</a>
+<a class="flex items-center justify-between p-4 bg-transparent hover:bg-slate-200/50 dark:hover:bg-slate-800/50 rounded-xl transition-colors group" href="#">
+<div class="flex items-center gap-4">
+<div class="flex items-center justify-center w-10 h-10 rounded-lg bg-primary/10 text-primary">
+<span class="material-symbols-outlined">tag</span>
+</div>
+<div>
+<p class="font-medium">Late Night Vibes</p>
+<p class="text-xs text-slate-500">1周前更新</p>
+</div>
+</div>
+<div class="flex items-center gap-2">
+<span class="text-sm font-semibold bg-slate-200 dark:bg-slate-800 px-2 py-1 rounded text-slate-600 dark:text-slate-400">56</span>
+<span class="material-symbols-outlined text-slate-400 group-hover:translate-x-1 transition-transform">chevron_right</span>
+</div>
+</a>
+<a class="flex items-center justify-between p-4 bg-transparent hover:bg-slate-200/50 dark:hover:bg-slate-800/50 rounded-xl transition-colors group" href="#">
+<div class="flex items-center gap-4">
+<div class="flex items-center justify-center w-10 h-10 rounded-lg bg-primary/10 text-primary">
+<span class="material-symbols-outlined">tag</span>
+</div>
+<div>
+<p class="font-medium">Workout Energy</p>
+<p class="text-xs text-slate-500">3天前更新</p>
+</div>
+</div>
+<div class="flex items-center gap-2">
+<span class="text-sm font-semibold bg-slate-200 dark:bg-slate-800 px-2 py-1 rounded text-slate-600 dark:text-slate-400">104</span>
+<span class="material-symbols-outlined text-slate-400 group-hover:translate-x-1 transition-transform">chevron_right</span>
+</div>
+</a>
+<a class="flex items-center justify-between p-4 bg-transparent hover:bg-slate-200/50 dark:hover:bg-slate-800/50 rounded-xl transition-colors group" href="#">
+<div class="flex items-center gap-4">
+<div class="flex items-center justify-center w-10 h-10 rounded-lg bg-primary/10 text-primary">
+<span class="material-symbols-outlined">tag</span>
+</div>
+<div>
+<p class="font-medium">Classical Masterpieces</p>
+<p class="text-xs text-slate-500">昨天更新</p>
+</div>
+</div>
+<div class="flex items-center gap-2">
+<span class="text-sm font-semibold bg-slate-200 dark:bg-slate-800 px-2 py-1 rounded text-slate-600 dark:text-slate-400">42</span>
+<span class="material-symbols-outlined text-slate-400 group-hover:translate-x-1 transition-transform">chevron_right</span>
+</div>
+</a>
+</div>
+<!-- Spacer for Mini Player -->
+<div class="h-32"></div>
+</main>
+<!-- Mini Player Sticky -->
+<div class="fixed bottom-16 left-0 right-0 px-2 pb-2">
+<div class="bg-slate-900 dark:bg-slate-800 rounded-xl p-2 flex items-center shadow-2xl border border-slate-700/50">
+<img alt="专辑封面" class="w-12 h-12 rounded-lg object-cover" data-alt="Modern abstract neon colorful album cover" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCTpYTi55gZ1k4eEPYjcySuRvJcHqfT7XWWHB3zwP3IPPIgaB9I6M4_qowAkOa9ftefBC6A-SY4VSx03s8VWriMu3u9oL3SalYfwn2WyudlO9ww0RDVYS1QnJ7lsDK3ENlEDRTiA01lYG-UCG5NnCdCBWhQKQ9Fzsgdcgxkz2qE3NsVH_0n7wDWHkvGRv_QjN4uU4DT9FEv3mK7SYWAj1kpHmMfROjxBanZ-ABWCRivGw5H4hSPN3luUo-6S5MHRsMhKHhs1wUC1N8"/>
+<div class="ml-3 flex-1 min-w-0">
+<p class="text-sm font-bold text-white truncate">After Hours</p>
+<p class="text-xs text-slate-400 truncate">The Weeknd</p>
+</div>
+<div class="flex items-center gap-1">
+<button class="p-2 text-white hover:bg-white/10 rounded-full">
+<span class="material-symbols-outlined">skip_previous</span>
+</button>
+<button class="p-2 bg-primary text-white rounded-full">
+<span class="material-symbols-outlined active-icon">pause</span>
+</button>
+<button class="p-2 text-white hover:bg-white/10 rounded-full">
+<span class="material-symbols-outlined">skip_next</span>
+</button>
+</div>
+</div>
+<!-- Progress Bar -->
+<div class="absolute bottom-2 left-4 right-4 h-1 bg-white/10 rounded-full overflow-hidden">
+<div class="h-full bg-primary w-2/3"></div>
+</div>
+</div>
+<!-- Bottom Navigation -->
+<nav class="bg-background-light dark:bg-background-dark border-t border-slate-200 dark:border-slate-800 px-4 py-2 pb-6">
+<div class="flex justify-between items-center max-w-md mx-auto">
+<a class="flex flex-col items-center gap-1 text-slate-500 dark:text-slate-400" href="#">
+<span class="material-symbols-outlined">home</span>
+<span class="text-[10px] font-medium">首页</span>
+</a>
+<a class="flex flex-col items-center gap-1 text-slate-500 dark:text-slate-400" href="#">
+<span class="material-symbols-outlined">queue_music</span>
+<span class="text-[10px] font-medium">歌单</span>
+</a>
+<a class="flex flex-col items-center gap-1 text-primary" href="#">
+<span class="material-symbols-outlined fill">sell</span>
+<span class="text-[10px] font-medium">标签</span>
+</a>
+<a class="flex flex-col items-center gap-1 text-slate-500 dark:text-slate-400" href="#">
+<span class="material-symbols-outlined">tune</span>
+<span class="text-[10px] font-medium">筛选</span>
+</a>
+</div>
+</nav>
+</body></html>

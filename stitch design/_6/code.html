@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+
+<html class="" lang="zh-CN"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">tailwind.config = {darkMode: "class", theme: {extend: {colors: {primary: "#1978e5", "background-light": "#f6f7f8", "background-dark": "#111821"}, fontFamily: {display: "Inter"}, borderRadius: {DEFAULT: "0.25rem", lg: "0.5rem", xl: "0.75rem", full: "9999px"}}}};</script>
+<title>标签详情 - Deep Focus</title>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        .material-symbols-outlined.fill {
+            font-variation-settings: 'FILL' 1;
+        }
+        .pb-safe {
+            padding-bottom: env(safe-area-inset-bottom);
+        }
+    </style>
+</head>
+<body class="bg-background-light dark:bg-background-dark font-display text-slate-900 dark:text-slate-100 min-h-screen flex flex-col">
+<!-- Header Section -->
+<header class="sticky top-0 z-20 bg-background-light/80 dark:bg-background-dark/80 backdrop-blur-md border-b border-slate-200 dark:border-slate-800">
+<div class="flex items-center p-4 justify-between max-w-2xl mx-auto w-full">
+<div class="flex items-center gap-3">
+<button class="p-2 hover:bg-slate-200 dark:hover:bg-slate-800 rounded-full transition-colors">
+<span class="material-symbols-outlined text-slate-900 dark:text-slate-100">arrow_back</span>
+</button>
+<h2 class="text-xl font-bold tracking-tight text-slate-900 dark:text-slate-100">#Deep Focus</h2>
+</div>
+<div class="flex items-center">
+<button class="p-2 hover:bg-slate-200 dark:hover:bg-slate-800 rounded-full transition-colors">
+<span class="material-symbols-outlined text-slate-900 dark:text-slate-100">search</span>
+</button>
+</div>
+</div>
+</header>
+<!-- Stats Summary -->
+<main class="flex-1 max-w-2xl mx-auto w-full pb-40">
+<div class="px-4 py-6">
+<div class="flex flex-col gap-1 bg-primary/10 dark:bg-primary/5 border border-primary/20 dark:border-primary/10 p-6 rounded-xl">
+<span class="text-primary font-semibold text-sm uppercase tracking-wider">当前标签</span>
+<div class="flex items-baseline gap-2">
+<span class="text-4xl font-black text-slate-900 dark:text-slate-100">128</span>
+<span class="text-slate-500 dark:text-slate-400 font-medium">首歌曲</span>
+</div>
+</div>
+</div>
+<!-- Song List -->
+<div class="flex flex-col">
+<!-- Song Item 1 -->
+<div class="flex items-center gap-4 px-4 py-3 hover:bg-slate-100 dark:hover:bg-slate-800/50 transition-colors group cursor-pointer">
+<div class="relative size-14 shrink-0 overflow-hidden rounded-lg bg-slate-200 dark:bg-slate-800">
+<img alt="Starlight Album Cover" class="w-full h-full object-cover" data-alt="Abstract vibrant geometric shapes in blue" src="https://lh3.googleusercontent.com/aida-public/AB6AXuAsL3b6cm2h-JszJrwVx6GJ6Rjw-zwWj8awF_WWU9UxnKlWnmS3mXNEHGSaeBdcPknrFdvXAvGv5sJYuQYB6QFcPgzlY8cxDNs5yw3WdGQdVFLI4J6pCYHzzLgN0scW11n138e37AHqENCfLVUvhyxsNVKYZ82-DowN2SyhlHewDaTs6yQYE7_zPRbwP0tOszY-zsV5P9iyCYdyJNodv9CqIhGVcS_XqWDA6T_J7lGDvjt26B_XEYAu6KJUpGPyLOtNyEiirOYNWf0"/>
+</div>
+<div class="flex flex-col flex-1 min-w-0">
+<p class="text-slate-900 dark:text-slate-100 text-base font-semibold truncate">Starlight</p>
+<p class="text-slate-500 dark:text-slate-400 text-sm truncate">Muse</p>
+</div>
+<button class="p-2 text-slate-400 hover:text-primary transition-colors">
+<span class="material-symbols-outlined">more_vert</span>
+</button>
+</div>
+<!-- Song Item 2 -->
+<div class="flex items-center gap-4 px-4 py-3 hover:bg-slate-100 dark:hover:bg-slate-800/50 transition-colors group cursor-pointer">
+<div class="relative size-14 shrink-0 overflow-hidden rounded-lg bg-slate-200 dark:bg-slate-800">
+<img alt="Weightless Album Cover" class="w-full h-full object-cover" data-alt="Calm morning fog over a lake" src="https://lh3.googleusercontent.com/aida-public/AB6AXuAdkUZ74msH08VW2x7GP2XG8KPfj-o9VgKiKrPqa_9-_8W0dCKs84giwNhHrbogTgdJVTYWn6Vzl15yXATKB5Gu8Z7IC_B5As3MYsaVmZOJVexeHaIfCicpp3nZrfn5hSaKsb3ag19Fb-jXo5Yy4VjUeQsMe316X8FHZeu1zp_RDppsiL__ZI244-zL4J1f9s3omUo6JSq_wrepdTudGYefwmVRRd74XtrUbKsJ4riNuh6NuiCCjsepQWDUwJMHtb4hCJPzsK3pIy4"/>
+</div>
+<div class="flex flex-col flex-1 min-w-0">
+<p class="text-slate-900 dark:text-slate-100 text-base font-semibold truncate">Weightless</p>
+<p class="text-slate-500 dark:text-slate-400 text-sm truncate">Marconi Union</p>
+</div>
+<button class="p-2 text-slate-400 hover:text-primary transition-colors">
+<span class="material-symbols-outlined">more_vert</span>
+</button>
+</div>
+<!-- Song Item 3 -->
+<div class="flex items-center gap-4 px-4 py-3 hover:bg-slate-100 dark:hover:bg-slate-800/50 transition-colors group cursor-pointer">
+<div class="relative size-14 shrink-0 overflow-hidden rounded-lg bg-slate-200 dark:bg-slate-800">
+<img alt="Midnight City Cover" class="w-full h-full object-cover" data-alt="Neon city lights at night blurred" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBmZ62NB7hho_pnarePhETTSUIJRngc0myACHETLLKwTd4B5oQ-BnXYrHr3eWkk53XdbgoQ30W7mgVyerPYwyAuMZHLDzaDcm02Abo63jGxCJnOzjtgXsHeVBgwdEcVAKZVM5dTz5Cd0JmVf4VXXr3HhmBXja_952ffXA8EpdMXCrkY5wKKgzbcM34vyFqeA8wXusWHjjqJIh7AwwF03iGeZfQDclrIjYxuwOCjNyed40FUC2UgyqqRT0757HMxToQlKsLt-JSdfvY"/>
+</div>
+<div class="flex flex-col flex-1 min-w-0">
+<p class="text-slate-900 dark:text-slate-100 text-base font-semibold truncate">Midnight City</p>
+<p class="text-slate-500 dark:text-slate-400 text-sm truncate">M83</p>
+</div>
+<button class="p-2 text-slate-400 hover:text-primary transition-colors">
+<span class="material-symbols-outlined">more_vert</span>
+</button>
+</div>
+<!-- Song Item 4 -->
+<div class="flex items-center gap-4 px-4 py-3 hover:bg-slate-100 dark:hover:bg-slate-800/50 transition-colors group cursor-pointer">
+<div class="relative size-14 shrink-0 overflow-hidden rounded-lg bg-slate-200 dark:bg-slate-800">
+<img alt="After Dark Cover" class="w-full h-full object-cover" data-alt="Minimalist dark abstract mountain silhouette" src="https://lh3.googleusercontent.com/aida-public/AB6AXuClVOuzNG6QRn6SoxutdjjAoXIMEoJFVYu7KWZzF9G6MDQUtifJXiL-53DG2DISKeMl78hS9-qtt7JIPul2VY2dMAslZYJIifABbx46J00H_xdXk2w6mtnzQMDfvEjgBRUfHIpNNZyz57qy4_7sLs3frTnd1_B_XYg-zXWvx19Dz6gjWwe1K66jwhHP1Rxu3qOsZPts3t-iczYgEeR3o0TMhYF1ztPetPMLRIi3zlR2VO_asSxWorw7wfuXyQAe0OTUHpTVS_Xsi6o"/>
+</div>
+<div class="flex flex-col flex-1 min-w-0">
+<p class="text-slate-900 dark:text-slate-100 text-base font-semibold truncate">After Dark</p>
+<p class="text-slate-500 dark:text-slate-400 text-sm truncate">Mr.Kitty</p>
+</div>
+<button class="p-2 text-slate-400 hover:text-primary transition-colors">
+<span class="material-symbols-outlined">more_vert</span>
+</button>
+</div>
+<!-- Song Item 5 -->
+<div class="flex items-center gap-4 px-4 py-3 hover:bg-slate-100 dark:hover:bg-slate-800/50 transition-colors group cursor-pointer">
+<div class="relative size-14 shrink-0 overflow-hidden rounded-lg bg-slate-200 dark:bg-slate-800">
+<img alt="Resonance Cover" class="w-full h-full object-cover" data-alt="Retro synthwave sunset gradient background" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCk6rl6TLJdlxHLXcbI6cxuFQr_c54_ZNYixw96vV_QpJKUWNrqFFn6mUuk29GIopOKvnd4cud0IyBjK9mRn1hLeUbDxeTk3Psz40H3ta14hKpd1pO9lBZ91uXGxQNAPUBajy6Kmy3f1w9OFCkcsxDS9KUX2cTA5RTiYxJaBIQKpOR801q5n6JQRZMFo7_WXqcemrDGBtDrJKnAdOYS9zGQaqVe34V0jrqP-L0G-Sq5xwrKW9z-c4YQhLJebuRHrscBR7lN0Xx2dFQ"/>
+</div>
+<div class="flex flex-col flex-1 min-w-0">
+<p class="text-slate-900 dark:text-slate-100 text-base font-semibold truncate">Resonance</p>
+<p class="text-slate-500 dark:text-slate-400 text-sm truncate">HOME</p>
+</div>
+<button class="p-2 text-slate-400 hover:text-primary transition-colors">
+<span class="material-symbols-outlined">more_vert</span>
+</button>
+</div>
+</div>
+</main>
+<!-- Global Floating Mini Player -->
+<div class="fixed bottom-20 left-4 right-4 z-40 max-w-2xl mx-auto">
+<div class="bg-primary shadow-lg shadow-primary/30 rounded-xl p-3 flex items-center justify-between">
+<div class="flex items-center gap-3 min-w-0">
+<div class="size-10 rounded-lg overflow-hidden shrink-0 border border-white/20">
+<img alt="Currently Playing" class="w-full h-full object-cover" data-alt="Album art for currently playing song" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBWw1kwkkpawFxK_s6I2hE7JEuA_bT3cmWmI6PxRFgatRH8-bGSDttRAtKU6oxqcUrIjBvt9KiUCGO8X8M8HzmMElDwicI0VftqNCCu-7q03skNgvsLVarJ1AQ3Hec08bHW16vBEvKqBKhdWcKSirA5NdEscHASjjqZ5sAXNUaZQU0W4IUTlOdjNk2LH6yxzxslMHkr4wvnLxeUhnJs0IIex_cxs3Y0dDGuvuajMyvStahNtrr7BQiRSsn0eM8TE_n_Wq-ENN1-TEg"/>
+</div>
+<div class="flex flex-col min-w-0">
+<p class="text-white text-sm font-bold truncate">Starlight</p>
+<p class="text-white/80 text-xs truncate">正在播放 · Muse</p>
+</div>
+</div>
+<div class="flex items-center gap-1">
+<button class="p-2 text-white">
+<span class="material-symbols-outlined fill-1">play_arrow</span>
+</button>
+<button class="p-2 text-white">
+<span class="material-symbols-outlined">skip_next</span>
+</button>
+</div>
+</div>
+</div>
+<!-- Bottom Navigation Bar -->
+<nav class="fixed bottom-0 left-0 right-0 z-50 bg-background-light dark:bg-background-dark border-t border-slate-200 dark:border-slate-800">
+<div class="flex justify-between items-center max-w-md mx-auto px-4 py-2 pb-6">
+<a class="flex flex-col items-center gap-1 text-slate-500 dark:text-slate-400" href="#">
+<span class="material-symbols-outlined">home</span>
+<span class="text-[10px] font-medium">首页</span>
+</a>
+<a class="flex flex-col items-center gap-1 text-slate-500 dark:text-slate-400" href="#">
+<span class="material-symbols-outlined">queue_music</span>
+<span class="text-[10px] font-medium">歌单</span>
+</a>
+<a class="flex flex-col items-center gap-1 text-primary" href="#">
+<span class="material-symbols-outlined fill">sell</span>
+<span class="text-[10px] font-medium">标签</span>
+</a>
+<a class="flex flex-col items-center gap-1 text-slate-500 dark:text-slate-400" href="#">
+<span class="material-symbols-outlined">tune</span>
+<span class="text-[10px] font-medium">筛选</span>
+</a>
+</div>
+</nav>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        .material-symbols-outlined.fill {
+            font-variation-settings: 'FILL' 1;
+        }
+        .pb-safe {
+            padding-bottom: env(safe-area-inset-bottom);
+        }
+    </style>
+</body></html>

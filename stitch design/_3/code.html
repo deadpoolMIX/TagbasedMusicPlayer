@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+
+<html class="" lang="zh-CN"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>音乐歌单</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">tailwind.config = {darkMode: "class", theme: {extend: {colors: {primary: "#1978e5", "background-light": "#f6f7f8", "background-dark": "#111821"}, fontFamily: {display: "Inter"}, borderRadius: {DEFAULT: "0.25rem", lg: "0.5rem", xl: "0.75rem", full: "9999px"}}}};</script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        .material-symbols-outlined.fill {
+            font-variation-settings: 'FILL' 1;
+        }
+        body {
+            min-height: max(884px, 100dvh);
+        }
+        .no-scrollbar::-webkit-scrollbar {
+            display: none;
+        }
+        .no-scrollbar {
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+        }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+</head>
+<body class="bg-background-light dark:bg-background-dark font-display text-slate-900 dark:text-slate-100 antialiased">
+<div class="flex flex-col h-screen max-w-md mx-auto bg-background-light dark:bg-background-dark shadow-2xl overflow-hidden relative">
+<!-- Header -->
+<header class="p-4 pt-6 flex items-center justify-between border-b border-slate-200 dark:border-slate-800">
+<div class="flex items-center gap-3">
+<span class="material-symbols-outlined text-slate-600 dark:text-slate-400 cursor-pointer">arrow_back</span>
+<h1 class="text-xl font-bold">歌单</h1>
+</div>
+<span class="material-symbols-outlined text-slate-600 dark:text-slate-400 cursor-pointer">add_circle</span>
+</header>
+<!-- Stats Section -->
+<div class="px-4 py-3">
+<p class="text-sm font-medium text-slate-500 dark:text-slate-400">12 个歌单</p>
+</div>
+<!-- Playlist List -->
+<main class="flex-1 overflow-y-auto pb-32">
+<div class="flex flex-col">
+<!-- Playlist Item 1 -->
+<div class="flex items-center justify-between px-4 py-4 hover:bg-slate-100 dark:hover:bg-slate-800/50 transition-colors group">
+<div class="flex items-center gap-4 flex-1">
+<span class="material-symbols-outlined text-slate-400 dark:text-slate-600 cursor-grab active:cursor-grabbing">drag_indicator</span>
+<div class="w-12 h-12 rounded-lg bg-primary/20 flex items-center justify-center text-primary overflow-hidden">
+<img class="w-full h-full object-cover" data-alt="Music speakers and neon lights" src="https://lh3.googleusercontent.com/aida-public/AB6AXuA7WjfahP-eriA6_SsZu7KhRH-Evaauhg8rV_WaJc5vs--Ii1mMynUdOBK8CaH9ZFkq_7w1aX6IF0TpPkhLWYl9xyMC-ihsru3ZgMwZCsN7HzNSsoVGyeqOLVU8QhW0qUP-dlctk_PndEQ390zHXWP_RwkkXE-fP-jX-zzlYa7rlAbKXeY7UqO8AvsNeAwjAdk6S55dEg2-XpmPD2cAlkXrrNLw2ha0JViTHqQYbSk-3xdj6jizZNBFxmkXv4MI4XQqfCcR_eMp02E"/>
+</div>
+<div class="flex flex-col">
+<span class="font-semibold text-base">原声热歌</span>
+<span class="text-xs text-slate-500 dark:text-slate-400">42 首歌曲</span>
+</div>
+</div>
+<span class="material-symbols-outlined text-slate-400 hover:text-slate-900 dark:hover:text-slate-100 cursor-pointer">more_vert</span>
+</div>
+<!-- Playlist Item 2 -->
+<div class="flex items-center justify-between px-4 py-4 hover:bg-slate-100 dark:hover:bg-slate-800/50 transition-colors group">
+<div class="flex items-center gap-4 flex-1">
+<span class="material-symbols-outlined text-slate-400 dark:text-slate-600 cursor-grab active:cursor-grabbing">drag_indicator</span>
+<div class="w-12 h-12 rounded-lg bg-primary/20 flex items-center justify-center text-primary overflow-hidden">
+<img class="w-full h-full object-cover" data-alt="Concert stage with colorful stage lights" src="https://lh3.googleusercontent.com/aida-public/AB6AXuAvj_jI3c99ElnVGhiZpxvOEdlBI8TnMkfufLTBpG6BD5hYq1pY5MgIfKAe5aalAbqeTs-CQ8kKatscyPNvLHOtFJ0wTUFLVqDOVvfWf_dmNReGMmU0C-14DAbr3SvfuhbEUWysdkKyOsPTXlvAtaR1zqV2ojxqcU43wHjch1y-h4s6EdX3csZBQTmFUpdvj2lWEAO48S5hPDGuZkf8_6IE7zq-XZF3LB5PelcITAidRTMNezjxJmztGNV_AL4hzEAOmhV-6BDimEI"/>
+</div>
+<div class="flex flex-col">
+<span class="font-semibold text-base">深夜爵士</span>
+<span class="text-xs text-slate-500 dark:text-slate-400">28 首歌曲</span>
+</div>
+</div>
+<span class="material-symbols-outlined text-slate-400 hover:text-slate-900 dark:hover:text-slate-100 cursor-pointer">more_vert</span>
+</div>
+<!-- Playlist Item 3 -->
+<div class="flex items-center justify-between px-4 py-4 hover:bg-slate-100 dark:hover:bg-slate-800/50 transition-colors group">
+<div class="flex items-center gap-4 flex-1">
+<span class="material-symbols-outlined text-slate-400 dark:text-slate-600 cursor-grab active:cursor-grabbing">drag_indicator</span>
+<div class="w-12 h-12 rounded-lg bg-primary/20 flex items-center justify-center text-primary overflow-hidden">
+<img class="w-full h-full object-cover" data-alt="Abstract vibrant paint swirl pattern" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDWCmwvJt8vh_4Dsm1L_GA5h6vp_AIyJCn0T98EERVvFYuXab1bcgetqZgk8Az-Sav_2gu4GJ3bDFQsQ6Mz0Fqj-lC0foy0Hl6wzGkBLU7Q_N9k6FzCllLp038FOYmLIerizdmzsJac4U3ul3ulY_AqWfgCfEwfBgXfPpNbA4ePHIknFZQFEdHs9LetixCMg96uH5fPdO11Wwf5bXmJtVEsVRHQSDaenRLpk-pqaWqhHx72UEfkvOnU8TK6q9UUTFg9fnorcp1H0gw"/>
+</div>
+<div class="flex flex-col">
+<span class="font-semibold text-base">晨间动力</span>
+<span class="text-xs text-slate-500 dark:text-slate-400">15 首歌曲</span>
+</div>
+</div>
+<span class="material-symbols-outlined text-slate-400 hover:text-slate-900 dark:hover:text-slate-100 cursor-pointer">more_vert</span>
+</div>
+<!-- Playlist Item 4 -->
+<div class="flex items-center justify-between px-4 py-4 hover:bg-slate-100 dark:hover:bg-slate-800/50 transition-colors group">
+<div class="flex items-center gap-4 flex-1">
+<span class="material-symbols-outlined text-slate-400 dark:text-slate-600 cursor-grab active:cursor-grabbing">drag_indicator</span>
+<div class="w-12 h-12 rounded-lg bg-primary/20 flex items-center justify-center text-primary overflow-hidden">
+<img class="w-full h-full object-cover" data-alt="Vinyl record spinning on turntable" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCMkmZUpR4NebFz3vbuZe8DAt-Nmc4jymXquwWnRXVfoiau8adSWuNbOunSk-G4osHBDyZgaRyhf31gIJgUH2_akG875ORbgekv-GGfEHBk_f1AK0rcgyfnkiRHWbBNI5PEOGhGCORk9hIP1Ek0YkV7uoi1OYehT5kFjZVvFCPUGDEU6oQu3LihDA2PlMI47yIrKbKlCohKzpi6X3CGSJJsWhYYWlCcJudlEugxYuQdw-GNehgqteAjRb_WOY1fE6sDH5Obw9tSXgE"/>
+</div>
+<div class="flex flex-col">
+<span class="font-semibold text-base">复古情调</span>
+<span class="text-xs text-slate-500 dark:text-slate-400">85 首歌曲</span>
+</div>
+</div>
+<span class="material-symbols-outlined text-slate-400 hover:text-slate-900 dark:hover:text-slate-100 cursor-pointer">more_vert</span>
+</div>
+<!-- Playlist Item 5 -->
+<div class="flex items-center justify-between px-4 py-4 hover:bg-slate-100 dark:hover:bg-slate-800/50 transition-colors group">
+<div class="flex items-center gap-4 flex-1">
+<span class="material-symbols-outlined text-slate-400 dark:text-slate-600 cursor-grab active:cursor-grabbing">drag_indicator</span>
+<div class="w-12 h-12 rounded-lg bg-primary/20 flex items-center justify-center text-primary overflow-hidden">
+<img class="w-full h-full object-cover" data-alt="Microphone in a dark studio setting" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDuLeYJ1zVbyH8-7c5uV87C1aP1Go2fbfIEJEsrzv8no0E_QXMMQiHKHYG1_vZRqd_fxDqk6McqXEf1_norlpwD5lChUG-e6hM6GprIxYbnTuGOHIoshDdgZDfUf5RT_sgsbj9W5mEU0h4YR5wA5rLBkhgbuhT0LTj42b8UnS5x78j1clBXg9T_qkNOo83hC05bI2VKWfj44_VrdW1-92eMsoadZbPZHHD88MPGpGTZaAIZ_tp6v6bFwkjDmfueKavtYN3_yLAu2RU"/>
+</div>
+<div class="flex flex-col">
+<span class="font-semibold text-base">健身能量</span>
+<span class="text-xs text-slate-500 dark:text-slate-400">30 首歌曲</span>
+</div>
+</div>
+<span class="material-symbols-outlined text-slate-400 hover:text-slate-900 dark:hover:text-slate-100 cursor-pointer">more_vert</span>
+</div>
+</div>
+</main>
+<!-- Mini Player -->
+<div class="absolute bottom-[72px] left-0 right-0 px-4 pb-2">
+<div class="bg-white/90 dark:bg-slate-900/90 backdrop-blur-md rounded-xl border border-slate-200 dark:border-slate-800 p-2 flex items-center justify-between shadow-lg">
+<div class="flex items-center gap-3 overflow-hidden">
+<div class="w-10 h-10 rounded-lg bg-primary shrink-0 flex items-center justify-center overflow-hidden">
+<img class="w-full h-full object-cover" data-alt="Minimalist abstract art with vibrant colors" src="https://lh3.googleusercontent.com/aida-public/AB6AXuA6nAUXenNqj6IzsLBnrjhikzWd7yEOBKv9Bjf4dh4l6Gte6zVtTsqTC8Pn4-aKFbddOKIJC6wjA9f3GbQ29mliS_nvP87wmi6VDXLK-SEzrSqRpDKh6ZSFWW5Df1P3pUZHha5Q3XI-j1wcmikjYF837mY_lRDT_YC9s3j1kVt6RyvEAuPIOeZDsiZumKMMojKw3b0hhD8QnMYb2kBtEMS-M6Qh8OW0NNrAOu_c28acUR026ULsLGNciK2HXoAKeMUPA3muxh0LuEY"/>
+</div>
+<div class="flex flex-col truncate">
+<span class="text-sm font-semibold truncate">Midnight City</span>
+<span class="text-xs text-slate-500 dark:text-slate-400 truncate">M83</span>
+</div>
+</div>
+<div class="flex items-center gap-1 shrink-0 px-2">
+<button class="w-10 h-10 flex items-center justify-center rounded-full hover:bg-slate-200 dark:hover:bg-slate-800">
+<span class="material-symbols-outlined">skip_previous</span>
+</button>
+<button class="w-10 h-10 flex items-center justify-center rounded-full bg-primary text-white">
+<span class="material-symbols-outlined active-icon">play_arrow</span>
+</button>
+<button class="w-10 h-10 flex items-center justify-center rounded-full hover:bg-slate-200 dark:hover:bg-slate-800">
+<span class="material-symbols-outlined">skip_next</span>
+</button>
+</div>
+<div class="absolute bottom-0 left-2 right-2 h-0.5 bg-slate-200 dark:bg-slate-700 overflow-hidden rounded-full">
+<div class="h-full bg-primary w-1/3"></div>
+</div>
+</div>
+</div>
+<!-- Bottom Navigation -->
+<nav class="absolute bottom-0 left-0 right-0 bg-background-light dark:bg-background-dark border-t border-slate-200 dark:border-slate-800 px-4 py-2 pb-6"><div class="flex justify-between items-center max-w-md mx-auto">
+<a class="flex flex-col items-center gap-1 text-slate-500 dark:text-slate-400" href="#">
+<span class="material-symbols-outlined">home</span>
+<span class="text-[10px] font-medium">首页</span>
+</a>
+<a class="flex flex-col items-center gap-1 text-primary" href="#">
+<span class="material-symbols-outlined fill">queue_music</span>
+<span class="text-[10px] font-medium">歌单</span>
+</a>
+<a class="flex flex-col items-center gap-1 text-slate-500 dark:text-slate-400" href="#">
+<span class="material-symbols-outlined">sell</span>
+<span class="text-[10px] font-medium">标签</span>
+</a>
+<a class="flex flex-col items-center gap-1 text-slate-500 dark:text-slate-400" href="#">
+<span class="material-symbols-outlined">tune</span>
+<span class="text-[10px] font-medium">筛选</span>
+</a>
+</div></nav>
+</div>
+</body></html>

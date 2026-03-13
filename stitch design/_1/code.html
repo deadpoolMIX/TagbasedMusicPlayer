@@ -1,0 +1,204 @@
+<!DOCTYPE html>
+
+<html class="" lang="zh-CN"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>音乐库</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">tailwind.config = {darkMode: "class", theme: {extend: {colors: {primary: "#1978e5", "background-light": "#f6f7f8", "background-dark": "#111821"}, fontFamily: {display: "Inter"}, borderRadius: {DEFAULT: "0.25rem", lg: "0.5rem", xl: "0.75rem", full: "9999px"}}}};</script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        .material-symbols-outlined.fill {
+            font-variation-settings: 'FILL' 1;
+        }
+        body {
+            min-height: max(884px, 100dvh);
+        }
+        .no-scrollbar::-webkit-scrollbar {
+            display: none;
+        }
+        .no-scrollbar {
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+        }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-background-light dark:bg-background-dark font-display text-slate-900 dark:text-slate-100 antialiased">
+<div class="relative flex min-h-screen flex-col overflow-x-hidden">
+<!-- Header Section -->
+<header class="sticky top-0 z-20 bg-background-light/80 dark:bg-background-dark/80 backdrop-blur-md px-4 pt-6 pb-2">
+<div class="flex items-center justify-between mb-4">
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-primary text-3xl">library_music</span>
+<h1 class="text-xl font-bold tracking-tight">1,248 首歌曲</h1>
+</div>
+<button class="p-2 rounded-full hover:bg-slate-200 dark:hover:bg-slate-800 transition-colors">
+<span class="material-symbols-outlined">settings</span>
+</button>
+</div>
+<!-- Search Bar -->
+<div class="mb-4">
+<label class="relative flex items-center w-full h-11">
+<span class="material-symbols-outlined absolute left-4 text-slate-500">search</span>
+<input class="w-full h-full pl-11 pr-4 rounded-xl border-none bg-slate-200/50 dark:bg-slate-800/50 focus:ring-2 focus:ring-primary text-sm placeholder:text-slate-500" placeholder="在曲库中搜索" type="text"/>
+</label>
+</div>
+<!-- Category Chips -->
+<div class="flex gap-2 overflow-x-auto pb-2 no-scrollbar">
+<button class="shrink-0 px-4 py-1.5 rounded-full bg-primary text-white text-sm font-medium">最近添加</button>
+<button class="shrink-0 px-4 py-1.5 rounded-full bg-slate-200 dark:bg-slate-800 text-sm font-medium">歌手</button>
+<button class="shrink-0 px-4 py-1.5 rounded-full bg-slate-200 dark:bg-slate-800 text-sm font-medium">专辑</button>
+<button class="shrink-0 px-4 py-1.5 rounded-full bg-slate-200 dark:bg-slate-800 text-sm font-medium">风格</button>
+</div>
+</header>
+<!-- Song List -->
+<main class="flex-1 px-4 py-2 space-y-1 pb-40">
+<!-- Song Item 1 -->
+<div class="flex items-center justify-between p-2 rounded-xl hover:bg-slate-200/50 dark:hover:bg-slate-800/50 group">
+<div class="flex items-center gap-4">
+<div class="h-12 w-12 rounded-lg bg-slate-300 dark:bg-slate-700 bg-cover bg-center" data-alt="Vibrant abstract neon music album cover" style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuCsp9KFb9jel5HoKUEFWvWL86V52dTlWHN-mygyswTtE2PTQuhN6c38waEdCeuqOTydQwPjl1Dn9sNpEPkx01UKxsAWsg8E4ToWdw04WKWtb9U18hIjP1byp_Pe5iijudNaecDAbdwA9H26cAwzWFDSsWRAAg4i1A6ugSFGhQwCt3EeQWjiXq8H1cEoNIb-ET9E3KKKg5CCPOvEG6_sIp07wsY6yiPMJpxYn-Y5oCduieHCu1nkDDAWWebZl-0iTfscyxCfRy9qMBA')"></div>
+<div class="flex flex-col">
+<span class="font-semibold text-sm line-clamp-1">午夜之城 (Midnight City)</span>
+<span class="text-xs text-slate-500 dark:text-slate-400 line-clamp-1">M83</span>
+</div>
+</div>
+<button class="text-slate-400 hover:text-primary transition-colors">
+<span class="material-symbols-outlined">more_vert</span>
+</button>
+</div>
+<!-- Song Item 2 -->
+<div class="flex items-center justify-between p-2 rounded-xl hover:bg-slate-200/50 dark:hover:bg-slate-800/50 group">
+<div class="flex items-center gap-4">
+<div class="h-12 w-12 rounded-lg bg-slate-300 dark:bg-slate-700 bg-cover bg-center" data-alt="Minimalist indie acoustic guitar album cover" style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuBqj1CC_OJ-lkXuU5fidMwMBRDvNrxpclCTyGgFWzglapAO3--ydwb4Sqj_y-e6Z7uTvnSK2YrSR8rcnCathfF6WD-6cpSO-1nXfoxDBa6T4FBKS0TKLyZssvSf6zGuYhqWWeZkW40LwytRk2eO9oDkCdEh_J2qAQddZeMxKjTwa0eCiFzVi2zZ3DwF8dGfNvzGqQA4IDmjJTvOM5A-5sZ76iTb8VGFxdynDPxeVmLoj6W1iCz_qCn6MZwnFxYhmBM6-5P07VUsr64')"></div>
+<div class="flex flex-col">
+<span class="font-semibold text-sm line-clamp-1">Levitating</span>
+<span class="text-xs text-slate-500 dark:text-slate-400 line-clamp-1">Dua Lipa</span>
+</div>
+</div>
+<button class="text-slate-400 hover:text-primary transition-colors">
+<span class="material-symbols-outlined">more_vert</span>
+</button>
+</div>
+<!-- Song Item 3 -->
+<div class="flex items-center justify-between p-2 rounded-xl hover:bg-slate-200/50 dark:hover:bg-slate-800/50 group">
+<div class="flex items-center gap-4">
+<div class="h-12 w-12 rounded-lg bg-slate-300 dark:bg-slate-700 bg-cover bg-center" data-alt="Electronic synthwave sunset album cover art" style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuA1un0xpomb6Bo_rRN9sDd3Xyh7x33AQ8kMzgQTyLnGIfTiYTR4FhRDX3a8od8JYIKgwL8FSrygKZGOwde_C83aMn91kT-4QoHVK2laXgPH6PYyjq70BGJtVNrXwRsQRk5fvn6qIuiQ-a3Yc01vF0Bnzcgt0IjMCzz7VoilcB5cMdve6PqSP2swjaYsH8d9A7oZkI0i_HrsbFLOldKacbR3SAwoGK1jCZk-MlGmtUsfQt5m9SqAb84sfNLjZUVrd2x6yRnSn7PgbxI')"></div>
+<div class="flex flex-col">
+<span class="font-semibold text-sm line-clamp-1">Blinding Lights</span>
+<span class="text-xs text-slate-500 dark:text-slate-400 line-clamp-1">The Weeknd</span>
+</div>
+</div>
+<button class="text-slate-400 hover:text-primary transition-colors">
+<span class="material-symbols-outlined">more_vert</span>
+</button>
+</div>
+<!-- Song Item 4 -->
+<div class="flex items-center justify-between p-2 rounded-xl hover:bg-slate-200/50 dark:hover:bg-slate-800/50 group">
+<div class="flex items-center gap-4">
+<div class="h-12 w-12 rounded-lg bg-slate-300 dark:bg-slate-700 bg-cover bg-center" data-alt="Modern pop colorful graphic album cover" style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuDZSzBga4aSF9RDaU0z7k8J2xm383a0SZGOzEQFDFJkDPjK1axEd1SxT-j6WW12D2pEVpcsvHrmM3rDOZpe-hdm4thZpwNCwwlJ3xaeO1z50JgLXHGu6TlujvhcYUdvUGlEB6cdOqBTh_yPTh_UQSDU3SoRDzK8zhrnUhxtIFdLgqUJadEVLOkdHrtXwxIAoyDdSRaD70B0eh-OmK2TStVMvBaQhVou7Zv4Sto-80oCvbWULXZTgEK1BB75Yd_-kisEVWR2gqQUTWs')"></div>
+<div class="flex flex-col">
+<span class="font-semibold text-sm line-clamp-1">Starboy</span>
+<span class="text-xs text-slate-500 dark:text-slate-400 line-clamp-1">Daft Punk ft. The Weeknd</span>
+</div>
+</div>
+<button class="text-slate-400 hover:text-primary transition-colors">
+<span class="material-symbols-outlined">more_vert</span>
+</button>
+</div>
+<!-- Song Item 5 -->
+<div class="flex items-center justify-between p-2 rounded-xl hover:bg-slate-200/50 dark:hover:bg-slate-800/50 group">
+<div class="flex items-center gap-4">
+<div class="h-12 w-12 rounded-lg bg-slate-300 dark:bg-slate-700 bg-cover bg-center" data-alt="Rock concert silhouette album cover photography" style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuD8U6GjAn9Rwc5g975HkUCrBAT9-tsEzoZIXVRKXROWGPf-NMPzp4AvW2jJG_S3qcfWBXvLi6FNganaWc3beZwIFbIEtE2i1fclA2ltPVLMEH5cXJvlvdpzXTI1tgvroDUcI0Z9Bp19tyTlXq5AoeEbfqJ7ZEmWysrQqe4r3AQPPbtubnz-mVsOTVdIP_fK4DR4G3DFptoSn32_9yMqhVDrDjbx57F3mC8VBBtd3utRIxzeXn6FdJUAqc8Ja6HFmA2OwMCza9usAiI')"></div>
+<div class="flex flex-col">
+<span class="font-semibold text-sm line-clamp-1">Save Your Tears</span>
+<span class="text-xs text-slate-500 dark:text-slate-400 line-clamp-1">The Weeknd</span>
+</div>
+</div>
+<button class="text-slate-400 hover:text-primary transition-colors">
+<span class="material-symbols-outlined">more_vert</span>
+</button>
+</div>
+<!-- Song Item 6 -->
+<div class="flex items-center justify-between p-2 rounded-xl hover:bg-slate-200/50 dark:hover:bg-slate-800/50 group">
+<div class="flex items-center gap-4">
+<div class="h-12 w-12 rounded-lg bg-slate-300 dark:bg-slate-700 bg-cover bg-center" data-alt="Jazz club atmosphere album cover design" style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuD6zPnLmN_AOxVRr8bhhkVqkpNfzJcRKHgWiTzMB14PMr88XUopwjkyCT6MHx9DquIldhVlPxBnND81ZXaSMwMxS75YWCCFaC0-Z7B5Rx7qn0Epz31DZqoNrAvQ2sWfE3F-NNzPnCy9Fl3NjUJ93gHdwUjAw4mPWYFs5T3IUUkhbTPC6Ih733NhWqASeIrGm2gXYUAuKgcXfwWDCHqMvRhQkGCj7Rjc7qzuSyZyJ4Ce-zpwRrvPg1X0VYlIDZXM4GJlaogxSCSL_cM')"></div>
+<div class="flex flex-col">
+<span class="font-semibold text-sm line-clamp-1">Heat Waves</span>
+<span class="text-xs text-slate-500 dark:text-slate-400 line-clamp-1">Glass Animals</span>
+</div>
+</div>
+<button class="text-slate-400 hover:text-primary transition-colors">
+<span class="material-symbols-outlined">more_vert</span>
+</button>
+</div>
+<!-- Song Item 7 -->
+<div class="flex items-center justify-between p-2 rounded-xl hover:bg-slate-200/50 dark:hover:bg-slate-800/50 group">
+<div class="flex items-center gap-4">
+<div class="h-12 w-12 rounded-lg bg-slate-300 dark:bg-slate-700 bg-cover bg-center" data-alt="Lofi chill beats aesthetic album cover" style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuBih1MhzhIM124ZT64X8MDyUkIO84hKgjOlZ2yc4qiVh5p6DjdwtQwXj1003-ALDBn-4eVL0XklkQVOfhD8GGLPMq9NbioHZsxnykAtGd6D0h-HdOUGK34jWJedNxiprrwvJ0doiAwbnMnwXF5ZZ6ZJNKZ_MCeyVDfv19elW58ORlF7OD2MKbptoRWYZ5zmrMx_AYHZtbk6d7ig1JH4hXjxQXxUvHSTVpR1r_ZqQrcdLCJoa1reDbO1uS98msqtXfi7tVuP956bDgY')"></div>
+<div class="flex flex-col">
+<span class="font-semibold text-sm line-clamp-1">Starlight</span>
+<span class="text-xs text-slate-500 dark:text-slate-400 line-clamp-1">Muse</span>
+</div>
+</div>
+<button class="text-slate-400 hover:text-primary transition-colors">
+<span class="material-symbols-outlined">more_vert</span>
+</button>
+</div>
+</main>
+<!-- Bottom Controls Area -->
+<div class="fixed bottom-0 left-0 right-0 z-50">
+<!-- Mini Player -->
+<div class="mx-3 mb-2 px-3 py-2 bg-slate-100/95 dark:bg-slate-900/95 backdrop-blur-lg border border-slate-200 dark:border-slate-800 rounded-2xl shadow-xl flex items-center justify-between">
+<div class="flex items-center gap-3 overflow-hidden">
+<div class="h-10 w-10 shrink-0 rounded-lg bg-slate-300 dark:bg-slate-700 bg-cover bg-center" data-alt="Current playing song album cover thumbnail" style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuD66pT4P6TjV7LMVU1iMFGkGLhm4kagf1BWnUD2LpHBAhvcZXt5bFwosAGeUOm6HKS27cO2F6S39IvYeOBX0R_PC7Tedy4B0tyro0RKjuFJSxq7y4Yqsahi--gyATQ7-YpLRB573iwNQL7CU89-1NXL-KO-CmyE1kPyIlRe61JY7AtV986Lw1_HxGCkD7IvdB_IWXUAFlHCn76ZX571lKFn1T3RaSii21QAke5KB3TLax0DGDUYNn11rhO8hZg39F3ETPuccn-GAtU')"></div>
+<div class="flex flex-col min-w-0">
+<span class="text-sm font-semibold truncate">午夜之城 (Midnight City)</span>
+<span class="text-xs text-slate-500 dark:text-slate-400 truncate">M83</span>
+</div>
+</div>
+<div class="flex items-center gap-4 px-2">
+<button class="p-1">
+<span class="material-symbols-outlined fill text-2xl">play_arrow</span>
+</button>
+<button class="p-1">
+<span class="material-symbols-outlined text-2xl">skip_next</span>
+</button>
+</div>
+<!-- Progress Line -->
+<div class="absolute bottom-0 left-3 right-3 h-0.5 bg-slate-200 dark:bg-slate-800 overflow-hidden rounded-full">
+<div class="h-full bg-primary w-1/3"></div>
+</div>
+</div>
+<!-- Bottom NavBar -->
+<nav class="bg-background-light dark:bg-background-dark border-t border-slate-200 dark:border-slate-800 px-4 py-2 pb-6">
+<div class="flex justify-between items-center max-w-md mx-auto">
+<a class="flex flex-col items-center gap-1 text-primary" href="#">
+<span class="material-symbols-outlined fill">home</span>
+<span class="text-[10px] font-medium">首页</span>
+</a>
+<a class="flex flex-col items-center gap-1 text-slate-500 dark:text-slate-400" href="#">
+<span class="material-symbols-outlined">queue_music</span>
+<span class="text-[10px] font-medium">歌单</span>
+</a>
+<a class="flex flex-col items-center gap-1 text-slate-500 dark:text-slate-400" href="#">
+<span class="material-symbols-outlined">sell</span>
+<span class="text-[10px] font-medium">标签</span>
+</a>
+<a class="flex flex-col items-center gap-1 text-slate-500 dark:text-slate-400" href="#">
+<span class="material-symbols-outlined">tune</span>
+<span class="text-[10px] font-medium">筛选</span>
+</a>
+</div>
+</nav>
+</div>
+</div>
+</body></html>
