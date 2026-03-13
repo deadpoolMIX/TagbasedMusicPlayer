@@ -1,10 +1,14 @@
 package com.tagplayer.musicplayer.ui.player.screen
 
+import android.net.Uri
+import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.detectVerticalDragGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.aspectRatio
@@ -15,12 +19,16 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.FavoriteBorder
+import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.Pause
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Repeat
@@ -34,6 +42,7 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Slider
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
@@ -47,15 +56,24 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.scale
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.compose.material.icons.filled.List
-import androidx.compose.material.icons.filled.Lyrics
-import com.tagplayer.musicplayer.ui.player.components.PlaybackQueueSheet
+import androidx.compose.ui.graphics.Color
+import coil.compose.AsyncImage
+import coil.request.ImageRequest
+import com.tagplayer.musicplayer.data.local.entity.Tag
 import com.tagplayer.musicplayer.player.RepeatMode
+import com.tagplayer.musicplayer.ui.components.TagSelectionDialog
+import com.tagplayer.musicplayer.ui.player.components.PlaybackQueueSheet
 import com.tagplayer.musicplayer.ui.player.viewmodel.PlayerViewModel
+import com.tagplayer.musicplayer.ui.tags.viewmodel.TagViewModel
 import kotlin.math.max
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -64,7 +82,8 @@ fun PlayerScreen(
     onBackClick: () -> Unit,
     onNavigateToLyrics: () -> Unit = {},
     modifier: Modifier = Modifier,
-    viewModel: PlayerViewModel = hiltViewModel()
+    viewModel: PlayerViewModel = hiltViewModel(),
+    tagViewModel: TagViewModel = hiltViewModel()
 ) {
     val playbackState by viewModel.playbackState.collectAsState()
     val currentPosition by viewModel.currentPosition.collectAsState()
@@ -72,29 +91,40 @@ fun PlayerScreen(
     val queue by viewModel.queue.collectAsState()
 
     var showQueueSheet by remember { mutableStateOf(false) }
+    var showTagDialog by remember { mutableStateOf(false) }
 
     val currentSong = playbackState.currentSong
+
+    // 获取当前歌曲的标签
+    val songTags = remember(currentSong) {
+        if (currentSong != null) {
+            tagViewModel.getSongTagsFlow(currentSong.id)
+        } else {
+            kotlinx.coroutines.flow.flowOf(emptyList())
+        }
+    }.collectAsState(initial = emptyList())
+
+    // 滑动关闭手势状态
+    var swipeOffset by remember { mutableFloatStateOf(0f) }
+    val animatedScale by animateFloatAsState(
+        targetValue = 1f - (swipeOffset / 1000f).coerceIn(0f, 0.5f),
+        label = "scale"
+    )
 
     Scaffold(
         topBar = {
             TopAppBar(
                 title = { Text("") },
                 navigationIcon = {
+                    // 下滑箭头按钮
                     IconButton(onClick = onBackClick) {
                         Icon(
-                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                            contentDescription = "返回"
+                            imageVector = Icons.Default.KeyboardArrowDown,
+                            contentDescription = "关闭"
                         )
                     }
                 },
                 actions = {
-                    // 歌词按钮
-                    IconButton(onClick = onNavigateToLyrics) {
-                        Icon(
-                            imageVector = Icons.Default.Lyrics,
-                            contentDescription = "歌词"
-                        )
-                    }
                     // 播放队列按钮
                     IconButton(onClick = { showQueueSheet = true }) {
                         Icon(
@@ -135,29 +165,39 @@ fun PlayerScreen(
                 modifier = Modifier
                     .fillMaxSize()
                     .padding(paddingValues)
-                    .padding(horizontal = 24.dp),
+                    .padding(horizontal = 24.dp)
+                    .scale(animatedScale)
+                    .pointerInput(Unit) {
+                        detectVerticalDragGestures(
+                            onDragEnd = {
+                                if (swipeOffset > 200) {
+                                    onBackClick()
+                                }
+                                swipeOffset = 0f
+                            },
+                            onVerticalDrag = { change, dragAmount ->
+                                change.consume()
+                                if (dragAmount > 0) {
+                                    swipeOffset += dragAmount
+                                }
+                            }
+                        )
+                    },
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
                 Spacer(modifier = Modifier.height(32.dp))
 
-                // Album Art
-                Box(
+                // Album Art - 点击进入歌词
+                AlbumArt(
+                    albumId = currentSong.albumId,
                     modifier = Modifier
                         .fillMaxWidth(0.85f)
                         .aspectRatio(1f)
                         .clip(RoundedCornerShape(16.dp))
-                        .background(MaterialTheme.colorScheme.surfaceVariant)
-                        .clickable { /* TODO: 显示歌词 */ },
-                    contentAlignment = Alignment.Center
-                ) {
-                    Text(
-                        text = "♪",
-                        style = MaterialTheme.typography.displayLarge,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)
-                    )
-                }
+                        .clickable { onNavigateToLyrics() }
+                )
 
-                Spacer(modifier = Modifier.height(48.dp))
+                Spacer(modifier = Modifier.height(32.dp))
 
                 // Song Info
                 Text(
@@ -193,137 +233,47 @@ fun PlayerScreen(
                     modifier = Modifier.fillMaxWidth()
                 )
 
+                Spacer(modifier = Modifier.height(16.dp))
+
+                // 标签快捷位
+                TagChipsRow(
+                    tags = songTags.value,
+                    onAddTagClick = { showTagDialog = true },
+                    onTagClick = { tag ->
+                        // 点击标签可以移除
+                        tagViewModel.removeTagFromSong(currentSong.id, tag.id)
+                    }
+                )
+
                 Spacer(modifier = Modifier.weight(1f))
 
-                // Progress Bar
-                Column(modifier = Modifier.fillMaxWidth()) {
-                    Slider(
-                        value = if (duration > 0) currentPosition.toFloat() / duration else 0f,
-                        onValueChange = { fraction ->
-                            viewModel.seekTo((fraction * duration).toLong())
-                        },
-                        modifier = Modifier.fillMaxWidth()
-                    )
-
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween
-                    ) {
-                        Text(
-                            text = formatDuration(currentPosition),
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                        Text(
-                            text = formatDuration(duration),
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    }
-                }
+                // Progress Bar - 修复拖动后不更新问题
+                ProgressBar(
+                    currentPosition = currentPosition,
+                    duration = duration,
+                    onSeek = { position -> viewModel.seekTo(position) }
+                )
 
                 Spacer(modifier = Modifier.height(24.dp))
 
                 // Control Buttons
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceEvenly,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    // Shuffle
-                    IconButton(
-                        onClick = { viewModel.toggleShuffle() },
-                        modifier = Modifier.size(48.dp)
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.Shuffle,
-                            contentDescription = "随机播放",
-                            tint = if (playbackState.isShuffling) {
-                                MaterialTheme.colorScheme.primary
-                            } else {
-                                MaterialTheme.colorScheme.onSurfaceVariant
-                            }
-                        )
-                    }
-
-                    // Previous
-                    IconButton(
-                        onClick = { viewModel.playPrevious() },
-                        modifier = Modifier.size(56.dp)
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.SkipPrevious,
-                            contentDescription = "上一首",
-                            modifier = Modifier.size(32.dp)
-                        )
-                    }
-
-                    // Play/Pause
-                    Box(
-                        modifier = Modifier
-                            .size(72.dp)
-                            .clip(CircleShape)
-                            .background(MaterialTheme.colorScheme.primary)
-                            .clickable { viewModel.playPauseToggle() },
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Icon(
-                            imageVector = if (playbackState.isPlaying) Icons.Default.Pause else Icons.Default.PlayArrow,
-                            contentDescription = if (playbackState.isPlaying) "暂停" else "播放",
-                            modifier = Modifier.size(40.dp),
-                            tint = MaterialTheme.colorScheme.onPrimary
-                        )
-                    }
-
-                    // Next
-                    IconButton(
-                        onClick = { viewModel.playNext() },
-                        modifier = Modifier.size(56.dp)
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.SkipNext,
-                            contentDescription = "下一首",
-                            modifier = Modifier.size(32.dp)
-                        )
-                    }
-
-                    // Repeat
-                    IconButton(
-                        onClick = {
-                            val nextMode = when (playbackState.repeatMode) {
-                                RepeatMode.OFF -> RepeatMode.ALL
-                                RepeatMode.ALL -> RepeatMode.ONE
-                                RepeatMode.ONE -> RepeatMode.OFF
-                            }
-                            viewModel.setRepeatMode(nextMode)
-                        },
-                        modifier = Modifier.size(48.dp)
-                    ) {
-                        when (playbackState.repeatMode) {
-                            RepeatMode.OFF -> {
-                                Icon(
-                                    imageVector = Icons.Default.Repeat,
-                                    contentDescription = "顺序播放",
-                                    tint = MaterialTheme.colorScheme.onSurfaceVariant
-                                )
-                            }
-                            RepeatMode.ALL -> {
-                                Icon(
-                                    imageVector = Icons.Default.Repeat,
-                                    contentDescription = "列表循环",
-                                    tint = MaterialTheme.colorScheme.primary
-                                )
-                            }
-                            RepeatMode.ONE -> {
-                                Icon(
-                                    imageVector = Icons.Default.RepeatOne,
-                                    contentDescription = "单曲循环",
-                                    tint = MaterialTheme.colorScheme.primary
-                                )
-                            }
+                ControlButtons(
+                    isPlaying = playbackState.isPlaying,
+                    isShuffling = playbackState.isShuffling,
+                    repeatMode = playbackState.repeatMode,
+                    onPlayPause = { viewModel.playPauseToggle() },
+                    onNext = { viewModel.playNext() },
+                    onPrevious = { viewModel.playPrevious() },
+                    onShuffle = { viewModel.toggleShuffle() },
+                    onRepeat = {
+                        val nextMode = when (playbackState.repeatMode) {
+                            RepeatMode.OFF -> RepeatMode.ALL
+                            RepeatMode.ALL -> RepeatMode.ONE
+                            RepeatMode.ONE -> RepeatMode.OFF
                         }
+                        viewModel.setRepeatMode(nextMode)
                     }
-                }
+                )
 
                 Spacer(modifier = Modifier.height(48.dp))
             }
@@ -347,6 +297,294 @@ fun PlayerScreen(
                 showQueueSheet = false
             }
         )
+
+        // 标签选择弹窗
+        if (showTagDialog && currentSong != null) {
+            TagSelectionDialog(
+                song = currentSong,
+                onDismiss = { showTagDialog = false }
+            )
+        }
+    }
+}
+
+@Composable
+private fun AlbumArt(
+    albumId: Long,
+    modifier: Modifier = Modifier
+) {
+    val context = LocalContext.current
+
+    // 使用 MediaStore 获取专辑封面 URI
+    val albumArtUri = remember(albumId) {
+        Uri.parse("content://media/external/audio/albumart/$albumId")
+    }
+
+    Box(
+        modifier = modifier
+            .background(MaterialTheme.colorScheme.surfaceVariant),
+        contentAlignment = Alignment.Center
+    ) {
+        AsyncImage(
+            model = ImageRequest.Builder(context)
+                .data(albumArtUri)
+                .crossfade(true)
+                .build(),
+            contentDescription = "专辑封面",
+            contentScale = ContentScale.Crop,
+            modifier = Modifier.fillMaxSize(),
+            fallback = {
+                // 加载失败时显示音乐符号
+                Box(
+                    modifier = Modifier.fillMaxSize(),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(
+                        text = "♪",
+                        style = MaterialTheme.typography.displayLarge,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)
+                    )
+                }
+            },
+            error = {
+                Box(
+                    modifier = Modifier.fillMaxSize(),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(
+                        text = "♪",
+                        style = MaterialTheme.typography.displayLarge,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)
+                    )
+                }
+            }
+        )
+    }
+}
+
+@Composable
+private fun TagChipsRow(
+    tags: List<Tag>,
+    onAddTagClick: () -> Unit,
+    onTagClick: (Tag) -> Unit,
+    modifier: Modifier = Modifier
+) {
+    LazyRow(
+        modifier = modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.CenterHorizontally),
+        contentPadding = PaddingValues(horizontal = 16.dp)
+    ) {
+        // 显示已有标签
+        items(tags) { tag ->
+            TagChip(
+                tag = tag,
+                onClick = { onTagClick(tag) }
+            )
+        }
+        // 添加按钮
+        item {
+            AddTagChip(onClick = onAddTagClick)
+        }
+    }
+}
+
+@Composable
+private fun TagChip(
+    tag: Tag,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    Surface(
+        shape = RoundedCornerShape(9999.dp),
+        color = MaterialTheme.colorScheme.primaryContainer,
+        modifier = modifier
+            .clickable(onClick = onClick)
+    ) {
+        Row(
+            modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(
+                text = "#${tag.name}",
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onPrimaryContainer
+            )
+        }
+    }
+}
+
+@Composable
+private fun AddTagChip(
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    Surface(
+        shape = RoundedCornerShape(9999.dp),
+        color = MaterialTheme.colorScheme.surfaceVariant,
+        modifier = modifier
+            .clickable(onClick = onClick)
+    ) {
+        Row(
+            modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Icon(
+                imageVector = Icons.Default.Add,
+                contentDescription = "添加标签",
+                modifier = Modifier.size(18.dp),
+                tint = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
+    }
+}
+
+@Composable
+private fun ProgressBar(
+    currentPosition: Long,
+    duration: Long,
+    onSeek: (Long) -> Unit
+) {
+    // 使用本地状态来跟踪拖动位置
+    var sliderPosition by remember { mutableFloatStateOf(0f) }
+    var isDragging by remember { mutableStateOf(false) }
+
+    // 当不拖动时，使用实际播放位置
+    val positionFraction = if (duration > 0) currentPosition.toFloat() / duration else 0f
+
+    Column(modifier = Modifier.fillMaxWidth()) {
+        Slider(
+            value = if (isDragging) sliderPosition else positionFraction,
+            onValueChange = { fraction ->
+                isDragging = true
+                sliderPosition = fraction
+            },
+            onValueChangeFinished = {
+                onSeek((sliderPosition * duration).toLong())
+                isDragging = false
+            },
+            modifier = Modifier.fillMaxWidth()
+        )
+
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween
+        ) {
+            Text(
+                text = formatDuration(if (isDragging) (sliderPosition * duration).toLong() else currentPosition),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            Text(
+                text = formatDuration(duration),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
+    }
+}
+
+@Composable
+private fun ControlButtons(
+    isPlaying: Boolean,
+    isShuffling: Boolean,
+    repeatMode: RepeatMode,
+    onPlayPause: () -> Unit,
+    onNext: () -> Unit,
+    onPrevious: () -> Unit,
+    onShuffle: () -> Unit,
+    onRepeat: () -> Unit
+) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.SpaceEvenly,
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        // Shuffle
+        IconButton(
+            onClick = onShuffle,
+            modifier = Modifier.size(48.dp)
+        ) {
+            Icon(
+                imageVector = Icons.Default.Shuffle,
+                contentDescription = "随机播放",
+                tint = if (isShuffling) {
+                    MaterialTheme.colorScheme.primary
+                } else {
+                    MaterialTheme.colorScheme.onSurfaceVariant
+                }
+            )
+        }
+
+        // Previous
+        IconButton(
+            onClick = onPrevious,
+            modifier = Modifier.size(56.dp)
+        ) {
+            Icon(
+                imageVector = Icons.Default.SkipPrevious,
+                contentDescription = "上一首",
+                modifier = Modifier.size(32.dp)
+            )
+        }
+
+        // Play/Pause
+        Box(
+            modifier = Modifier
+                .size(72.dp)
+                .clip(CircleShape)
+                .background(MaterialTheme.colorScheme.primary)
+                .clickable { onPlayPause() },
+            contentAlignment = Alignment.Center
+        ) {
+            Icon(
+                imageVector = if (isPlaying) Icons.Default.Pause else Icons.Default.PlayArrow,
+                contentDescription = if (isPlaying) "暂停" else "播放",
+                modifier = Modifier.size(40.dp),
+                tint = MaterialTheme.colorScheme.onPrimary
+            )
+        }
+
+        // Next
+        IconButton(
+            onClick = onNext,
+            modifier = Modifier.size(56.dp)
+        ) {
+            Icon(
+                imageVector = Icons.Default.SkipNext,
+                contentDescription = "下一首",
+                modifier = Modifier.size(32.dp)
+            )
+        }
+
+        // Repeat
+        IconButton(
+            onClick = onRepeat,
+            modifier = Modifier.size(48.dp)
+        ) {
+            when (repeatMode) {
+                RepeatMode.OFF -> {
+                    Icon(
+                        imageVector = Icons.Default.Repeat,
+                        contentDescription = "顺序播放",
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+                RepeatMode.ALL -> {
+                    Icon(
+                        imageVector = Icons.Default.Repeat,
+                        contentDescription = "列表循环",
+                        tint = MaterialTheme.colorScheme.primary
+                    )
+                }
+                RepeatMode.ONE -> {
+                    Icon(
+                        imageVector = Icons.Default.RepeatOne,
+                        contentDescription = "单曲循环",
+                        tint = MaterialTheme.colorScheme.primary
+                    )
+                }
+            }
+        }
     }
 }
 

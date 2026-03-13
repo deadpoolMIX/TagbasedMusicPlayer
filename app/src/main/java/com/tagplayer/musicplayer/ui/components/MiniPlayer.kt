@@ -47,10 +47,8 @@ fun MiniPlayer(
 
     val currentSong = playbackState.currentSong
 
-    // 如果没有歌曲，显示一个占位但保持可点击状态（用于调试）
-    // 实际应该不显示，但为了测试点击功能，暂时显示一个提示
+    // 如果没有歌曲，不显示 MiniPlayer
     if (currentSong == null) {
-        // 返回空，不显示 MiniPlayer
         return
     }
 
@@ -70,12 +68,10 @@ fun MiniPlayer(
                     .padding(12.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                // Album Art
-                Box(
-                    modifier = Modifier
-                        .size(48.dp)
-                        .clip(RoundedCornerShape(8.dp))
-                        .background(MaterialTheme.colorScheme.primaryContainer)
+                // Album Art - 使用统一的 AlbumArt 组件
+                AlbumArt(
+                    albumId = currentSong.albumId,
+                    modifier = Modifier.size(48.dp)
                 )
 
                 Spacer(modifier = Modifier.width(12.dp))

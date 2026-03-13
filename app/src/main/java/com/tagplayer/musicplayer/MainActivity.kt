@@ -69,7 +69,8 @@ class MainActivity : ComponentActivity() {
                             route.startsWith(Routes.ARTIST_LIST) ||
                             route.startsWith(Routes.ARTIST_DETAIL) ||
                             route.startsWith(Routes.ALBUM_DETAIL) ||
-                            route.startsWith(Routes.SETTINGS)
+                            route.startsWith(Routes.SETTINGS) ||
+                            route.startsWith(Routes.LYRICS)
                         } == true
                     }
                 }

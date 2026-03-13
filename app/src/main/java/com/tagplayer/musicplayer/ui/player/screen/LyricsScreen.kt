@@ -3,6 +3,7 @@ package com.tagplayer.musicplayer.ui.player.screen
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.detectVerticalDragGestures
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
@@ -10,11 +11,13 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -27,6 +30,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -34,12 +38,13 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.draw.scale
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.tagplayer.musicplayer.ui.player.viewmodel.PlayerViewModel
-import com.tagplayer.musicplayer.util.LyricLine
 import com.tagplayer.musicplayer.util.LyricsParser
 import kotlinx.coroutines.launch
 
@@ -65,6 +70,17 @@ fun LyricsScreen(
     // 当前歌词行索引
     var currentLineIndex by remember { mutableIntStateOf(-1) }
 
+    // 滑动关闭手势
+    var swipeOffset by remember { mutableFloatStateOf(0f) }
+    val animatedScale by animateFloatAsState(
+        targetValue = 1f - (swipeOffset / 1000f).coerceIn(0f, 0.3f),
+        label = "scale"
+    )
+    val animatedAlpha by animateFloatAsState(
+        targetValue = 1f - (swipeOffset / 500f).coerceIn(0f, 1f),
+        label = "alpha"
+    )
+
     // 更新当前歌词行
     LaunchedEffect(currentPosition, lyrics) {
         val newIndex = LyricsParser.getCurrentLineIndex(lyrics, currentPosition)
@@ -74,7 +90,7 @@ fun LyricsScreen(
             scope.launch {
                 listState.animateScrollToItem(
                     index = newIndex,
-                    scrollOffset = -200 // 向上偏移，让当前行在中间
+                    scrollOffset = -200
                 )
             }
         }
@@ -87,7 +103,7 @@ fun LyricsScreen(
                 navigationIcon = {
                     IconButton(onClick = onBackClick) {
                         Icon(
-                            imageVector = Icons.Default.Close,
+                            imageVector = Icons.Default.KeyboardArrowDown,
                             contentDescription = "关闭"
                         )
                     }
@@ -103,6 +119,24 @@ fun LyricsScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(paddingValues)
+                .alpha(animatedAlpha)
+                .scale(animatedScale)
+                .pointerInput(Unit) {
+                    detectVerticalDragGestures(
+                        onDragEnd = {
+                            if (swipeOffset > 300) {
+                                onBackClick()
+                            }
+                            swipeOffset = 0f
+                        },
+                        onVerticalDrag = { change, dragAmount ->
+                            change.consume()
+                            if (dragAmount > 0) {
+                                swipeOffset += dragAmount
+                            }
+                        }
+                    )
+                }
         ) {
             if (lyrics.isEmpty()) {
                 // 无歌词提示

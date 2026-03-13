@@ -5,6 +5,7 @@ import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.detectVerticalDragGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -23,7 +24,6 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Delete
-import androidx.compose.material.icons.filled.DragHandle
 import androidx.compose.material.icons.filled.MusicNote
 import androidx.compose.material.icons.filled.PlaylistRemove
 import androidx.compose.material3.Card
@@ -35,9 +35,15 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.tagplayer.musicplayer.data.local.entity.Song
@@ -74,56 +80,113 @@ fun PlaybackQueueSheet(
                     containerColor = MaterialTheme.colorScheme.surface
                 )
             ) {
-                Column(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(16.dp)
-                ) {
-                    // Header
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Text(
-                            text = "播放队列 (${queue.size})",
-                            style = MaterialTheme.typography.titleMedium
-                        )
-                        Row {
-                            TextButton(onClick = onClearQueue) {
-                                Text("清空")
-                            }
-                            IconButton(onClick = onDismiss) {
-                                Icon(
-                                    imageVector = Icons.Default.Close,
-                                    contentDescription = "关闭"
-                                )
-                            }
+                // 可拖拽关闭的内容
+                DraggableQueueContent(
+                    queue = queue,
+                    currentIndex = currentIndex,
+                    onDismiss = onDismiss,
+                    onSongClick = onSongClick,
+                    onRemoveSong = onRemoveSong,
+                    onClearQueue = onClearQueue
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun DraggableQueueContent(
+    queue: List<Song>,
+    currentIndex: Int,
+    onDismiss: () -> Unit,
+    onSongClick: (Int) -> Unit,
+    onRemoveSong: (Int) -> Unit,
+    onClearQueue: () -> Unit
+) {
+    var swipeOffset by remember { mutableFloatStateOf(0f) }
+    var isDragging by remember { mutableStateOf(false) }
+
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .pointerInput(Unit) {
+                detectVerticalDragGestures(
+                    onDragEnd = {
+                        if (swipeOffset > 300) {
+                            onDismiss()
+                        }
+                        swipeOffset = 0f
+                        isDragging = false
+                    },
+                    onVerticalDrag = { change, dragAmount ->
+                        change.consume()
+                        if (dragAmount > 0) {
+                            swipeOffset += dragAmount
+                            isDragging = true
                         }
                     }
+                )
+            }
+            .padding(16.dp)
+    ) {
+        // 拖动指示条
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(bottom = 16.dp),
+            contentAlignment = Alignment.Center
+        ) {
+            Box(
+                modifier = Modifier
+                    .width(40.dp)
+                    .height(4.dp)
+                    .clip(RoundedCornerShape(2.dp))
+                    .background(MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.3f))
+            )
+        }
 
-                    Spacer(modifier = Modifier.height(8.dp))
-                    HorizontalDivider()
-                    Spacer(modifier = Modifier.height(8.dp))
-
-                    // Queue List
-                    LazyColumn(
-                        modifier = Modifier.fillMaxWidth(),
-                        contentPadding = PaddingValues(vertical = 8.dp)
-                    ) {
-                        itemsIndexed(
-                            items = queue,
-                            key = { index, song -> "${index}_${song.id}" }
-                        ) { index, song ->
-                            QueueItem(
-                                song = song,
-                                isPlaying = index == currentIndex,
-                                onClick = { onSongClick(index) },
-                                onRemove = { onRemoveSong(index) }
-                            )
-                        }
-                    }
+        // Header
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(
+                text = "播放队列 (${queue.size})",
+                style = MaterialTheme.typography.titleMedium
+            )
+            Row {
+                TextButton(onClick = onClearQueue) {
+                    Text("清空")
                 }
+                IconButton(onClick = onDismiss) {
+                    Icon(
+                        imageVector = Icons.Default.Close,
+                        contentDescription = "关闭"
+                    )
+                }
+            }
+        }
+
+        Spacer(modifier = Modifier.height(8.dp))
+        HorizontalDivider()
+        Spacer(modifier = Modifier.height(8.dp))
+
+        // Queue List
+        LazyColumn(
+            modifier = Modifier.fillMaxWidth(),
+            contentPadding = PaddingValues(vertical = 8.dp)
+        ) {
+            itemsIndexed(
+                items = queue,
+                key = { index, song -> "${index}_${song.id}" }
+            ) { index, song ->
+                QueueItem(
+                    song = song,
+                    isPlaying = index == currentIndex,
+                    onClick = { onSongClick(index) },
+                    onRemove = { onRemoveSong(index) }
+                )
             }
         }
     }
