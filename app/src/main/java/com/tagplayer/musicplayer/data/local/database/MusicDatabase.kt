@@ -18,7 +18,7 @@ import com.tagplayer.musicplayer.data.local.entity.Tag
         PlaylistSong::class,
         ScanFolder::class
     ],
-    version = 2,
+    version = 3,
     exportSchema = false
 )
 abstract class MusicDatabase : RoomDatabase() {

@@ -13,5 +13,6 @@ data class Playlist(
     val createdAt: Long,
     val updatedAt: Long,
     val sortOrder: Int = 0,
-    val songCount: Int = 0
+    val songCount: Int = 0,
+    val isSystem: Boolean = false  // 系统歌单标记，如"我喜欢"
 )

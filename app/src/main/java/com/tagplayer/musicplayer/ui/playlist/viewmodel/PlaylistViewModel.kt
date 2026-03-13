@@ -146,10 +146,34 @@ class PlaylistViewModel @Inject constructor(
         }
     }
 
-    fun isSongInPlaylist(playlistId: Long, songId: Long, callback: (Boolean) -> Unit) {
+    companion object {
+        const val FAVORITES_PLAYLIST_ID = -1L
+    }
+
+    // "我喜欢"歌单中的歌曲ID集合
+    private val _favoriteSongIds = MutableStateFlow<Set<Long>>(emptySet())
+    val favoriteSongIds: StateFlow<Set<Long>> = _favoriteSongIds.asStateFlow()
+
+    init {
+        // 加载"我喜欢"歌单的歌曲
         viewModelScope.launch {
-            val exists = playlistRepository.isSongInPlaylist(playlistId, songId)
-            callback(exists)
+            playlistRepository.getSongsInPlaylist(FAVORITES_PLAYLIST_ID)
+                .collect { songs ->
+                    _favoriteSongIds.value = songs.map { it.id }.toSet()
+                }
         }
     }
-}
+
+    fun isSongFavorite(songId: Long): Boolean {
+        return _favoriteSongIds.value.contains(songId)
+    }
+
+    fun toggleFavorite(song: Song) {
+        viewModelScope.launch {
+            if (isSongFavorite(song.id)) {
+                playlistRepository.removeSongFromPlaylist(FAVORITES_PLAYLIST_ID, song.id)
+            } else {
+                playlistRepository.addSongToPlaylist(FAVORITES_PLAYLIST_ID, song.id)
+            }
+        }
+    }

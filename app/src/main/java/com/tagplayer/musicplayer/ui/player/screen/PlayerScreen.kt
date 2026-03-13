@@ -74,7 +74,7 @@ import com.tagplayer.musicplayer.player.RepeatMode
 import com.tagplayer.musicplayer.ui.components.TagSelectionDialog
 import com.tagplayer.musicplayer.ui.player.components.PlaybackQueueSheet
 import com.tagplayer.musicplayer.ui.player.viewmodel.PlayerViewModel
-import com.tagplayer.musicplayer.ui.tags.viewmodel.TagViewModel
+import com.tagplayer.musicplayer.ui.playlist.viewmodel.PlaylistViewModel
 import kotlin.math.max
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -84,7 +84,8 @@ fun PlayerScreen(
     onNavigateToLyrics: () -> Unit = {},
     modifier: Modifier = Modifier,
     viewModel: PlayerViewModel = hiltViewModel(),
-    tagViewModel: TagViewModel = hiltViewModel()
+    tagViewModel: TagViewModel = hiltViewModel(),
+    playlistViewModel: PlaylistViewModel = hiltViewModel()
 ) {
     val playbackState by viewModel.playbackState.collectAsState()
     val currentPosition by viewModel.currentPosition.collectAsState()
@@ -95,6 +96,9 @@ fun PlayerScreen(
     var showTagDialog by remember { mutableStateOf(false) }
 
     val currentSong = playbackState.currentSong
+
+    // 检查当前歌曲是否已收藏
+    val isFavorite = currentSong?.let { playlistViewModel.isSongFavorite(it.id) } ?: false
 
     // 获取当前歌曲的标签
     val songTags = remember(currentSong) {
@@ -134,10 +138,15 @@ fun PlayerScreen(
                         )
                     }
                     // 收藏按钮
-                    IconButton(onClick = { /* TODO: 收藏功能 */ }) {
+                    IconButton(
+                        onClick = {
+                            currentSong?.let { playlistViewModel.toggleFavorite(it) }
+                        }
+                    ) {
                         Icon(
-                            imageVector = Icons.Default.FavoriteBorder,
-                            contentDescription = "收藏"
+                            imageVector = if (isFavorite) Icons.Default.Favorite else Icons.Default.FavoriteBorder,
+                            contentDescription = if (isFavorite) "已收藏" else "收藏",
+                            tint = if (isFavorite) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface
                         )
                     }
                 },

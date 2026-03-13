@@ -45,6 +45,7 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.tagplayer.musicplayer.data.local.entity.Playlist
 import com.tagplayer.musicplayer.ui.playlist.viewmodel.PlaylistViewModel
+import com.tagplayer.musicplayer.ui.playlist.viewmodel.PlaylistViewModel.Companion.FAVORITES_PLAYLIST_ID
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -110,14 +111,20 @@ fun PlaylistScreen(
                     verticalArrangement = Arrangement.spacedBy(12.dp),
                     contentPadding = androidx.compose.foundation.layout.PaddingValues(16.dp)
                 ) {
+                    // 对歌单排序：系统歌单在前，然后按 sortOrder 排序
+                    val sortedPlaylists = playlists.sortedWith(
+                        compareByDescending<Playlist> { it.isSystem }
+                            .thenBy { it.sortOrder }
+                            .thenBy { it.createdAt }
+                    )
                     items(
-                        items = playlists,
+                        items = sortedPlaylists,
                         key = { it.id }
                     ) { playlist ->
                         PlaylistItem(
                             playlist = playlist,
                             onClick = { onPlaylistClick(playlist) },
-                            onDelete = { viewModel.deletePlaylist(playlist) }
+                            onDelete = if (playlist.isSystem) null else { viewModel.deletePlaylist(playlist) }
                         )
                     }
                 }
@@ -140,7 +147,7 @@ fun PlaylistScreen(
 private fun PlaylistItem(
     playlist: Playlist,
     onClick: () -> Unit,
-    onDelete: () -> Unit
+    onDelete: (() -> Unit)?
 ) {
     Card(
         modifier = Modifier
@@ -191,13 +198,15 @@ private fun PlaylistItem(
                 )
             }
 
-            // 删除按钮
-            IconButton(onClick = onDelete) {
-                Icon(
-                    imageVector = Icons.Default.Delete,
-                    contentDescription = "删除歌单",
-                    tint = MaterialTheme.colorScheme.error
-                )
+            // 删除按钮（系统歌单不显示）
+            if (onDelete != null) {
+                IconButton(onClick = onDelete) {
+                    Icon(
+                        imageVector = Icons.Default.Delete,
+                        contentDescription = "删除歌单",
+                        tint = MaterialTheme.colorScheme.error
+                    )
+                }
             }
         }
     }
