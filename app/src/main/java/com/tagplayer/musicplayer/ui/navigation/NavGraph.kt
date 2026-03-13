@@ -22,6 +22,7 @@ import com.tagplayer.musicplayer.ui.player.screen.LyricsScreen
 import com.tagplayer.musicplayer.ui.artist.screen.ArtistListScreen
 import com.tagplayer.musicplayer.ui.artist.screen.ArtistDetailScreen
 import com.tagplayer.musicplayer.ui.album.screen.AlbumListScreen
+import com.tagplayer.musicplayer.ui.album.screen.AlbumDetailScreen
 import com.tagplayer.musicplayer.ui.settings.screen.SettingsScreen
 
 object Routes {
@@ -150,8 +151,23 @@ fun NavGraph(
             AlbumListScreen(
                 onBackClick = { navController.popBackStack() },
                 onAlbumClick = { album ->
-                    // TODO: 导航到专辑详情页
+                    navController.navigate(Routes.albumDetail(album.name, album.artist))
                 }
+            )
+        }
+        composable(
+            route = Routes.ALBUM_DETAIL,
+            arguments = listOf(
+                navArgument("albumName") { type = NavType.StringType },
+                navArgument("artistName") { type = NavType.StringType }
+            )
+        ) { backStackEntry ->
+            val albumName = backStackEntry.arguments?.getString("albumName") ?: return@composable
+            val artistName = backStackEntry.arguments?.getString("artistName") ?: return@composable
+            AlbumDetailScreen(
+                albumName = albumName,
+                artistName = artistName,
+                onBackClick = { navController.popBackStack() }
             )
         }
         composable(

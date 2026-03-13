@@ -20,4 +20,7 @@ class AlbumViewModel @Inject constructor(
             started = SharingStarted.WhileSubscribed(5000),
             initialValue = emptyList()
         )
+
+    fun getSongsByAlbum(albumName: String, artistName: String) =
+        artistRepository.getSongsByAlbum(albumName, artistName)
 }
