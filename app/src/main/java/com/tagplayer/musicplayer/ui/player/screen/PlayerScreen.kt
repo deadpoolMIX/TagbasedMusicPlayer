@@ -54,6 +54,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -446,29 +447,28 @@ private fun ProgressBar(
     duration: Long,
     onSeek: (Long) -> Unit
 ) {
-    // 使用本地状态来跟踪拖动位置
-    var sliderPosition by remember { mutableFloatStateOf(0f) }
     var isDragging by remember { mutableStateOf(false) }
+    var dragPosition by remember { mutableFloatStateOf(0f) }
 
     // 计算当前播放位置的比例
-    val positionFraction = if (duration > 0) currentPosition.toFloat() / duration else 0f
-
-    // 当不拖动时，自动同步播放位置到滑块位置
-    LaunchedEffect(currentPosition) {
-        if (!isDragging) {
-            sliderPosition = positionFraction
-        }
+    val positionFraction = remember(currentPosition, duration) {
+        if (duration > 0) currentPosition.toFloat() / duration else 0f
     }
+
+    // Slider 显示的当前值
+    val sliderValue = if (isDragging) dragPosition else positionFraction
 
     Column(modifier = Modifier.fillMaxWidth()) {
         Slider(
-            value = sliderPosition,
+            value = sliderValue,
             onValueChange = { fraction ->
-                isDragging = true
-                sliderPosition = fraction
+                if (!isDragging) {
+                    isDragging = true
+                }
+                dragPosition = fraction
             },
             onValueChangeFinished = {
-                onSeek((sliderPosition * duration).toLong())
+                onSeek((dragPosition * duration).toLong())
                 isDragging = false
             },
             modifier = Modifier.fillMaxWidth()
@@ -479,7 +479,7 @@ private fun ProgressBar(
             horizontalArrangement = Arrangement.SpaceBetween
         ) {
             Text(
-                text = formatDuration((sliderPosition * duration).toLong()),
+                text = formatDuration((sliderValue * duration).toLong()),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )

@@ -1,7 +1,6 @@
 package com.tagplayer.musicplayer.ui.player.components
 
 import androidx.compose.animation.core.animateFloatAsState
-import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectDragGesturesAfterLongPress
@@ -22,6 +21,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
@@ -40,19 +40,22 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.zIndex
 import com.tagplayer.musicplayer.data.local.entity.Song
+import kotlinx.coroutines.launch
 
 @Composable
 fun PlaybackQueueSheet(
@@ -101,7 +104,6 @@ fun PlaybackQueueSheet(
     }
 }
 
-@OptIn(ExperimentalFoundationApi::class)
 @Composable
 private fun DraggableQueueContent(
     queue: List<Song>,
@@ -114,10 +116,6 @@ private fun DraggableQueueContent(
 ) {
     var swipeOffset by remember { mutableFloatStateOf(0f) }
     var isDragging by remember { mutableStateOf(false) }
-
-    // 拖拽排序状态
-    var draggedItemIndex by remember { mutableIntStateOf(-1) }
-    var dragOffsetY by remember { mutableFloatStateOf(0f) }
 
     Column(
         modifier = Modifier
@@ -187,50 +185,110 @@ private fun DraggableQueueContent(
         Spacer(modifier = Modifier.height(8.dp))
 
         // Queue List with drag support
-        LazyColumn(
-            modifier = Modifier
-                .fillMaxWidth()
-                .weight(1f),
-            contentPadding = PaddingValues(vertical = 8.dp)
-        ) {
-            itemsIndexed(
-                items = queue,
-                key = { index, song -> "${song.id}_${index}" }
-            ) { index, song ->
-                val isDragged = draggedItemIndex == index
-                val elevation by animateFloatAsState(
-                    targetValue = if (isDragged) 8f else 0f,
-                    label = "elevation"
-                )
+        ReorderableQueueList(
+            queue = queue,
+            currentIndex = currentIndex,
+            onSongClick = onSongClick,
+            onRemoveSong = onRemoveSong,
+            onMoveSong = onMoveSong
+        )
+    }
+}
 
-                QueueItem(
-                    song = song,
-                    isPlaying = index == currentIndex,
-                    isDragged = isDragged,
-                    elevation = elevation,
-                    onClick = { onSongClick(index) },
-                    onRemove = { onRemoveSong(index) },
-                    onDragStart = { draggedItemIndex = index },
-                    onDragEnd = {
-                        draggedItemIndex = -1
+@Composable
+private fun ReorderableQueueList(
+    queue: List<Song>,
+    currentIndex: Int,
+    onSongClick: (Int) -> Unit,
+    onRemoveSong: (Int) -> Unit,
+    onMoveSong: (fromIndex: Int, toIndex: Int) -> Unit
+) {
+    // 使用 SnapshotStateList 来管理可变的列表状态
+    val items = remember { mutableStateListOf<Song>() }
+
+    // 当外部 queue 变化时，同步到内部列表
+    androidx.compose.runtime.LaunchedEffect(queue) {
+        if (items.toList() != queue) {
+            items.clear()
+            items.addAll(queue)
+        }
+    }
+
+    val listState = rememberLazyListState()
+    val scope = rememberCoroutineScope()
+
+    // 拖拽状态
+    var draggedIndex by remember { mutableIntStateOf(-1) }
+    var dragOffsetY by remember { mutableFloatStateOf(0f) }
+    var dragStartY by remember { mutableFloatStateOf(0f) }
+    val itemHeight = 56.dp  // 预估每项高度
+    val itemHeightPx = with(androidx.compose.ui.platform.LocalDensity.current) { itemHeight.toPx() }
+
+    LazyColumn(
+        state = listState,
+        modifier = Modifier
+            .fillMaxWidth()
+            .weight(1f),
+        contentPadding = PaddingValues(vertical = 8.dp)
+    ) {
+        itemsIndexed(
+            items = items,
+            key = { index, song -> "${song.id}_$index" }
+        ) { index, song ->
+            val isDragged = draggedIndex == index
+            val elevation by animateFloatAsState(
+                targetValue = if (isDragged) 8f else 0f,
+                label = "elevation"
+            )
+
+            val scale by animateFloatAsState(
+                targetValue = if (isDragged) 1.02f else 1f,
+                label = "scale"
+            )
+
+            QueueItem(
+                song = song,
+                isPlaying = index == currentIndex,
+                isDragged = isDragged,
+                elevation = elevation,
+                scale = scale,
+                dragOffsetY = if (isDragged) dragOffsetY else 0f,
+                onClick = { onSongClick(index) },
+                onRemove = { onRemoveSong(index) },
+                onDragStart = { offsetY ->
+                    draggedIndex = index
+                    dragStartY = offsetY
+                    dragOffsetY = 0f
+                },
+                onDrag = { dragAmountY ->
+                    dragOffsetY += dragAmountY
+
+                    // 计算目标位置
+                    val totalDrag = dragOffsetY
+                    val itemsDragged = (totalDrag / itemHeightPx).toInt()
+                    val targetIndex = (draggedIndex + itemsDragged).coerceIn(0, items.size - 1)
+
+                    if (targetIndex != draggedIndex) {
+                        // 在列表中交换位置
+                        val item = items.removeAt(draggedIndex)
+                        items.add(targetIndex, item)
+
+                        // 通知外部
+                        onMoveSong(draggedIndex, targetIndex)
+
+                        // 更新拖拽索引
+                        draggedIndex = targetIndex
+                        // 重置偏移量，避免跳跃
                         dragOffsetY = 0f
-                    },
-                    onDrag = { offsetY ->
-                        dragOffsetY = offsetY
-                        // 计算目标位置
-                        val itemHeight = 56f // 预估每项高度
-                        val dragIndex = (offsetY / itemHeight).toInt()
-                        if (dragIndex != 0 && draggedItemIndex != -1) {
-                            val targetIndex = (draggedItemIndex + dragIndex).coerceIn(0, queue.size - 1)
-                            if (targetIndex != draggedItemIndex) {
-                                onMoveSong(draggedItemIndex, targetIndex)
-                                draggedItemIndex = targetIndex
-                            }
-                        }
-                    },
-                    modifier = Modifier.animateItemPlacement()
-                )
-            }
+                    }
+                },
+                onDragEnd = {
+                    draggedIndex = -1
+                    dragOffsetY = 0f
+                    dragStartY = 0f
+                },
+                modifier = if (isDragged) Modifier.zIndex(1f) else Modifier
+            )
         }
     }
 }
@@ -241,17 +299,16 @@ private fun QueueItem(
     isPlaying: Boolean,
     isDragged: Boolean,
     elevation: Float,
+    scale: Float,
+    dragOffsetY: Float,
     onClick: () -> Unit,
     onRemove: () -> Unit,
-    onDragStart: () -> Unit,
-    onDragEnd: () -> Unit,
+    onDragStart: (Float) -> Unit,
     onDrag: (Float) -> Unit,
+    onDragEnd: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    val scale by animateFloatAsState(
-        targetValue = if (isDragged) 1.02f else 1f,
-        label = "scale"
-    )
+    val density = androidx.compose.ui.platform.LocalDensity.current
 
     Row(
         modifier = modifier
@@ -259,37 +316,51 @@ private fun QueueItem(
             .graphicsLayer {
                 scaleX = scale
                 scaleY = scale
-                this.translationY = if (isDragged) 0f else 0f
+                translationY = dragOffsetY
+                shadowElevation = elevation
             }
             .background(
-                if (isDragged) MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
-                else MaterialTheme.colorScheme.surface
+                if (isDragged) {
+                    MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.9f)
+                } else {
+                    MaterialTheme.colorScheme.surface
+                },
+                RoundedCornerShape(8.dp)
             )
             .clickable(onClick = onClick)
-            .pointerInput(Unit) {
-                detectDragGesturesAfterLongPress(
-                    onDragStart = { onDragStart() },
-                    onDragEnd = { onDragEnd() },
-                    onDragCancel = { onDragEnd() },
-                    onDrag = { change, dragAmount ->
-                        change.consume()
-                        onDrag(dragAmount.y)
-                    }
-                )
-            }
-            .padding(vertical = 8.dp),
+            .padding(vertical = 8.dp, horizontal = 4.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        // Drag handle
-        Icon(
-            imageVector = Icons.Default.DragHandle,
-            contentDescription = "拖动排序",
-            modifier = Modifier.size(20.dp),
-            tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)
-        )
+        // 拖拽手柄（三条杠图标）
+        Box(
+            modifier = Modifier
+                .size(40.dp)
+                .pointerInput(Unit) {
+                    detectDragGesturesAfterLongPress(
+                        onDragStart = { offset ->
+                            onDragStart(offset.y)
+                        },
+                        onDragEnd = { onDragEnd() },
+                        onDragCancel = { onDragEnd() },
+                        onDrag = { change, dragAmount ->
+                            change.consume()
+                            onDrag(dragAmount.y)
+                        }
+                    )
+                },
+            contentAlignment = Alignment.Center
+        ) {
+            Icon(
+                imageVector = Icons.Default.DragHandle,
+                contentDescription = "拖动排序",
+                modifier = Modifier.size(24.dp),
+                tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)
+            )
+        }
+
         Spacer(modifier = Modifier.width(4.dp))
 
-        // Playing indicator
+        // 正在播放指示器
         if (isPlaying) {
             Box(
                 modifier = Modifier
@@ -302,7 +373,7 @@ private fun QueueItem(
             Spacer(modifier = Modifier.width(12.dp))
         }
 
-        // Icon
+        // 音乐图标
         Icon(
             imageVector = Icons.Default.MusicNote,
             contentDescription = null,
@@ -316,7 +387,7 @@ private fun QueueItem(
 
         Spacer(modifier = Modifier.width(12.dp))
 
-        // Song info
+        // 歌曲信息
         Column(
             modifier = Modifier.weight(1f)
         ) {
@@ -340,7 +411,7 @@ private fun QueueItem(
             )
         }
 
-        // Remove button
+        // 删除按钮
         IconButton(onClick = onRemove) {
             Icon(
                 imageVector = Icons.Default.Delete,

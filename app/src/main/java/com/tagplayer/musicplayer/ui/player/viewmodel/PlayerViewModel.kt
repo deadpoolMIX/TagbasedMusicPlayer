@@ -107,3 +107,4 @@ class PlayerViewModel @Inject constructor(
     fun moveSong(fromIndex: Int, toIndex: Int) {
         musicPlayer.moveSong(fromIndex, toIndex)
     }
+}

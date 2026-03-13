@@ -19,7 +19,7 @@ class PlaybackQueue {
     }
 
     fun getQueue(): List<Song> {
-        return if (isShuffling) shuffledQueue else originalQueue
+        return (if (isShuffling) shuffledQueue else originalQueue).toList()
     }
 
     fun getCurrentSong(): Song? {

@@ -220,6 +220,16 @@ class MusicPlayer @Inject constructor(
         return playbackQueue.getQueue()
     }
 
+    fun moveSong(fromIndex: Int, toIndex: Int) {
+        playbackQueue.moveSong(fromIndex, toIndex)
+        _queue.value = playbackQueue.getQueue()
+        _currentIndex.value = playbackQueue.getCurrentIndex()
+        _playbackState.value = _playbackState.value.copy(
+            currentIndex = playbackQueue.getCurrentIndex()
+        )
+        _playerEvents.trySend(PlayerEvent.QueueUpdated)
+    }
+
     fun setRepeatMode(mode: RepeatMode) {
         playbackQueue.setRepeatMode(mode)
         _playbackState.value = _playbackState.value.copy(repeatMode = mode)

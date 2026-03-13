@@ -883,9 +883,48 @@ ScanFolder (扫描文件夹)
 
 ---
 
-- **d69b80e** - Initial commit: Phase 8 complete
-- **bee2dfe** - 修复字母索引导航手势处理
-- **101b1d6** - 修复播放页UI问题
-- **9dc11d0** - 修复 Coil API 使用错误
+## 播放队列修复 (2026-03-14)
+
+### 修复1: 播放列表长按拖动排序
+- [x] 修改 PlaybackQueueSheet.kt
+  - 添加 `detectDragGesturesAfterLongPress` 实现长按拖拽
+  - 添加拖动指示器（DragHandle 图标）
+  - 实时计算目标位置并交换
+  - 添加 `onMoveSong` 回调
+- [x] 添加 moveSong 方法到 MusicPlayer 和 PlayerViewModel
+
+### 修复2: 歌词页面显示歌词
+- [x] 修改 MusicScanner.kt
+  - 添加 `loadLyricsFromFile()` 方法
+  - 扫描时自动查找同目录 .lrc 文件
+  - 支持 UTF-8 编码
+- [x] 歌词解析使用 LyricsParser.parseLrc()
+
+### 修复3: 播放列表删除立即刷新
+- [x] 修改 MusicPlayer.removeFromQueue()
+  - 删除后更新 `_currentIndex.value`
+  - 删除后更新 `PlaybackState.currentIndex`
+
+### 修复4: 播放列表当前播放索引同步
+- [x] 修改 MusicPlayer.playAtIndex()
+  - 更新 `PlaybackState.currentIndex` 为正确索引
+  - 问题根源：之前只更新了 `_currentIndex`，未同步到 PlaybackState
+
+### 创建的文件
+| 文件 | 说明 |
+|------|------|
+| - | 无新文件 |
+
+### 修改的文件
+| 文件 | 修改内容 |
+|------|----------|
+| PlaybackQueueSheet.kt | 添加长按拖拽排序功能 |
+| PlayerScreen.kt | 添加 onMoveSong 回调 |
+| PlayerViewModel.kt | 添加 moveSong 方法 |
+| MusicPlayer.kt | 修复 currentIndex 同步，修复 removeFromQueue 刷新 |
+| MusicScanner.kt | 添加歌词文件读取 |
 
 ---
+
+- **a50145d** - 修复播放队列4个问题
+

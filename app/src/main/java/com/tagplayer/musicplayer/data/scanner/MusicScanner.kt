@@ -146,36 +146,37 @@ class MusicScanner @Inject constructor(
         if (filePath.isEmpty()) return null
 
         val file = java.io.File(filePath)
-        val parentDir = file.parentFile
+        val parentDir = file.parentFile ?: return null
         val fileNameWithoutExt = file.nameWithoutExtension
 
-        // 尝试查找同名的 .lrc 文件
-        val lrcFile = java.io.File(parentDir, "$fileNameWithoutExt.lrc")
-        if (lrcFile.exists()) {
-            return try {
-                lrcFile.readText(Charsets.UTF_8)
-            } catch (e: Exception) {
-                // 尝试 GBK 编码
-                try {
-                    lrcFile.readText(Charsets.UTF_8)
-                } catch (e2: Exception) {
-                    null
-                }
-            }
-        }
-
-        // 尝试查找其他常见的歌词文件名格式
-        val possibleLyricsFiles = listOf(
-            java.io.File(parentDir, "$fileNameWithoutExt.LRC"),
-            java.io.File(parentDir, "${fileNameWithoutExt}.txt")
+        // 尝试查找同名的 .lrc 文件（支持多种扩展名大小写）
+        val possibleNames = listOf(
+            "$fileNameWithoutExt.lrc",
+            "$fileNameWithoutExt.LRC",
+            "$fileNameWithoutExt.txt",
+            "$fileNameWithoutExt.TXT"
         )
 
-        for (lyricsFile in possibleLyricsFiles) {
-            if (lyricsFile.exists()) {
-                return try {
-                    lyricsFile.readText(Charsets.UTF_8)
+        for (lrcFileName in possibleNames) {
+            val lrcFile = java.io.File(parentDir, lrcFileName)
+            if (lrcFile.exists() && lrcFile.canRead()) {
+                // 尝试 UTF-8 编码
+                try {
+                    val content = lrcFile.readText(Charsets.UTF_8)
+                    if (content.isNotBlank()) {
+                        return content
+                    }
                 } catch (e: Exception) {
-                    null
+                    // UTF-8 失败，尝试 GBK 编码
+                    try {
+                        val content = lrcFile.readText(Charsets.ISO_8859_1)
+                            .let { String(it.toByteArray(Charsets.ISO_8859_1), Charsets.forName("GBK")) }
+                        if (content.isNotBlank()) {
+                            return content
+                        }
+                    } catch (e2: Exception) {
+                        // 继续尝试下一个文件
+                    }
                 }
             }
         }
