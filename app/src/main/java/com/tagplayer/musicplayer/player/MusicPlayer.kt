@@ -42,6 +42,12 @@ class MusicPlayer @Inject constructor(
     private val _duration = MutableStateFlow(0L)
     val duration: StateFlow<Long> = _duration.asStateFlow()
 
+    private val _queue = MutableStateFlow<List<com.tagplayer.musicplayer.data.local.entity.Song>>(emptyList())
+    val queue: StateFlow<List<com.tagplayer.musicplayer.data.local.entity.Song>> = _queue.asStateFlow()
+
+    private val _currentIndex = MutableStateFlow(0)
+    val currentIndex: StateFlow<Int> = _currentIndex.asStateFlow()
+
     private val playbackQueue = PlaybackQueue()
 
     private val playerListener = object : Player.Listener {
@@ -156,6 +162,8 @@ class MusicPlayer @Inject constructor(
         initializePlayer()
 
         playbackQueue.setQueue(songs, startIndex)
+        _queue.value = playbackQueue.getQueue()
+        _currentIndex.value = playbackQueue.getCurrentIndex()
         val currentSong = playbackQueue.getCurrentSong()
         if (currentSong != null) {
             // 立即更新状态，让 MiniPlayer 显示
@@ -167,23 +175,39 @@ class MusicPlayer @Inject constructor(
         }
     }
 
+    fun playAtIndex(index: Int) {
+        val song = playbackQueue.playAtIndex(index)
+        _currentIndex.value = index
+        if (song != null) {
+            _playbackState.value = _playbackState.value.copy(
+                currentSong = song,
+                currentSongId = song.id
+            )
+            playSong(song)
+        }
+    }
+
     fun addToQueue(song: com.tagplayer.musicplayer.data.local.entity.Song) {
         playbackQueue.addToQueue(song)
+        _queue.value = playbackQueue.getQueue()
         _playerEvents.trySend(PlayerEvent.QueueUpdated)
     }
 
     fun addToQueueNext(song: com.tagplayer.musicplayer.data.local.entity.Song) {
         playbackQueue.addToQueueNext(song)
+        _queue.value = playbackQueue.getQueue()
         _playerEvents.trySend(PlayerEvent.QueueUpdated)
     }
 
     fun removeFromQueue(index: Int) {
         playbackQueue.removeFromQueue(index)
+        _queue.value = playbackQueue.getQueue()
         _playerEvents.trySend(PlayerEvent.QueueUpdated)
     }
 
     fun clearQueue() {
         playbackQueue.clear()
+        _queue.value = emptyList()
         _playerEvents.trySend(PlayerEvent.QueueUpdated)
     }
 
@@ -210,6 +234,7 @@ class MusicPlayer @Inject constructor(
     }
 
     private fun playSong(song: com.tagplayer.musicplayer.data.local.entity.Song) {
+        _currentIndex.value = playbackQueue.getCurrentIndex()
         val mediaItem = MediaItem.Builder()
             .setMediaId(song.id.toString())
             .setUri(song.filePath)

@@ -40,7 +40,7 @@ fun BottomNavBar(
             NavigationBarItem(
                 icon = {
                     Icon(
-                        imageVector = if (selected) screen.selectedIcon else screen.unselectedIcon,
+                        imageVector = if (selected) screen.selectedIcon!! else screen.unselectedIcon!!,
                         contentDescription = screen.title
                     )
                 },

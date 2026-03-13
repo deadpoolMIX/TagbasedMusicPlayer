@@ -62,4 +62,20 @@ interface PlaylistDao {
 
     @Query("SELECT EXISTS(SELECT 1 FROM playlist_songs WHERE playlistId = :playlistId AND songId = :songId)")
     suspend fun isSongInPlaylist(playlistId: Long, songId: Long): Boolean
+
+    // Backup/Restore methods
+    @Query("SELECT * FROM playlists")
+    suspend fun getAllPlaylistsList(): List<Playlist>
+
+    @Query("SELECT * FROM playlist_songs")
+    suspend fun getAllPlaylistSongsList(): List<PlaylistSong>
+
+    @Query("DELETE FROM playlists")
+    suspend fun deleteAllPlaylists()
+
+    @Query("DELETE FROM playlist_songs")
+    suspend fun deleteAllPlaylistSongs()
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertPlaylistSong(playlistSong: PlaylistSong)
 }

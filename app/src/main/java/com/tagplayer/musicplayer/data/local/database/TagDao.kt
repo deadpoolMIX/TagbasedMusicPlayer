@@ -75,4 +75,20 @@ interface TagDao {
     @Transaction
     @Query("SELECT s.* FROM songs s INNER JOIN song_tags st ON s.id = st.songId WHERE st.tagId = :tagId ORDER BY s.title ASC")
     fun getSongsForTag(tagId: Long): Flow<List<com.tagplayer.musicplayer.data.local.entity.Song>>
+
+    // Backup/Restore methods
+    @Query("SELECT * FROM tags")
+    suspend fun getAllTagsList(): List<Tag>
+
+    @Query("SELECT * FROM song_tags")
+    suspend fun getAllSongTagsList(): List<SongTag>
+
+    @Query("DELETE FROM tags")
+    suspend fun deleteAllTags()
+
+    @Query("DELETE FROM song_tags")
+    suspend fun deleteAllSongTags()
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertSongTag(songTag: SongTag)
 }

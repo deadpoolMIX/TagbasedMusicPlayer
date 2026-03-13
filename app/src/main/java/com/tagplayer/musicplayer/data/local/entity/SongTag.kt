@@ -1,7 +1,9 @@
 package com.tagplayer.musicplayer.data.local.entity
 
 import androidx.room.Entity
+import kotlinx.serialization.Serializable
 
+@Serializable
 @Entity(
     tableName = "song_tags",
     primaryKeys = ["songId", "tagId"]

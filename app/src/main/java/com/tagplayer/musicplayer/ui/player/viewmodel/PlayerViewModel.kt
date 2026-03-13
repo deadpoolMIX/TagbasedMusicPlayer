@@ -39,6 +39,22 @@ class PlayerViewModel @Inject constructor(
             initialValue = 0L
         )
 
+    // 播放队列
+    val queue: StateFlow<List<Song>> = musicPlayer.queue
+        .stateIn(
+            scope = viewModelScope,
+            started = SharingStarted.WhileSubscribed(5000),
+            initialValue = emptyList()
+        )
+
+    // 当前播放索引
+    val currentIndex: StateFlow<Int> = musicPlayer.currentIndex
+        .stateIn(
+            scope = viewModelScope,
+            started = SharingStarted.WhileSubscribed(5000),
+            initialValue = 0
+        )
+
     fun playPauseToggle() {
         musicPlayer.playPauseToggle()
     }
@@ -66,6 +82,10 @@ class PlayerViewModel @Inject constructor(
 
     fun setQueue(songs: List<Song>, startIndex: Int = 0) {
         musicPlayer.setQueue(songs, startIndex)
+    }
+
+    fun playAtIndex(index: Int) {
+        musicPlayer.playAtIndex(index)
     }
 
     fun addToQueue(song: Song) {

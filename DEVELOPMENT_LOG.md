@@ -6,8 +6,6 @@
 
 ## 阶段一: 项目基础搭建
 
-### 开始时间: 2026-03-13
-
 ### 任务清单
 - [ ] 创建Android Studio项目
 - [ ] 配置build.gradle.kts依赖
@@ -19,8 +17,6 @@
 - [ ] 配置权限 (音频读取、通知)
 
 ### 进度记录
-
-#### 2026-03-13 - 阶段一完成
 - [x] 创建项目基础结构
 - [x] 配置Gradle和依赖库 (gradle/libs.versions.toml)
 - [x] 配置build.gradle.kts (项目级和应用级)
@@ -45,9 +41,7 @@
 
 ---
 
-## 阶段二: 数据层实现 (预计3-4天)
-
-### 开始时间: 2026-03-13
+## 阶段二: 数据层实现
 
 ### 任务清单
 - [x] Room数据库完整搭建 (所有实体和DAO)
@@ -55,8 +49,6 @@
 - [x] Repository层实现
 
 ### 进度记录
-
-#### 2026-03-13 - 阶段二完成
 - [x] Room数据库完整搭建 (MusicDatabase.kt)
   - 6个实体: Song, Tag, SongTag, Playlist, PlaylistSong, ScanFolder
   - 4个DAO: SongDao, TagDao, PlaylistDao, ScanFolderDao
@@ -119,38 +111,7 @@ ScanFolder (扫描文件夹)
 
 ---
 
-#### 2026-03-13 - Bug修复
-- 修复 Screen.kt 中 Compose Material Icons 导入错误
-- 将 AutoMirrored 图标替换为标准图标 (LibraryMusic) 以避免接收器类型不匹配问题
-
-#### 2026-03-13 - Bug修复 (阶段三)
-- 修复 PlaybackService.kt 第11行拼写错误: `nimport` → `import`
-- 添加 MediaSessionCallback 的 `@OptIn(UnstableApi::class)` 注解
-
----
-
-## 🔧 技术栈已配置
-
-| 组件 | 版本 | 状态 |
-|------|------|------|
-| Kotlin | 1.9.22 | ✅ |
-| Jetpack Compose | 2024.02.00 | ✅ |
-| Hilt | 2.50 | ✅ |
-| Room | 2.6.1 | ✅ |
-| Media3 (ExoPlayer) | 1.2.1 | ✅ |
-| Coil | 2.5.0 | ✅ |
-
-## 📝 权限已配置
-
-- `READ_MEDIA_AUDIO` - 读取音频文件
-- `FOREGROUND_SERVICE_MEDIA_PLAYBACK` - 前台播放服务
-- `POST_NOTIFICATIONS` - 通知权限
-
----
-
-## 阶段三: 音频播放核心 (预计4-5天)
-
-### 开始时间: 2026-03-13
+## 阶段三: 音频播放核心
 
 ### 任务清单
 - [x] ExoPlayer集成 (播放/暂停/切歌)
@@ -160,8 +121,6 @@ ScanFolder (扫描文件夹)
 - [x] 播放状态管理
 
 ### 进度记录
-
-#### 2026-03-13 - 阶段三完成
 - [x] ExoPlayer集成 (MusicPlayer.kt)
   - 播放/暂停/停止
   - 上一首/下一首
@@ -219,9 +178,7 @@ ScanFolder (扫描文件夹)
 
 ---
 
-## 阶段四: UI基础组件 (预计2-3天)
-
-### 开始时间: 2026-03-13
+## 阶段四: UI基础组件
 
 ### 任务清单
 - [ ] MiniPlayer组件 (底部悬浮播放器)
@@ -231,8 +188,6 @@ ScanFolder (扫描文件夹)
 - [ ] 底部操作面板
 
 ### 进度记录
-
-#### 2026-03-13 - 阶段四完成
 - [x] MiniPlayer组件 (底部悬浮播放器)
   - 显示当前播放歌曲信息
   - 播放/暂停/上一首/下一首控制
@@ -280,9 +235,7 @@ ScanFolder (扫描文件夹)
 
 ---
 
-## 阶段五: 首页功能实现 (预计2-3天)
-
-### 开始时间: 2026-03-13
+## 阶段五: 首页功能实现
 
 ### 任务清单
 - [x] HomeViewModel创建
@@ -294,8 +247,6 @@ ScanFolder (扫描文件夹)
 - [x] 空状态处理
 
 ### 进度记录
-
-#### 2026-03-13 - 阶段五完成
 - [x] HomeViewModel创建 (`HomeViewModel.kt`)
   - 搜索状态管理
   - 筛选类型状态 (ALL/RECENT/ARTIST/ALBUM)
@@ -314,18 +265,17 @@ ScanFolder (扫描文件夹)
   - 点击歌曲播放
   - 操作菜单: 下一首播放
   - 操作菜单: 删除歌曲
-
-#### 2026-03-13 - 修复权限和添加文件夹管理
-- [x] 修复扫描无反应问题 - 添加运行时权限申请
-  - 创建 PermissionUtils.kt 工具类
-  - 适配 Android 13+ READ_MEDIA_AUDIO 权限
-  - HomeScreen 添加权限申请对话框
-- [x] 添加手动文件夹扫描功能
-  - HomeViewModel 添加文件夹管理方法
-  - SongRepository 添加 scanFolder 方法
-  - HomeScreen 添加文件夹管理对话框
-  - 支持使用系统文件夹选择器 (OpenDocumentTree)
-  - 支持添加/移除扫描文件夹
+- [x] 修复权限和添加文件夹管理
+  - 修复扫描无反应问题 - 添加运行时权限申请
+    - 创建 PermissionUtils.kt 工具类
+    - 适配 Android 13+ READ_MEDIA_AUDIO 权限
+    - HomeScreen 添加权限申请对话框
+  - 添加手动文件夹扫描功能
+    - HomeViewModel 添加文件夹管理方法
+    - SongRepository 添加 scanFolder 方法
+    - HomeScreen 添加文件夹管理对话框
+    - 支持使用系统文件夹选择器 (OpenDocumentTree)
+    - 支持添加/移除扫描文件夹
 
 ### 阶段五完成内容总结
 
@@ -367,9 +317,7 @@ ScanFolder (扫描文件夹)
 
 ---
 
-## 阶段六: 歌单功能实现 (预计2-3天)
-
-### 开始时间: 2026-03-13
+## 阶段六: 歌单功能实现
 
 ### 任务清单
 - [x] PlaylistViewModel创建
@@ -378,8 +326,6 @@ ScanFolder (扫描文件夹)
 - [x] AddToPlaylistDialog添加到歌单对话框
 
 ### 进度记录
-
-#### 2026-03-13 - 阶段六完成
 - [x] 创建 PlaylistViewModel
   - 歌单列表管理
   - 创建/删除歌单
@@ -413,9 +359,7 @@ ScanFolder (扫描文件夹)
 
 ---
 
-## 阶段七: 标签功能实现 (预计3-4天)
-
-### 开始时间: 2026-03-13
+## 阶段七: 标签功能实现
 
 ### 任务清单
 - [x] TagViewModel创建
@@ -424,8 +368,6 @@ ScanFolder (扫描文件夹)
 - [x] TagSelectionDialog标签选择对话框
 
 ### 进度记录
-
-#### 2026-03-13 - 阶段七完成
 - [x] 创建 TagViewModel
   - 标签列表管理
   - 创建/编辑/删除标签
@@ -478,9 +420,7 @@ ScanFolder (扫描文件夹)
 
 ---
 
-## 阶段八: 筛选功能实现 (预计3-4天)
-
-### 开始时间: 2026-03-13
+## 阶段八: 筛选功能实现
 
 ### 任务清单
 - [x] FilterViewModel 筛选逻辑和状态管理
@@ -491,8 +431,6 @@ ScanFolder (扫描文件夹)
 - [x] 保存筛选结果为歌单功能
 
 ### 进度记录
-
-#### 2026-03-13 - 阶段八完成
 - [x] 创建 FilterViewModel
   - 管理框A/B/C的标签选择状态
   - 集成 FilterRepository 的布尔运算逻辑
@@ -544,122 +482,125 @@ ScanFolder (扫描文件夹)
 
 ---
 
-## Bug修复记录
+## 阶段九: 正在播放页实现
 
-### 修复1: 隐藏底部导航栏
-- [x] 修改 MainActivity.kt
-  - 在进入歌单添加歌曲、专辑列表、艺术家列表、艺术家详情页面时隐藏底部导航栏
-  - 添加 hideBottomBar 状态判断
+### 任务清单
+- [x] 播放队列弹窗
+- [x] 歌词功能 (LRC解析器、歌词页面)
+- [x] 播放控制增强
 
-### 修复2: 添加歌曲页面底部按钮位置
-- [x] 修改 AddSongsToPlaylistScreen.kt
-  - 使用 Box 布局使按钮固定在屏幕底部
-
-### 修复3: 最近播放功能修复
-- [x] 修改 MusicPlayer.kt
-  - 播放歌曲时调用 songRepository.incrementPlayCount() 更新播放记录
-  - 注入 SongRepository 依赖
-
-### 修复4: 创建艺术家详情页面
-- [x] 创建 ArtistDetailScreen.kt
-  - 显示艺术家所有歌曲
-  - 顶部显示歌曲数量
-  - 播放全部按钮（顶部和底部各一个）
-  - 点击歌曲播放该艺术家所有歌曲
-- [x] 创建 ArtistDetailViewModel.kt
-  - 根据艺术家名称获取歌曲列表
-- [x] 更新 NavGraph.kt 添加 ARTIST_DETAIL 路由
-
-### 修复5: 字母表快速导航改进
-- [x] 创建 PinyinUtils.kt 拼音工具类
-  - 中文按拼音首字母归类
-  - 日文字符、数字、特殊符号归为 #
-  - 提供固定字母索引列表 # + A-Z
-- [x] 修改 ArtistListScreen.kt
-  - 按拼音首字母分组艺术家
-  - 右侧字母栏固定显示 # + A-Z
-  - 无数据的字母显示为浅灰色
-  - 点击/拖拽时只响应有数据的字母
-- [x] 修改 AlbumListScreen.kt
-  - 应用相同的拼音索引逻辑
-  - 中文专辑按拼音首字母分组
-
-### 修复6: UI尺寸调整
-- [x] 修改 PlaylistDetailScreen.kt
-  - 缩小 PlaylistHeader 尺寸
-  - 封面从 80.dp 缩小到 56.dp
-  - 整体内边距从 16.dp 减少到 12.dp
-  - 歌曲数量改为水平排列，更加紧凑
+### 进度记录
+- [x] 播放队列弹窗 (PlaybackQueueSheet.kt)
+- [x] 歌词功能
+  - LRC歌词解析器 (LyricsParser.kt)
+  - 全屏歌词页面 (LyricsScreen.kt)
+- [x] 播放控制增强
+  - PlayerScreen 添加播放队列按钮、歌词入口
+  - PlayerViewModel 添加队列管理方法
+  - MusicPlayer 添加 queue/currentIndex StateFlow
+  - PlaybackQueue 添加 playAtIndex 方法
+  - PlaybackState 添加 currentIndex
 
 ### 创建的文件
 | 文件 | 说明 |
 |------|------|
-| PinyinUtils.kt | 中文转拼音首字母工具类 |
-| ArtistDetailScreen.kt | 艺术家详情页面 |
-| ArtistDetailViewModel.kt | 艺术家详情状态管理 |
+| PlaybackQueueSheet.kt | 播放队列弹窗组件 |
+| LyricsParser.kt | LRC歌词解析器 |
+| LyricsScreen.kt | 全屏歌词页面 |
 
 ### 修改的文件
 | 文件 | 修改内容 |
 |------|----------|
-| MainActivity.kt | 特定页面隐藏底部导航栏 |
-| AddSongsToPlaylistScreen.kt | 修复底部按钮位置 |
-| MusicPlayer.kt | 修复最近播放记录更新 |
-| ArtistListScreen.kt | 字母索引导航改进 |
-| AlbumListScreen.kt | 字母索引导航改进 |
-| PlaylistDetailScreen.kt | 缩小头部尺寸 |
-| NavGraph.kt | 添加艺术家详情路由 |
+| PlayerScreen.kt | 添加播放队列按钮、歌词入口 |
+| PlayerViewModel.kt | 添加队列管理方法 |
+| MusicPlayer.kt | 添加 queue/currentIndex StateFlow |
+| PlaybackQueue.kt | 添加 playAtIndex 方法 |
+| PlaybackState.kt | 添加 currentIndex |
+
+### 功能清单
+| 功能 | 状态 |
+|------|------|
+| 播放队列弹窗 | ✅ |
+| 队列歌曲点击播放 | ✅ |
+| 队列歌曲删除 | ✅ |
+| 清空队列 | ✅ |
+| LRC歌词解析 | ✅ |
+| 全屏歌词显示 | ✅ |
+| 歌词逐行高亮 | ✅ |
+| 点击歌词跳转 | ✅ |
+| 歌词自动滚动 | ✅ |
 
 ---
 
-### 2026-03-13 - 修复测试发现的问题
+## 阶段十: 设置功能实现
 
-#### 修复1: MiniPlayer点击进入完整播放器
-- [x] 创建 PlayerScreen.kt 完整播放器界面
-  - 专辑封面占位 (点击显示歌词)
-  - 歌曲信息显示 (歌名/歌手/专辑)
-  - 进度条和播放控制
-  - 播放模式切换 (顺序/列表循环/单曲循环)
-  - 随机播放切换
-- [x] 更新 NavGraph 添加 PLAYER 路由
-- [x] 更新 MainActivity MiniPlayer onPlayerClick 导航到播放器
-- [x] 播放器页面隐藏底部导航栏
+### 任务清单
+- [x] 设置页UI
+- [x] 主题设置 (浅色/深色/跟随系统)
+- [x] 数据备份与导入 (JSON格式)
+- [x] 文件夹管理
+- [x] 其他设置 (清除缓存、关于页面)
 
-#### 修复2: 顶部空白问题
-- [x] 移除 MainActivity.enableEdgeToEdge() 调用
-- [x] 修复状态栏与标题栏之间的空白
+### 进度记录
+- [x] 设置页UI (SettingsScreen.kt)
+- [x] 主题设置 (ThemeManager.kt)
+  - 浅色/深色/跟随系统
+- [x] 数据备份与导入 (SettingsRepository.kt)
+  - JSON格式导出
+  - JSON格式导入
+- [x] 文件夹管理
+- [x] 其他设置
+  - 清除缓存
+  - 关于页面
 
-#### 修复3: 添加文件夹闪退
-- [x] 修复 URI 处理逻辑
-  - 添加 getRealPathFromUri() 方法解析真实路径
-  - 添加 getFolderNameFromUri() 获取文件夹名称
-- [x] 更新 ScanFolder 实体添加 name 字段
-- [x] 数据库版本升级到 2
-- [x] 更新 ScanFolderRepository 支持保存名称
-- [x] 更新 HomeViewModel.addScanFolderByUri() 正确处理 URI
+### 创建的文件
+| 文件 | 说明 |
+|------|------|
+| SettingsViewModel.kt | 设置状态管理 |
+| SettingsScreen.kt | 设置页面UI |
+| SettingsRepository.kt | 设置数据存储和备份逻辑 |
+| ThemeManager.kt | 主题管理器 |
 
-### 修复后测试清单
-- [x] 点击 MiniPlayer 进入完整播放器
-- [x] 顶部空白已消失
-- [x] 添加文件夹不闪退
-- [x] 文件夹名称正确显示
+### 修改的文件
+| 文件 | 修改内容 |
+|------|----------|
+| MainActivity.kt | 集成动态主题切换 |
+| HomeScreen.kt | 添加设置入口按钮 |
+| NavGraph.kt | 添加 Settings/Lyrics 路由 |
+| Screen.kt | 添加 Settings 屏幕定义 |
+| AppModule.kt | 添加 DataStore |
+| build.gradle.kts | 添加 kotlinx-serialization |
+| libs.versions.toml | 添加 serialization 依赖 |
+| 实体类 | 添加 @Serializable 注解 |
+| DAO | 添加备份/恢复方法 |
+
+### 功能清单
+| 功能 | 状态 |
+|------|------|
+| 主题切换 | ✅ |
+| 导出JSON备份 | ✅ |
+| 导入JSON备份 | ✅ |
+| 文件夹管理 | ✅ |
+| 清除缓存 | ✅ |
+| 关于页面 | ✅ |
 
 ---
 
-### 2026-03-14 - 筛选页和首页功能改进
+## 功能改进记录
 
-#### 改进1: FilterScreen 统一滑动
+### 改进1: FilterScreen 统一滑动
 - [x] 修复筛选页整体滑动问题
   - 将 Column + 嵌套 LazyColumn 改为单一 LazyColumn
   - 筛选条件头部作为 LazyColumn 的 item 元素
   - 筛选结果歌曲列表作为 items 元素
   - 整个页面可以统一滑动
 
-#### 改进2: 筛选页无条件时显示所有歌曲
+### 改进2: 筛选页无条件时显示所有歌曲
 - [x] 修改 FilterViewModel
   - 当框A、框B、框C都为空时，显示所有歌曲
   - 从 SongRepository 获取全部歌曲
 
-#### 改进3: HomeScreen 添加排序功能
+### 改进3: HomeScreen 添加排序功能
 - [x] 添加排序按钮在"n首歌曲"标题栏右侧
 - [x] 创建 SortDialog 排序对话框
 - [x] 支持6种排序方式：
@@ -670,14 +611,14 @@ ScanFolder (扫描文件夹)
   - 歌手名称（A→Z）
   - 歌手名称（Z→A）
 
-#### 改进4: 实现"最近播放"功能
+### 改进4: 实现"最近播放"功能
 - [x] SongDao 添加 getRecentlyPlayedSongs() 查询
 - [x] SongRepository 添加 getRecentlyPlayedSongs() 方法
 - [x] HomeViewModel 添加最近播放数据流
 - [x] 点击"最近播放"筛选按钮显示最近播放过的歌曲
 - [x] 按最近播放时间倒序排列（最上面是最近播放的）
 
-#### 改进5: 实现艺术家列表页面
+### 改进5: 实现艺术家列表页面
 - [x] 创建 ArtistRepository.kt
   - 按艺术家名称聚合歌曲
   - 统计每个艺术家的歌曲数量
@@ -688,7 +629,7 @@ ScanFolder (扫描文件夹)
   - 右侧字母索引栏导航
   - 点击字母跳转到对应艺术家
 
-#### 改进6: 实现专辑网格页面
+### 改进6: 实现专辑网格页面
 - [x] ArtistRepository 添加 getAlbums() 方法
   - 按专辑名称和艺术家聚合歌曲
   - 统计每个专辑的歌曲数量
@@ -699,9 +640,26 @@ ScanFolder (扫描文件夹)
   - 支持排序（标题/年份/数量）
   - 支持调整列数（2/3/4列）
 
-#### 改进7: 更新导航
+### 改进7: 更新导航
 - [x] NavGraph.kt 添加 ARTIST_LIST 和 ALBUM_LIST 路由
 - [x] HomeScreen 点击"艺术家"/"专辑"按钮导航到新页面
+
+### 改进8: 添加歌曲改为独立页面
+- [x] 创建 AddSongsToPlaylistScreen.kt 独立页面
+  - 支持搜索歌曲
+  - 支持多选（Checkbox）
+  - 显示已选择数量
+  - 顶部标题栏显示选择数量
+  - 底部添加按钮
+- [x] 更新 NavGraph 添加 ADD_SONGS_TO_PLAYLIST 路由
+- [x] 修改 PlaylistDetailScreen 导航到新页面
+- [x] 移除 PlaylistDetailScreen 中的弹窗代码
+
+### 改进9: 歌单详情页头部显示歌曲数量
+- [x] 修改 PlaylistHeader 组件
+  - 移除歌单名称（顶部导航栏已显示）
+  - 显示加粗的歌曲数量（与标签详情页一致）
+  - 显示 "首歌曲" 文字
 
 ### 创建的文件
 | 文件 | 说明 |
@@ -725,61 +683,30 @@ ScanFolder (扫描文件夹)
 
 ---
 
-#### 改进1: 添加歌曲改为独立页面
-- [x] 创建 AddSongsToPlaylistScreen.kt 独立页面
-  - 支持搜索歌曲
-  - 支持多选（Checkbox）
-  - 显示已选择数量
-  - 顶部标题栏显示选择数量
-  - 底部添加按钮
-- [x] 更新 NavGraph 添加 ADD_SONGS_TO_PLAYLIST 路由
-- [x] 修改 PlaylistDetailScreen 导航到新页面
-- [x] 移除 PlaylistDetailScreen 中的弹窗代码
-
-#### 改进2: 歌单详情页头部显示歌曲数量
-- [x] 修改 PlaylistHeader 组件
-  - 移除歌单名称（顶部导航栏已显示）
-  - 显示加粗的歌曲数量（与标签详情页一致）
-  - 显示 "首歌曲" 文字
-
----
-
-#### 改进1: 添加歌曲改为独立页面
-- [x] 创建 AddSongsToPlaylistScreen.kt 独立页面
-  - 支持搜索歌曲
-  - 支持多选（Checkbox）
-  - 显示已选择数量
-  - 顶部标题栏显示选择数量
-  - 底部添加按钮
-- [x] 更新 NavGraph 添加 ADD_SONGS_TO_PLAYLIST 路由
-- [x] 修改 PlaylistDetailScreen 导航到新页面
-- [x] 移除 PlaylistDetailScreen 中的弹窗代码
-
-#### 改进2: 歌单详情页头部显示歌曲数量
-- [x] 修改 PlaylistHeader 组件
-  - 移除歌单名称（顶部导航栏已显示）
-  - 显示加粗的歌曲数量（与标签详情页一致）
-  - 显示 "首歌曲" 文字
-
----
-
 ## Bug修复记录
 
-### 修复1: 隐藏底部导航栏
+### 修复1: Screen.kt 中 Compose Material Icons 导入错误
+- [x] 将 AutoMirrored 图标替换为标准图标 (LibraryMusic) 以避免接收器类型不匹配问题
+
+### 修复2: PlaybackService.kt 拼写错误
+- [x] 修复第11行拼写错误: `nimport` → `import`
+- [x] 添加 MediaSessionCallback 的 `@OptIn(UnstableApi::class)` 注解
+
+### 修复3: 隐藏底部导航栏
 - [x] 修改 MainActivity.kt
   - 在进入歌单添加歌曲、专辑列表、艺术家列表、艺术家详情页面时隐藏底部导航栏
   - 添加 hideBottomBar 状态判断
 
-### 修复2: 添加歌曲页面底部按钮位置
+### 修复4: 添加歌曲页面底部按钮位置
 - [x] 修改 AddSongsToPlaylistScreen.kt
   - 使用 Box 布局使按钮固定在屏幕底部
 
-### 修复3: 最近播放功能修复
+### 修复5: 最近播放功能修复
 - [x] 修改 MusicPlayer.kt
   - 播放歌曲时调用 songRepository.incrementPlayCount() 更新播放记录
   - 注入 SongRepository 依赖
 
-### 修复4: 创建艺术家详情页面
+### 修复6: 创建艺术家详情页面
 - [x] 创建 ArtistDetailScreen.kt
   - 显示艺术家所有歌曲
   - 顶部显示歌曲数量
@@ -789,7 +716,7 @@ ScanFolder (扫描文件夹)
   - 根据艺术家名称获取歌曲列表
 - [x] 更新 NavGraph.kt 添加 ARTIST_DETAIL 路由
 
-### 修复5: 字母表快速导航改进
+### 修复7: 字母表快速导航改进
 - [x] 创建 PinyinUtils.kt 拼音工具类
   - 中文按拼音首字母归类
   - 日文字符、数字、特殊符号归为 #
@@ -803,17 +730,47 @@ ScanFolder (扫描文件夹)
   - 应用相同的拼音索引逻辑
   - 中文专辑按拼音首字母分组
 
-### 修复6: UI尺寸调整
+### 修复8: UI尺寸调整
 - [x] 修改 PlaylistDetailScreen.kt
   - 缩小 PlaylistHeader 尺寸
   - 封面从 80.dp 缩小到 56.dp
   - 整体内边距从 16.dp 减少到 12.dp
   - 歌曲数量改为水平排列，更加紧凑
 
+### 修复9: MiniPlayer点击进入完整播放器
+- [x] 创建 PlayerScreen.kt 完整播放器界面
+  - 专辑封面占位 (点击显示歌词)
+  - 歌曲信息显示 (歌名/歌手/专辑)
+  - 进度条和播放控制
+  - 播放模式切换 (顺序/列表循环/单曲循环)
+  - 随机播放切换
+- [x] 更新 NavGraph 添加 PLAYER 路由
+- [x] 更新 MainActivity MiniPlayer onPlayerClick 导航到播放器
+- [x] 播放器页面隐藏底部导航栏
+
+### 修复10: 顶部空白问题
+- [x] 移除 MainActivity.enableEdgeToEdge() 调用
+- [x] 修复状态栏与标题栏之间的空白
+
+### 修复11: 添加文件夹闪退
+- [x] 修复 URI 处理逻辑
+  - 添加 getRealPathFromUri() 方法解析真实路径
+  - 添加 getFolderNameFromUri() 获取文件夹名称
+- [x] 更新 ScanFolder 实体添加 name 字段
+- [x] 数据库版本升级到 2
+- [x] 更新 ScanFolderRepository 支持保存名称
+- [x] 更新 HomeViewModel.addScanFolderByUri() 正确处理 URI
+
+### 修复12: 字母索引拖拽手势修复
+- [x] 修复艺术家列表和专辑列表页面的右侧字母索引栏拖拽手势生命周期Bug
+  - 问题: `pointerInput` 使用了外部状态 `componentHeight`，首次加载时高度为0，导致手势计算失效
+  - 解决: 移除外部高度状态，在 `awaitPointerEventScope` 内部直接访问 `size.height`
+  - 修改 ArtistListScreen.kt 和 AlbumListScreen.kt
+
 ### 创建的文件
 | 文件 | 说明 |
 |------|------|
-| PinyinUtils.kt | 中文转拼音首字母工具类 |
+| AlphabetIndexUtils.kt | 字母索引分组工具类（使用 ICU Transliterator） |
 | ArtistDetailScreen.kt | 艺术家详情页面 |
 | ArtistDetailViewModel.kt | 艺术家详情状态管理 |
 
@@ -827,5 +784,32 @@ ScanFolder (扫描文件夹)
 | AlbumListScreen.kt | 字母索引导航改进 |
 | PlaylistDetailScreen.kt | 缩小头部尺寸 |
 | NavGraph.kt | 添加艺术家详情路由 |
+| PlayerScreen.kt | 创建完整播放器界面 |
+| ScanFolder.kt | 添加 name 字段 |
+| ScanFolderRepository.kt | 支持保存名称 |
+| HomeViewModel.kt | 正确处理 URI |
+
+---
+
+## 技术栈已配置
+
+| 组件 | 版本 | 状态 |
+|------|------|------|
+| Kotlin | 1.9.22 | ✅ |
+| Jetpack Compose | 2024.02.00 | ✅ |
+| Hilt | 2.50 | ✅ |
+| Room | 2.6.1 | ✅ |
+| Media3 (ExoPlayer) | 1.2.1 | ✅ |
+| Coil | 2.5.0 | ✅ |
+
+## 权限已配置
+
+- `READ_MEDIA_AUDIO` - 读取音频文件
+- `FOREGROUND_SERVICE_MEDIA_PLAYBACK` - 前台播放服务
+- `POST_NOTIFICATIONS` - 通知权限
+
+---
+
+- **d69b80e** - Initial commit: Phase 8 complete
 
 ---

@@ -30,4 +30,14 @@ interface ScanFolderDao {
 
     @Query("SELECT EXISTS(SELECT 1 FROM scan_folders WHERE path = :path)")
     suspend fun scanFolderExists(path: String): Boolean
+
+    // Backup/Restore methods
+    @Query("SELECT * FROM scan_folders")
+    suspend fun getAllFoldersList(): List<ScanFolder>
+
+    @Query("DELETE FROM scan_folders")
+    suspend fun deleteAllFolders()
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertFolder(folder: ScanFolder)
 }

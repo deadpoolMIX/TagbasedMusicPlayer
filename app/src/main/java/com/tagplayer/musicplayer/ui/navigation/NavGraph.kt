@@ -18,9 +18,11 @@ import com.tagplayer.musicplayer.ui.tags.screen.TagsScreen
 import com.tagplayer.musicplayer.ui.tags.screen.TagDetailScreen
 import com.tagplayer.musicplayer.ui.filter.screen.FilterScreen
 import com.tagplayer.musicplayer.ui.player.screen.PlayerScreen
+import com.tagplayer.musicplayer.ui.player.screen.LyricsScreen
 import com.tagplayer.musicplayer.ui.artist.screen.ArtistListScreen
 import com.tagplayer.musicplayer.ui.artist.screen.ArtistDetailScreen
 import com.tagplayer.musicplayer.ui.album.screen.AlbumListScreen
+import com.tagplayer.musicplayer.ui.settings.screen.SettingsScreen
 
 object Routes {
     const val HOME = "home"
@@ -35,6 +37,8 @@ object Routes {
     const val ARTIST_DETAIL = "artist_detail/{artistName}"
     const val ALBUM_LIST = "album_list"
     const val ALBUM_DETAIL = "album_detail/{albumName}/{artistName}"
+    const val SETTINGS = "settings"
+    const val LYRICS = "lyrics"
 
     fun playlistDetail(playlistId: Long) = "playlist_detail/$playlistId"
     fun addSongsToPlaylist(playlistId: Long) = "add_songs_to_playlist/$playlistId"
@@ -56,7 +60,8 @@ fun NavGraph(
         composable(Routes.HOME) {
             HomeScreen(
                 onNavigateToArtist = { navController.navigate(Routes.ARTIST_LIST) },
-                onNavigateToAlbum = { navController.navigate(Routes.ALBUM_LIST) }
+                onNavigateToAlbum = { navController.navigate(Routes.ALBUM_LIST) },
+                onNavigateToSettings = { navController.navigate(Routes.SETTINGS) }
             )
         }
         composable(Routes.PLAYLIST) {
@@ -159,7 +164,20 @@ fun NavGraph(
             PlayerScreen(
                 onBackClick = {
                     navController.navigateUp()
+                },
+                onNavigateToLyrics = {
+                    navController.navigate(Routes.LYRICS)
                 }
+            )
+        }
+        composable(Routes.SETTINGS) {
+            SettingsScreen(
+                onBackClick = { navController.popBackStack() }
+            )
+        }
+        composable(Routes.LYRICS) {
+            LyricsScreen(
+                onBackClick = { navController.popBackStack() }
             )
         }
     }

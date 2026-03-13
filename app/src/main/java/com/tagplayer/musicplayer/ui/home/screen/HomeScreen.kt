@@ -31,6 +31,7 @@ import androidx.compose.material.icons.filled.Folder
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Sort
+import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.CircularProgressIndicator
@@ -79,6 +80,7 @@ import com.tagplayer.musicplayer.util.PermissionUtils
 fun HomeScreen(
     onNavigateToArtist: () -> Unit = {},
     onNavigateToAlbum: () -> Unit = {},
+    onNavigateToSettings: () -> Unit = {},
     modifier: Modifier = Modifier,
     viewModel: HomeViewModel = hiltViewModel(),
     playerViewModel: PlayerViewModel = hiltViewModel(),
@@ -137,6 +139,13 @@ fun HomeScreen(
                     )
                 },
                 actions = {
+                    // 设置按钮
+                    IconButton(onClick = onNavigateToSettings) {
+                        Icon(
+                            imageVector = Icons.Default.Settings,
+                            contentDescription = "设置"
+                        )
+                    }
                     // 文件夹管理按钮
                     IconButton(onClick = { viewModel.showFolderManager() }) {
                         Icon(

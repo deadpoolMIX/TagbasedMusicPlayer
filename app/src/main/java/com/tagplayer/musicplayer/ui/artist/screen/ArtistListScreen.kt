@@ -37,9 +37,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
@@ -48,17 +46,18 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.input.pointer.AwaitPointerEventScope
 import androidx.compose.ui.input.pointer.PointerEventPass
 import androidx.compose.ui.input.pointer.PointerInputChange
-import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.tagplayer.musicplayer.data.repository.Artist
 import com.tagplayer.musicplayer.ui.artist.viewmodel.ArtistViewModel
-import com.tagplayer.musicplayer.util.PinyinUtils
-import kotlinx.coroutines.delay
+import com.tagplayer.musicplayer.util.AlphabetIndexUtils
+import kotlinx.coroutines.awaitCancellation
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -71,32 +70,22 @@ fun ArtistListScreen(
     val artists by viewModel.artists.collectAsState()
     val listState = rememberLazyListState()
 
-    // 按首字母分组艺术家（使用拼音）
+    // 使用新的分组工具类按首字母分组艺术家
     val groupedArtists = remember(artists) {
-        artists.groupBy { artist ->
-            PinyinUtils.getFirstLetter(artist.name)
-        }.toSortedMap(compareBy { it })
+        AlphabetIndexUtils.groupByFirstLetter(artists) { it.name }
     }
 
-    // 字母索引只显示 # 和 A-Z（固定显示）
-    val alphabetIndex = remember { PinyinUtils.getAlphabetIndex() }
+    // 字母索引 A-Z + #（固定显示）
+    val alphabetIndex = remember { AlphabetIndexUtils.getAlphabetIndex() }
 
     // 可用的字母（根据实际数据过滤）
     val availableLetters = remember(groupedArtists) {
-        alphabetIndex.filter { letter ->
-            groupedArtists.containsKey(letter)
-        }
+        groupedArtists.keys
     }
 
     // 字母到索引位置的映射（用于滚动定位）
     val letterToIndexMap = remember(groupedArtists) {
-        val map = mutableMapOf<Char, Int>()
-        var index = 0
-        groupedArtists.forEach { (letter, artistList) ->
-            map[letter] = index
-            index += artistList.size + 1 // +1 为分组标题
-        }
-        map
+        AlphabetIndexUtils.calculateLetterToIndexMap(groupedArtists)
     }
 
     // 当前选中的字母（用于气泡提示）
@@ -157,10 +146,11 @@ fun ArtistListScreen(
                 }
             }
 
-            // 右侧字母索引栏 - 显示固定的 # + A-Z
+            // 右侧字母索引栏 - 显示固定的 A-Z + #
             AlphabetIndexBar(
                 letters = alphabetIndex,
-                enabledLetters = groupedArtists.keys,
+                enabledLetters = availableLetters,
+                currentSelectedLetter = selectedLetter,
                 onLetterSelected = { letter ->
                     selectedLetter = letter
                     // 滚动到对应位置
@@ -268,68 +258,87 @@ private fun ArtistItem(
     }
 }
 
+/**
+ * 字母索引栏组件
+ * 使用底层 pointerInput + awaitPointerEventScope 实现手势处理
+ * 在手势协程内部实时通过 size.height 获取高度，避免闭包陷阱
+ */
 @Composable
 private fun AlphabetIndexBar(
     letters: List<Char>,
     enabledLetters: Set<Char>,
+    currentSelectedLetter: Char?,
     onLetterSelected: (Char) -> Unit,
     onDragStart: () -> Unit,
     onDragEnd: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    var currentSelectedIndex by remember { mutableIntStateOf(-1) }
-    var isDragging by remember { mutableStateOf(false) }
-
-    // 计算当前位置对应的字母索引
-    fun updateSelectionFromY(y: Float, height: Float) {
-        if (height <= 0) return
-        val index = calculateLetterIndex(y, letters.size, height)
-        if (index in letters.indices) {
-            val letter = letters[index]
-            if (letter in enabledLetters && index != currentSelectedIndex) {
-                currentSelectedIndex = index
-                onLetterSelected(letter)
-            }
-        }
-    }
-
     Box(
         modifier = modifier
             .fillMaxHeight()
             .padding(vertical = 16.dp, horizontal = 4.dp)
+            // 关键：使用 Unit 作为 key，确保只初始化一次
             .pointerInput(Unit) {
-                // 使用 pointerInput 的 lambda 直接处理事件
                 awaitPointerEventScope {
                     while (true) {
-                        // 等待手指按下
-                        val down = awaitPointerEvent(PointerEventPass.Initial)
-                            .changes
-                            .firstOrNull { it.pressed }
+                        // 等待手指按下 - 使用 Main 事件传递
+                        val downEvent = awaitPointerEvent(PointerEventPass.Main)
+                        val downChange = downEvent.changes.firstOrNull { it.pressed }
                             ?: continue
 
-                        // 手指按下，立即触发
-                        isDragging = true
-                        onDragStart()
-                        updateSelectionFromY(down.position.y, size.height.toFloat())
+                        // 关键：在手势协程内部实时获取尺寸
+                        val currentHeight = size.height
+                        if (currentHeight <= 0) continue
 
-                        // 循环处理移动和抬起
-                        var active = true
-                        while (active) {
-                            val event = awaitPointerEvent(PointerEventPass.Initial)
-                            event.changes.forEach { change: PointerInputChange ->
+                        // 开始拖拽状态
+                        onDragStart()
+
+                        // 处理按下位置
+                        val initialY = downChange.position.y
+                        val initialIndex = calculateLetterIndex(
+                            initialY,
+                            letters.size,
+                            currentHeight.toFloat()
+                        )
+                        if (initialIndex in letters.indices) {
+                            val letter = letters[initialIndex]
+                            if (letter in enabledLetters) {
+                                onLetterSelected(letter)
+                            }
+                        }
+
+                        // 持续跟踪移动直到手指抬起
+                        var isPressed = true
+                        while (isPressed) {
+                            val moveEvent = awaitPointerEvent(PointerEventPass.Main)
+
+                            // 再次实时获取高度（可能在拖拽过程中有变化）
+                            val height = size.height
+                            if (height <= 0) continue
+
+                            for (change in moveEvent.changes) {
                                 if (change.pressed) {
-                                    // 手指还在按，更新位置
-                                    updateSelectionFromY(change.position.y, size.height.toFloat())
+                                    // 手指仍在按压，更新位置
+                                    val y = change.position.y
+                                    val index = calculateLetterIndex(
+                                        y,
+                                        letters.size,
+                                        height.toFloat()
+                                    )
+                                    if (index in letters.indices) {
+                                        val letter = letters[index]
+                                        if (letter in enabledLetters) {
+                                            onLetterSelected(letter)
+                                        }
+                                    }
                                 } else {
                                     // 手指抬起
-                                    active = false
+                                    isPressed = false
                                 }
                             }
                         }
 
-                        // 手指抬起，结束状态
-                        isDragging = false
-                        currentSelectedIndex = -1
+                        // 拖拽结束
                         onDragEnd()
                     }
                 }
@@ -340,8 +349,8 @@ private fun AlphabetIndexBar(
             verticalArrangement = Arrangement.SpaceEvenly,
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            letters.forEachIndexed { index, letter ->
-                val isSelected = index == currentSelectedIndex && isDragging
+            letters.forEach { letter ->
+                val isSelected = letter == currentSelectedLetter
                 val isEnabled = letter in enabledLetters
                 Text(
                     text = letter.toString(),
@@ -355,7 +364,7 @@ private fun AlphabetIndexBar(
                     modifier = Modifier
                         .padding(vertical = 2.dp)
                         .then(
-                            if (isEnabled && !isDragging) {
+                            if (isEnabled) {
                                 Modifier.clickable { onLetterSelected(letter) }
                             } else {
                                 Modifier
@@ -367,6 +376,10 @@ private fun AlphabetIndexBar(
     }
 }
 
+/**
+ * 计算触摸位置对应的字母索引
+ * 纯函数，无状态依赖
+ */
 private fun calculateLetterIndex(y: Float, letterCount: Int, totalHeight: Float): Int {
     if (totalHeight <= 0 || letterCount <= 0) return 0
     val itemHeight = totalHeight / letterCount
@@ -382,7 +395,7 @@ private fun LetterBubble(
     Box(
         modifier = modifier
             .size(80.dp)
-            .clip(CircleShape)
+            .clip(RoundedCornerShape(40.dp))
             .background(MaterialTheme.colorScheme.surfaceVariant),
         contentAlignment = Alignment.Center
     ) {

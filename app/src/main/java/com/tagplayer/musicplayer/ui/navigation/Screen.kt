@@ -14,8 +14,8 @@ import androidx.compose.ui.graphics.vector.ImageVector
 sealed class Screen(
     val route: String,
     val title: String,
-    val selectedIcon: ImageVector,
-    val unselectedIcon: ImageVector
+    val selectedIcon: ImageVector? = null,
+    val unselectedIcon: ImageVector? = null
 ) {
     data object Home : Screen(
         route = "home",
@@ -43,5 +43,11 @@ sealed class Screen(
         title = "筛选",
         selectedIcon = Icons.Filled.Tune,
         unselectedIcon = Icons.Outlined.Tune
+    )
+
+    // Non-bottom navigation screens
+    data object Settings : Screen(
+        route = "settings",
+        title = "设置"
     )
 }

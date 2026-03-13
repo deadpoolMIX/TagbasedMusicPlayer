@@ -174,4 +174,8 @@ class PlaybackQueue {
         currentIndex = index
         return song
     }
+
+    fun playAtIndex(index: Int): Song? {
+        return jumpToSong(index)
+    }
 }

@@ -41,7 +41,9 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -49,6 +51,9 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.compose.material.icons.filled.List
+import androidx.compose.material.icons.filled.Lyrics
+import com.tagplayer.musicplayer.ui.player.components.PlaybackQueueSheet
 import com.tagplayer.musicplayer.player.RepeatMode
 import com.tagplayer.musicplayer.ui.player.viewmodel.PlayerViewModel
 import kotlin.math.max
@@ -57,12 +62,16 @@ import kotlin.math.max
 @Composable
 fun PlayerScreen(
     onBackClick: () -> Unit,
+    onNavigateToLyrics: () -> Unit = {},
     modifier: Modifier = Modifier,
     viewModel: PlayerViewModel = hiltViewModel()
 ) {
     val playbackState by viewModel.playbackState.collectAsState()
     val currentPosition by viewModel.currentPosition.collectAsState()
     val duration by viewModel.duration.collectAsState()
+    val queue by viewModel.queue.collectAsState()
+
+    var showQueueSheet by remember { mutableStateOf(false) }
 
     val currentSong = playbackState.currentSong
 
@@ -79,7 +88,22 @@ fun PlayerScreen(
                     }
                 },
                 actions = {
-                    IconButton(onClick = { /* TODO: 更多选项 */ }) {
+                    // 歌词按钮
+                    IconButton(onClick = onNavigateToLyrics) {
+                        Icon(
+                            imageVector = Icons.Default.Lyrics,
+                            contentDescription = "歌词"
+                        )
+                    }
+                    // 播放队列按钮
+                    IconButton(onClick = { showQueueSheet = true }) {
+                        Icon(
+                            imageVector = Icons.Default.List,
+                            contentDescription = "播放队列"
+                        )
+                    }
+                    // 收藏按钮
+                    IconButton(onClick = { /* TODO: 收藏功能 */ }) {
                         Icon(
                             imageVector = Icons.Default.FavoriteBorder,
                             contentDescription = "收藏"
@@ -304,6 +328,25 @@ fun PlayerScreen(
                 Spacer(modifier = Modifier.height(48.dp))
             }
         }
+
+        // 播放队列弹窗
+        PlaybackQueueSheet(
+            isVisible = showQueueSheet,
+            queue = queue,
+            currentIndex = playbackState.currentIndex,
+            onDismiss = { showQueueSheet = false },
+            onSongClick = { index ->
+                viewModel.playAtIndex(index)
+                showQueueSheet = false
+            },
+            onRemoveSong = { index ->
+                viewModel.removeFromQueue(index)
+            },
+            onClearQueue = {
+                viewModel.clearQueue()
+                showQueueSheet = false
+            }
+        )
     }
 }
 
