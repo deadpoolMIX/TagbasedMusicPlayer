@@ -120,7 +120,7 @@ fun PlaylistScreen(
                         PlaylistItem(
                             playlist = playlist,
                             onClick = { onPlaylistClick(playlist) },
-                            onDelete = if (playlist.isSystem) null else { viewModel.deletePlaylist(playlist) }
+                            onDelete = if (playlist.isSystem) null else {{ viewModel.deletePlaylist(playlist) }}
                         )
                     }
                 }

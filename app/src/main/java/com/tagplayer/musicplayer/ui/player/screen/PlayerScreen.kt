@@ -76,6 +76,7 @@ import com.tagplayer.musicplayer.ui.components.TagSelectionDialog
 import com.tagplayer.musicplayer.ui.player.components.PlaybackQueueSheet
 import com.tagplayer.musicplayer.ui.player.viewmodel.PlayerViewModel
 import com.tagplayer.musicplayer.ui.playlist.viewmodel.PlaylistViewModel
+import com.tagplayer.musicplayer.ui.tags.viewmodel.TagViewModel
 import kotlin.math.max
 
 @OptIn(ExperimentalMaterial3Api::class)

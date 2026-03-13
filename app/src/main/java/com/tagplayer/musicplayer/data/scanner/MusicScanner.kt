@@ -150,13 +150,7 @@ class MusicScanner @Inject constructor(
         val file = java.io.File(filePath)
         if (!file.exists()) return null
 
-        // 首先尝试从音频文件中提取内嵌歌词
-        val embeddedLyrics = extractEmbeddedLyrics(filePath)
-        if (!embeddedLyrics.isNullOrBlank()) {
-            return embeddedLyrics
-        }
-
-        // 如果没有内嵌歌词，尝试查找同名的 .lrc 文件
+        // 尝试查找同名的 .lrc 文件
         val parentDir = file.parentFile ?: return null
         val fileNameWithoutExt = file.nameWithoutExtension
 
@@ -190,20 +184,5 @@ class MusicScanner @Inject constructor(
         }
 
         return null
-    }
-
-    private fun extractEmbeddedLyrics(filePath: String): String? {
-        val retriever = MediaMetadataRetriever()
-        return try {
-            retriever.setDataSource(filePath)
-            // 尝试获取歌词
-            val lyrics = retriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_LYRICS)
-            lyrics?.trim()?.takeIf { it.isNotBlank() }
-        } catch (e: Exception) {
-            // 提取失败，返回 null
-            null
-        } finally {
-            retriever.release()
-        }
     }
 }

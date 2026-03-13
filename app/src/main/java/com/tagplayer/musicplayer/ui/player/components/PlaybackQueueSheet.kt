@@ -190,8 +190,6 @@ private fun QueueContent(
                 QueueItem(
                     song = song,
                     isPlaying = actualIndex == currentIndex,
-                    canMoveUp = false, // 播放队列中不显示上移
-                    canMoveDown = false, // 播放队列中不显示下移
                     onClick = { onSongClick(actualIndex) },
                     onRemove = { onRemoveSong(actualIndex) }
                 )
