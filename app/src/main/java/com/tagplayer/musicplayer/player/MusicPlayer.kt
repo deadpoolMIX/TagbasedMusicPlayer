@@ -22,6 +22,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 @Singleton
 class MusicPlayer @Inject constructor(
@@ -29,7 +30,7 @@ class MusicPlayer @Inject constructor(
     private val songRepository: SongRepository
 ) {
     private var exoPlayer: ExoPlayer? = null
-    private val scope = CoroutineScope(Dispatchers.IO)
+    private val scope = CoroutineScope(Dispatchers.Main)
 
     // 位置更新任务
     private var positionUpdateJob: Job? = null
@@ -295,7 +296,9 @@ class MusicPlayer @Inject constructor(
 
         // 更新播放记录
         scope.launch {
-            songRepository.incrementPlayCount(song.id)
+            withContext(Dispatchers.IO) {
+                songRepository.incrementPlayCount(song.id)
+            }
         }
     }
 
