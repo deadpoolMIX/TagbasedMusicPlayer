@@ -810,6 +810,67 @@ ScanFolder (扫描文件夹)
 
 ---
 
+## 播放页UI修复 (2026-03-14)
+
+### 修复1: 点击封面跳转到歌词页面
+- [x] 移除顶部栏的歌词按钮
+- [x] 专辑封面添加点击跳转手势
+- **Git**: 101b1d6
+
+### 修复2: 歌词页面全屏无底部导航栏
+- [x] MainActivity.kt 添加 LYRICS 路由到 hideBottomBar 判断
+- [x] LyricsScreen 添加下滑关闭手势
+- **Git**: 101b1d6
+
+### 修复3: 标签快捷位
+- [x] PlayerScreen 添加 TagChipsRow 组件
+- [x] 显示当前歌曲的标签（带 # 前缀的胶囊样式）
+- [x] 点击 + 按钮弹出 TagSelectionDialog（复用首页弹窗）
+- [x] 点击标签可移除
+- **Git**: 101b1d6
+
+### 修复4: 下滑关闭手势
+- [x] PlayerScreen: 添加 detectVerticalDragGestures
+- [x] PlaybackQueueSheet: 添加拖动手势和指示条
+- [x] LyricsScreen: 添加下滑关闭手势
+- **Git**: 101b1d6
+
+### 修复5: 进度条拖动后更新问题
+- [x] 使用本地状态 sliderPosition 和 isDragging 跟踪拖动
+- [x] 拖动时显示拖动位置，释放后才触发 onSeek
+- **Git**: 101b1d6
+
+### 修复6: 专辑封面显示
+- [x] 创建统一的 AlbumArt 组件
+- [x] 使用 Coil SubcomposeAsyncImage 加载 MediaStore 专辑封面
+- [x] 更新 PlayerScreen、SongItem、MiniPlayer
+- **Git**: 101b1d6, 9dc11d0
+
+### 修复7: Coil API 修正
+- [x] 将 AsyncImage 替换为 SubcomposeAsyncImage
+- [x] 使用 loading 和 error 参数显示占位符
+- **Git**: 9dc11d0
+
+### 创建的文件
+| 文件 | 说明 |
+|------|------|
+| - | 无新文件 |
+
+### 修改的文件
+| 文件 | 修改内容 |
+|------|----------|
+| MainActivity.kt | 添加 LYRICS 到 hideBottomBar |
+| PlayerScreen.kt | 重构播放页UI，添加标签、手势、封面 |
+| LyricsScreen.kt | 添加下滑关闭手势 |
+| PlaybackQueueSheet.kt | 添加下滑关闭手势和指示条 |
+| SongItem.kt | 添加专辑封面显示 |
+| MiniPlayer.kt | 添加专辑封面显示 |
+
+---
+
 - **d69b80e** - Initial commit: Phase 8 complete
+- **bee2dfe** - 修复字母索引导航手势处理
+- **101b1d6** - 修复播放页UI问题
+- **9dc11d0** - 修复 Coil API 使用错误
 
 ---
