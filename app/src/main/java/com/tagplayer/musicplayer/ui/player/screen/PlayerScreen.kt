@@ -66,7 +66,7 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.compose.material.icons.filled.List
 import androidx.compose.ui.graphics.Color
-import coil.compose.AsyncImage
+import coil.compose.SubcomposeAsyncImage
 import coil.request.ImageRequest
 import com.tagplayer.musicplayer.data.local.entity.Tag
 import com.tagplayer.musicplayer.player.RepeatMode
@@ -325,7 +325,7 @@ private fun AlbumArt(
             .background(MaterialTheme.colorScheme.surfaceVariant),
         contentAlignment = Alignment.Center
     ) {
-        AsyncImage(
+        SubcomposeAsyncImage(
             model = ImageRequest.Builder(context)
                 .data(albumArtUri)
                 .crossfade(true)
@@ -333,8 +333,7 @@ private fun AlbumArt(
             contentDescription = "专辑封面",
             contentScale = ContentScale.Crop,
             modifier = Modifier.fillMaxSize(),
-            fallback = {
-                // 加载失败时显示音乐符号
+            loading = {
                 Box(
                     modifier = Modifier.fillMaxSize(),
                     contentAlignment = Alignment.Center
