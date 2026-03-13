@@ -447,28 +447,27 @@ private fun ProgressBar(
     duration: Long,
     onSeek: (Long) -> Unit
 ) {
+    // 状态分离：isDragging 控制是否拦截底层进度更新
     var isDragging by remember { mutableStateOf(false) }
-    var dragPosition by remember { mutableFloatStateOf(0f) }
+    // UI 显示的进度值（独立状态）
+    var sliderValue by remember { mutableFloatStateOf(0f) }
 
-    // 计算当前播放位置的比例
-    val positionFraction = remember(currentPosition, duration) {
-        if (duration > 0) currentPosition.toFloat() / duration else 0f
+    // 监听真实进度，仅在非拖拽时同步
+    LaunchedEffect(currentPosition) {
+        if (!isDragging && duration > 0) {
+            sliderValue = currentPosition.toFloat() / duration
+        }
     }
-
-    // Slider 显示的当前值
-    val sliderValue = if (isDragging) dragPosition else positionFraction
 
     Column(modifier = Modifier.fillMaxWidth()) {
         Slider(
             value = sliderValue,
-            onValueChange = { fraction ->
-                if (!isDragging) {
-                    isDragging = true
-                }
-                dragPosition = fraction
+            onValueChange = { newValue ->
+                isDragging = true
+                sliderValue = newValue
             },
             onValueChangeFinished = {
-                onSeek((dragPosition * duration).toLong())
+                onSeek((sliderValue * duration).toLong())
                 isDragging = false
             },
             modifier = Modifier.fillMaxWidth()

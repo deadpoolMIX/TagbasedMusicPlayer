@@ -926,5 +926,45 @@ ScanFolder (扫描文件夹)
 
 ---
 
-- **a50145d** - 修复播放队列4个问题
+## 播放问题修复
+
+### 修复1: 进度条不跟随歌曲进度
+- [x] 修改 PlayerScreen.kt 的 ProgressBar 组件
+  - 移除 LaunchedEffect，改用直接的 remember 计算
+  - 使用 if-else 逻辑：拖动时显示拖动位置，否则显示播放位置
+  - 修复 sliderPosition 和 positionFraction 的同步问题
+
+### 修复2: 添加到下一首播放时列表不更新
+- [x] 修改 PlaybackQueue.kt
+  - getQueue() 返回列表副本 `.toList()` 而非原列表引用
+  - 确保 StateFlow 能检测到列表变化并触发重组
+
+### 修复3: 播放列表长按拖拽排序
+- [x] 重写 PlaybackQueueSheet.kt
+  - 使用 SnapshotStateList 管理内部列表状态
+  - 拖拽手柄使用 `detectDragGesturesAfterLongPress`
+  - 被拖动项有悬浮效果（scale + elevation）
+  - 实时计算目标位置并交换数据
+  - 不拦截整行的普通点击事件
+
+### 修复4: 歌词无法显示
+- [x] 修改 MusicScanner.kt 的 loadLyricsFromFile()
+  - 支持多种文件扩展名（.lrc, .LRC, .txt, .TXT）
+  - 支持 UTF-8 和 GBK 编码自动检测
+  - 修复 GBK 编码读取逻辑
+- [x] 修改 LyricsScreen.kt
+  - 添加详细的空状态提示，说明如何添加歌词文件
+
+### 修改的文件
+| 文件 | 修改内容 |
+|------|----------|
+| PlayerScreen.kt | 修复 ProgressBar 同步逻辑 |
+| PlaybackQueue.kt | getQueue() 返回列表副本 |
+| PlaybackQueueSheet.kt | 实现长按拖拽排序 |
+| MusicScanner.kt | 修复歌词读取，支持多种编码 |
+| LyricsScreen.kt | 改进空状态提示 |
+
+---
+
+- **5a52aad** - 修复播放问题
 

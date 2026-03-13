@@ -1,5 +1,6 @@
 package com.tagplayer.musicplayer.data.scanner
 
+import android.media.MediaMetadataRetriever
 import android.content.ContentResolver
 import android.content.Context
 import android.database.Cursor
@@ -13,6 +14,7 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.withContext
+import java.nio.charset.Charset
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -146,10 +148,18 @@ class MusicScanner @Inject constructor(
         if (filePath.isEmpty()) return null
 
         val file = java.io.File(filePath)
+        if (!file.exists()) return null
+
+        // 首先尝试读取内嵌歌词
+        val embeddedLyrics = readEmbeddedLyrics(filePath)
+        if (!embeddedLyrics.isNullOrBlank()) {
+            return embeddedLyrics
+        }
+
+        // 尝试查找同名的 .lrc 文件
         val parentDir = file.parentFile ?: return null
         val fileNameWithoutExt = file.nameWithoutExtension
 
-        // 尝试查找同名的 .lrc 文件（支持多种扩展名大小写）
         val possibleNames = listOf(
             "$fileNameWithoutExt.lrc",
             "$fileNameWithoutExt.LRC",
@@ -160,17 +170,15 @@ class MusicScanner @Inject constructor(
         for (lrcFileName in possibleNames) {
             val lrcFile = java.io.File(parentDir, lrcFileName)
             if (lrcFile.exists() && lrcFile.canRead()) {
-                // 尝试 UTF-8 编码
                 try {
                     val content = lrcFile.readText(Charsets.UTF_8)
                     if (content.isNotBlank()) {
                         return content
                     }
                 } catch (e: Exception) {
-                    // UTF-8 失败，尝试 GBK 编码
                     try {
-                        val content = lrcFile.readText(Charsets.ISO_8859_1)
-                            .let { String(it.toByteArray(Charsets.ISO_8859_1), Charsets.forName("GBK")) }
+                        val bytes = lrcFile.readBytes()
+                        val content = String(bytes, Charset.forName("GBK"))
                         if (content.isNotBlank()) {
                             return content
                         }
@@ -182,5 +190,23 @@ class MusicScanner @Inject constructor(
         }
 
         return null
+    }
+
+    private fun readEmbeddedLyrics(filePath: String): String? {
+        val retriever = MediaMetadataRetriever()
+        return try {
+            retriever.setDataSource(filePath)
+            // 尝试读取内嵌歌词 (Android 不支持标准 LYRICS 标签，尝试读取 COMMENT 或自定义标签)
+            var lyrics = retriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_LYRICS)
+            if (lyrics.isNullOrBlank()) {
+                // 尝试其他可能的元数据字段
+                lyrics = retriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_COMMENT)
+            }
+            lyrics
+        } catch (e: Exception) {
+            null
+        } finally {
+            retriever.release()
+        }
     }
 }
