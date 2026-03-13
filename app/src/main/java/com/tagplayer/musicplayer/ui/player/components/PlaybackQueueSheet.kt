@@ -184,7 +184,7 @@ private fun QueueContent(
         ) {
             itemsIndexed(
                 items = visibleQueue,
-                key = { _, song -> song.id }
+                key = { relativeIndex, song -> "${relativeIndex}_${song.id}" }
             ) { relativeIndex, song ->
                 val actualIndex = currentIndex + relativeIndex
                 QueueItem(
