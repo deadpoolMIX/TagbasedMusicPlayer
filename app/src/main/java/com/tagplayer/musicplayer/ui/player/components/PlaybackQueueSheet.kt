@@ -1,10 +1,10 @@
 package com.tagplayer.musicplayer.ui.player.components
 
-import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.slideInVertically
-import androidx.compose.animation.slideOutVertically
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.detectDragGesturesAfterLongPress
 import androidx.compose.foundation.gestures.detectVerticalDragGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -12,9 +12,11 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -24,8 +26,8 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.DragHandle
 import androidx.compose.material.icons.filled.MusicNote
-import androidx.compose.material.icons.filled.PlaylistRemove
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.HorizontalDivider
@@ -37,15 +39,19 @@ import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.IntOffset
+import androidx.compose.ui.zIndex
 import com.tagplayer.musicplayer.data.local.entity.Song
 
 @Composable
@@ -56,13 +62,14 @@ fun PlaybackQueueSheet(
     onDismiss: () -> Unit,
     onSongClick: (Int) -> Unit,
     onRemoveSong: (Int) -> Unit,
+    onMoveSong: (fromIndex: Int, toIndex: Int) -> Unit,
     onClearQueue: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    AnimatedVisibility(
+    androidx.compose.animation.AnimatedVisibility(
         visible = isVisible,
-        enter = slideInVertically { it },
-        exit = slideOutVertically { it }
+        enter = androidx.compose.animation.slideInVertically { it },
+        exit = androidx.compose.animation.slideOutVertically { it }
     ) {
         Box(
             modifier = modifier
@@ -80,13 +87,13 @@ fun PlaybackQueueSheet(
                     containerColor = MaterialTheme.colorScheme.surface
                 )
             ) {
-                // 可拖拽关闭的内容
                 DraggableQueueContent(
                     queue = queue,
                     currentIndex = currentIndex,
                     onDismiss = onDismiss,
                     onSongClick = onSongClick,
                     onRemoveSong = onRemoveSong,
+                    onMoveSong = onMoveSong,
                     onClearQueue = onClearQueue
                 )
             }
@@ -94,6 +101,7 @@ fun PlaybackQueueSheet(
     }
 }
 
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 private fun DraggableQueueContent(
     queue: List<Song>,
@@ -101,14 +109,20 @@ private fun DraggableQueueContent(
     onDismiss: () -> Unit,
     onSongClick: (Int) -> Unit,
     onRemoveSong: (Int) -> Unit,
+    onMoveSong: (fromIndex: Int, toIndex: Int) -> Unit,
     onClearQueue: () -> Unit
 ) {
     var swipeOffset by remember { mutableFloatStateOf(0f) }
     var isDragging by remember { mutableStateOf(false) }
 
+    // 拖拽排序状态
+    var draggedItemIndex by remember { mutableIntStateOf(-1) }
+    var dragOffsetY by remember { mutableFloatStateOf(0f) }
+
     Column(
         modifier = Modifier
             .fillMaxWidth()
+            .fillMaxHeight(0.7f)
             .pointerInput(Unit) {
                 detectVerticalDragGestures(
                     onDragEnd = {
@@ -118,7 +132,7 @@ private fun DraggableQueueContent(
                         swipeOffset = 0f
                         isDragging = false
                     },
-                    onVerticalDrag = { change, dragAmount ->
+                    onVerticalDrag = { change: androidx.compose.ui.input.pointer.PointerInputChange, dragAmount: Float ->
                         change.consume()
                         if (dragAmount > 0) {
                             swipeOffset += dragAmount
@@ -172,20 +186,49 @@ private fun DraggableQueueContent(
         HorizontalDivider()
         Spacer(modifier = Modifier.height(8.dp))
 
-        // Queue List
+        // Queue List with drag support
         LazyColumn(
-            modifier = Modifier.fillMaxWidth(),
+            modifier = Modifier
+                .fillMaxWidth()
+                .weight(1f),
             contentPadding = PaddingValues(vertical = 8.dp)
         ) {
             itemsIndexed(
                 items = queue,
-                key = { index, song -> "${index}_${song.id}" }
+                key = { index, song -> "${song.id}_${index}" }
             ) { index, song ->
+                val isDragged = draggedItemIndex == index
+                val elevation by animateFloatAsState(
+                    targetValue = if (isDragged) 8f else 0f,
+                    label = "elevation"
+                )
+
                 QueueItem(
                     song = song,
                     isPlaying = index == currentIndex,
+                    isDragged = isDragged,
+                    elevation = elevation,
                     onClick = { onSongClick(index) },
-                    onRemove = { onRemoveSong(index) }
+                    onRemove = { onRemoveSong(index) },
+                    onDragStart = { draggedItemIndex = index },
+                    onDragEnd = {
+                        draggedItemIndex = -1
+                        dragOffsetY = 0f
+                    },
+                    onDrag = { offsetY ->
+                        dragOffsetY = offsetY
+                        // 计算目标位置
+                        val itemHeight = 56f // 预估每项高度
+                        val dragIndex = (offsetY / itemHeight).toInt()
+                        if (dragIndex != 0 && draggedItemIndex != -1) {
+                            val targetIndex = (draggedItemIndex + dragIndex).coerceIn(0, queue.size - 1)
+                            if (targetIndex != draggedItemIndex) {
+                                onMoveSong(draggedItemIndex, targetIndex)
+                                draggedItemIndex = targetIndex
+                            }
+                        }
+                    },
+                    modifier = Modifier.animateItemPlacement()
                 )
             }
         }
@@ -196,16 +239,56 @@ private fun DraggableQueueContent(
 private fun QueueItem(
     song: Song,
     isPlaying: Boolean,
+    isDragged: Boolean,
+    elevation: Float,
     onClick: () -> Unit,
-    onRemove: () -> Unit
+    onRemove: () -> Unit,
+    onDragStart: () -> Unit,
+    onDragEnd: () -> Unit,
+    onDrag: (Float) -> Unit,
+    modifier: Modifier = Modifier
 ) {
+    val scale by animateFloatAsState(
+        targetValue = if (isDragged) 1.02f else 1f,
+        label = "scale"
+    )
+
     Row(
-        modifier = Modifier
+        modifier = modifier
             .fillMaxWidth()
+            .graphicsLayer {
+                scaleX = scale
+                scaleY = scale
+                this.translationY = if (isDragged) 0f else 0f
+            }
+            .background(
+                if (isDragged) MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
+                else MaterialTheme.colorScheme.surface
+            )
             .clickable(onClick = onClick)
+            .pointerInput(Unit) {
+                detectDragGesturesAfterLongPress(
+                    onDragStart = { onDragStart() },
+                    onDragEnd = { onDragEnd() },
+                    onDragCancel = { onDragEnd() },
+                    onDrag = { change, dragAmount ->
+                        change.consume()
+                        onDrag(dragAmount.y)
+                    }
+                )
+            }
             .padding(vertical = 8.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
+        // Drag handle
+        Icon(
+            imageVector = Icons.Default.DragHandle,
+            contentDescription = "拖动排序",
+            modifier = Modifier.size(20.dp),
+            tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)
+        )
+        Spacer(modifier = Modifier.width(4.dp))
+
         // Playing indicator
         if (isPlaying) {
             Box(

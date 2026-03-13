@@ -104,7 +104,6 @@ class PlayerViewModel @Inject constructor(
         musicPlayer.clearQueue()
     }
 
-    fun getQueue(): List<Song> {
-        return musicPlayer.getQueue()
+    fun moveSong(fromIndex: Int, toIndex: Int) {
+        musicPlayer.moveSong(fromIndex, toIndex)
     }
-}

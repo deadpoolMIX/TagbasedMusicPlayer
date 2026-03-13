@@ -123,6 +123,9 @@ class MusicScanner @Inject constructor(
     }
 
     private fun cursorToSong(cursor: Cursor, columnMap: Map<String, Int>): Song {
+        val filePath = cursor.getString(columnMap[Media.DATA]!!) ?: ""
+        val lyrics = loadLyricsFromFile(filePath)
+
         return Song(
             id = cursor.getLong(columnMap[Media._ID]!!),
             title = cursor.getString(columnMap[Media.TITLE]!!) ?: "Unknown",
@@ -130,12 +133,53 @@ class MusicScanner @Inject constructor(
             album = cursor.getString(columnMap[Media.ALBUM]!!) ?: "Unknown Album",
             albumId = cursor.getLong(columnMap[Media.ALBUM_ID]!!),
             duration = cursor.getLong(columnMap[Media.DURATION]!!),
-            filePath = cursor.getString(columnMap[Media.DATA]!!) ?: "",
+            filePath = filePath,
             fileName = cursor.getString(columnMap[Media.DISPLAY_NAME]!!) ?: "",
             dateAdded = cursor.getLong(columnMap[Media.DATE_ADDED]!!) * 1000,
             dateModified = cursor.getLong(columnMap[Media.DATE_MODIFIED]!!) * 1000,
             size = cursor.getLong(columnMap[Media.SIZE]!!),
-            lyrics = null
+            lyrics = lyrics
         )
+    }
+
+    private fun loadLyricsFromFile(filePath: String): String? {
+        if (filePath.isEmpty()) return null
+
+        val file = java.io.File(filePath)
+        val parentDir = file.parentFile
+        val fileNameWithoutExt = file.nameWithoutExtension
+
+        // 尝试查找同名的 .lrc 文件
+        val lrcFile = java.io.File(parentDir, "$fileNameWithoutExt.lrc")
+        if (lrcFile.exists()) {
+            return try {
+                lrcFile.readText(Charsets.UTF_8)
+            } catch (e: Exception) {
+                // 尝试 GBK 编码
+                try {
+                    lrcFile.readText(Charsets.UTF_8)
+                } catch (e2: Exception) {
+                    null
+                }
+            }
+        }
+
+        // 尝试查找其他常见的歌词文件名格式
+        val possibleLyricsFiles = listOf(
+            java.io.File(parentDir, "$fileNameWithoutExt.LRC"),
+            java.io.File(parentDir, "${fileNameWithoutExt}.txt")
+        )
+
+        for (lyricsFile in possibleLyricsFiles) {
+            if (lyricsFile.exists()) {
+                return try {
+                    lyricsFile.readText(Charsets.UTF_8)
+                } catch (e: Exception) {
+                    null
+                }
+            }
+        }
+
+        return null
     }
 }

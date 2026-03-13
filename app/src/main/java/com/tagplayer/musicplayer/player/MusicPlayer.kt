@@ -181,7 +181,8 @@ class MusicPlayer @Inject constructor(
         if (song != null) {
             _playbackState.value = _playbackState.value.copy(
                 currentSong = song,
-                currentSongId = song.id
+                currentSongId = song.id,
+                currentIndex = index
             )
             playSong(song)
         }
@@ -202,6 +203,10 @@ class MusicPlayer @Inject constructor(
     fun removeFromQueue(index: Int) {
         playbackQueue.removeFromQueue(index)
         _queue.value = playbackQueue.getQueue()
+        _currentIndex.value = playbackQueue.getCurrentIndex()
+        _playbackState.value = _playbackState.value.copy(
+            currentIndex = playbackQueue.getCurrentIndex()
+        )
         _playerEvents.trySend(PlayerEvent.QueueUpdated)
     }
 

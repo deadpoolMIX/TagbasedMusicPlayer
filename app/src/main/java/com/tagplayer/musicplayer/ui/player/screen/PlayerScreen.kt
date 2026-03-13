@@ -15,6 +15,7 @@ import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
@@ -47,6 +48,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
@@ -56,7 +58,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.scale
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
@@ -65,7 +66,6 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.compose.material.icons.filled.List
-import androidx.compose.ui.graphics.Color
 import coil.compose.SubcomposeAsyncImage
 import coil.request.ImageRequest
 import com.tagplayer.musicplayer.data.local.entity.Tag
@@ -104,11 +104,11 @@ fun PlayerScreen(
         }
     }.collectAsState(initial = emptyList())
 
-    // 滑动关闭手势状态
+    // 滑动关闭手势状态 - 使用offset让页面向下滑出
     var swipeOffset by remember { mutableFloatStateOf(0f) }
-    val animatedScale by animateFloatAsState(
-        targetValue = 1f - (swipeOffset / 1000f).coerceIn(0f, 0.5f),
-        label = "scale"
+    val animatedOffset by animateFloatAsState(
+        targetValue = swipeOffset,
+        label = "offset"
     )
 
     Scaffold(
@@ -166,7 +166,7 @@ fun PlayerScreen(
                     .fillMaxSize()
                     .padding(paddingValues)
                     .padding(horizontal = 24.dp)
-                    .scale(animatedScale)
+                    .offset(y = animatedOffset.dp)
                     .pointerInput(Unit) {
                         detectVerticalDragGestures(
                             onDragEnd = {
@@ -291,6 +291,9 @@ fun PlayerScreen(
             },
             onRemoveSong = { index ->
                 viewModel.removeFromQueue(index)
+            },
+            onMoveSong = { fromIndex, toIndex ->
+                viewModel.moveSong(fromIndex, toIndex)
             },
             onClearQueue = {
                 viewModel.clearQueue()
@@ -447,12 +450,19 @@ private fun ProgressBar(
     var sliderPosition by remember { mutableFloatStateOf(0f) }
     var isDragging by remember { mutableStateOf(false) }
 
-    // 当不拖动时，使用实际播放位置
+    // 计算当前播放位置的比例
     val positionFraction = if (duration > 0) currentPosition.toFloat() / duration else 0f
+
+    // 当不拖动时，自动同步播放位置到滑块位置
+    LaunchedEffect(currentPosition) {
+        if (!isDragging) {
+            sliderPosition = positionFraction
+        }
+    }
 
     Column(modifier = Modifier.fillMaxWidth()) {
         Slider(
-            value = if (isDragging) sliderPosition else positionFraction,
+            value = sliderPosition,
             onValueChange = { fraction ->
                 isDragging = true
                 sliderPosition = fraction
@@ -469,7 +479,7 @@ private fun ProgressBar(
             horizontalArrangement = Arrangement.SpaceBetween
         ) {
             Text(
-                text = formatDuration(if (isDragging) (sliderPosition * duration).toLong() else currentPosition),
+                text = formatDuration((sliderPosition * duration).toLong()),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )

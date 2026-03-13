@@ -767,6 +767,20 @@ ScanFolder (扫描文件夹)
   - 解决: 移除外部高度状态，在 `awaitPointerEventScope` 内部直接访问 `size.height`
   - 修改 ArtistListScreen.kt 和 AlbumListScreen.kt
 
+### 修复13: 播放页UI修复 (2026-03-14)
+- [x] 修复下滑关闭效果
+  - 问题: 页面缩小下沉效果不符合预期
+  - 解决: 使用 `offset` 替代 `scale`，让页面向下滑出消失
+- [x] 修复播放队列列表被遮盖
+  - 问题: LazyColumn 没有设置 weight，被其他内容挤压
+  - 解决: 添加 `.weight(1f)` 让列表占据剩余空间
+- [x] 修复进度条拖动后弹回且不更新
+  - 问题: Slider 拖动逻辑中 `isDragging` 状态管理不当，且拖动时未同步 `sliderPosition`
+  - 解决:
+    - 在非拖动状态下自动同步 `sliderPosition = positionFraction`
+    - 避免在 `onValueChange` 中重复设置 `isDragging`
+    - 拖动时始终显示 `sliderPosition` 计算的时间
+
 ### 创建的文件
 | 文件 | 说明 |
 |------|------|
@@ -784,10 +798,11 @@ ScanFolder (扫描文件夹)
 | AlbumListScreen.kt | 字母索引导航改进 |
 | PlaylistDetailScreen.kt | 缩小头部尺寸 |
 | NavGraph.kt | 添加艺术家详情路由 |
-| PlayerScreen.kt | 创建完整播放器界面 |
+| PlayerScreen.kt | 修复下滑手势、进度条逻辑 |
 | ScanFolder.kt | 添加 name 字段 |
 | ScanFolderRepository.kt | 支持保存名称 |
 | HomeViewModel.kt | 正确处理 URI |
+| PlaybackQueueSheet.kt | 修复列表高度 |
 
 ---
 
