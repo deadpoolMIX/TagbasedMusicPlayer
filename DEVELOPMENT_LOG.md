@@ -991,5 +991,68 @@ ScanFolder (扫描文件夹)
 
 ---
 
-- **5a52aad** - 修复播放问题
+## 综合修复 (2026-03-13)
 
+### 修复1: 专辑详情页
+- [x] 创建 AlbumDetailScreen.kt - 显示专辑歌曲列表
+- [x] 修改 AlbumListScreen.kt - 点击专辑导航到详情页
+- [x] 更新 NavGraph.kt - 添加专辑详情路由
+- **Git**: 180ac8b
+
+### 修复2: "我喜欢"歌单功能
+- [x] 修改 Playlist 实体 - 添加 isSystem 字段
+- [x] 修改 MusicDatabase - 版本升级到 3
+- [x] 修改 AppModule - 数据库创建时自动插入"我喜欢"歌单
+- [x] 修改 PlaylistViewModel - 添加收藏/取消收藏功能
+- [x] 修改 PlayerScreen - 心形按钮绑定收藏功能
+- [x] 修改 PlaylistScreen - 系统歌单置顶且不可删除
+- **Git**: 7419d92
+
+### 修复3: 歌单页加号位置
+- [x] 修改 PlaylistScreen - 将右下角 FAB 改为标题栏右侧图标
+- **Git**: 3fa5dab
+
+### 修复4: Header 尺寸统一
+- [x] 修改 TagDetailScreen - TagHeader 尺寸改为与 PlaylistHeader 一致
+- **Git**: 5372f30
+
+### 修复5: 专辑封面修复
+- [x] 修改 SongItem.kt 和 PlayerScreen.kt - 使用 ContentUris.withAppendedId() 正确构建专辑封面 URI
+- **Git**: e37aab1
+
+### 修复6: 播放列表显示优化
+- [x] 修改 PlaybackQueueSheet - 只显示当前播放及之后的歌曲
+- **Git**: e94f5d8
+
+### 修复7: 添加到下一首刷新
+- [x] 修改 PlaybackQueueSheet - itemsIndexed key 使用 "${index}_${song.id}" 避免重复
+- **Git**: 0cc0ff9
+
+### 修复8: 内嵌歌词提取
+- [x] 修改 MusicScanner - 使用 MediaMetadataRetriever 提取音频内嵌歌词，优先于外部 .lrc 文件
+- **Git**: e81cb79
+
+### 修复9: 编译错误修复
+- [x] 修复 PlaylistViewModel.kt 缺少闭合大括号
+- **Git**: e5f3e7a
+
+### 创建的文件
+| 文件 | 说明 |
+|------|------|
+| AlbumDetailScreen.kt | 专辑详情页面 |
+
+### 修改的文件
+| 文件 | 修改内容 |
+|------|----------|
+| Playlist.kt | 添加 isSystem 字段 |
+| MusicDatabase.kt | 版本升级到 3 |
+| AppModule.kt | 初始化"我喜欢"歌单 |
+| PlaylistViewModel.kt | 添加收藏功能 |
+| PlayerScreen.kt | 心形按钮绑定收藏 |
+| PlaylistScreen.kt | 系统歌单置顶且不可删除，加号移到标题栏 |
+| TagDetailScreen.kt | 统一 Header 尺寸 |
+| SongItem.kt | 修复专辑封面 URI |
+| PlaybackQueueSheet.kt | 只显示当前及之后歌曲，修复 key 重复 |
+| MusicScanner.kt | 提取内嵌歌词 |
+
+---
