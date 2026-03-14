@@ -90,11 +90,6 @@ fun LyricsScreen(
     // 是否正在手动滚动
     var isUserScrolling by remember { mutableStateOf(false) }
 
-    // 获取屏幕高度用于计算居中偏移
-    val configuration = LocalConfiguration.current
-    val screenHeightDp = configuration.screenHeightDp.dp
-    val screenHeightPx = with(LocalDensity.current) { screenHeightDp.toPx() }
-
     // 歌词项高度（用于居中计算）
     val itemHeightPx = with(LocalDensity.current) { 48.dp.toPx() }
     // 两行歌词的高度偏移
@@ -108,13 +103,16 @@ fun LyricsScreen(
         if (newIndex != currentLineIndex && newIndex >= 0) {
             currentLineIndex = newIndex
 
-            // 计算偏移：屏幕中央偏上两行的位置
-            // scrollOffset 正值表示 item 距离可见区域顶部的像素
+            // 获取 LazyColumn 实际可见区域高度
+            val viewportHeight = listState.layoutInfo.viewportSize.height
+
+            // 计算居中偏移：让歌词显示在可见区域中央偏上两行
+            // scrollOffset 正值表示 item 从顶部向下偏移的像素
             scope.launch {
-                val centerOffset = (screenHeightPx / 2 - itemHeightPx / 2 - twoLinesOffsetPx).toInt()
+                val centerOffset = (viewportHeight / 2 - itemHeightPx / 2 - twoLinesOffsetPx).toInt()
                 listState.animateScrollToItem(
                     index = newIndex,
-                    scrollOffset = centerOffset
+                    scrollOffset = -centerOffset
                 )
             }
         }
