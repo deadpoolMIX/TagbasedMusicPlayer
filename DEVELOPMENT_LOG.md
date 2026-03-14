@@ -204,6 +204,7 @@ ScanFolder (扫描文件夹)
 - **添加文件夹闪退**: 添加URI解析方法获取真实路径
 - **最近播放不记录**: 播放时调用`incrementPlayCount()`更新记录
 - **筛选无条件时无结果**: 框A/B/C都为空时显示所有歌曲
+- **通知栏闪退**: 正确调用前台服务API，修复RemoteViews兼容问题
 
 ---
 
@@ -265,6 +266,7 @@ ScanFolder (扫描文件夹)
 
 | Commit | 说明 |
 |--------|------|
+| 9de26b1 | fix(notification): 修复通知栏导致闪退问题 |
 | 9ac82c1 | feat(notification): 添加自定义通知栏播放控制 |
 | 9f0fb23 | fix(lyrics): 修复歌词页触摸事件穿透问题 |
 | af722b1 | fix(lyrics): 修复歌词居中定位，使用viewportHeight计算 |
