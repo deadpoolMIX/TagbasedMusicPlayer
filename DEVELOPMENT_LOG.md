@@ -258,6 +258,7 @@ ScanFolder (扫描文件夹)
 
 | Commit | 说明 |
 |--------|------|
+| af722b1 | fix(lyrics): 修复歌词居中定位，使用viewportHeight计算 |
 | 7f8c30d | fix(lyrics): 修复歌词功能多项问题 |
 | e597636 | fix(lyrics): 调整歌词显示位置，当前歌词偏上两行 |
 | 8f062f8 | feat(lyrics): 支持双语歌词合并和居中显示 |
