@@ -77,7 +77,6 @@ import androidx.compose.material.icons.filled.List
 import com.tagplayer.musicplayer.data.local.entity.Tag
 import com.tagplayer.musicplayer.player.RepeatMode
 import com.tagplayer.musicplayer.ui.components.TagSelectionDialog
-import com.tagplayer.musicplayer.ui.player.components.PlaybackQueueSheet
 import com.tagplayer.musicplayer.ui.player.viewmodel.PlayerViewModel
 import com.tagplayer.musicplayer.ui.playlist.viewmodel.PlaylistViewModel
 import com.tagplayer.musicplayer.ui.tags.viewmodel.TagViewModel
@@ -90,6 +89,7 @@ import kotlin.math.max
 fun PlayerScreen(
     onBackClick: () -> Unit,
     onNavigateToLyrics: () -> Unit = {},
+    onNavigateToQueue: () -> Unit = {},
     modifier: Modifier = Modifier,
     viewModel: PlayerViewModel = hiltViewModel(),
     tagViewModel: TagViewModel = hiltViewModel(),
@@ -98,9 +98,7 @@ fun PlayerScreen(
     val playbackState by viewModel.playbackState.collectAsState()
     val currentPosition by viewModel.currentPosition.collectAsState()
     val duration by viewModel.duration.collectAsState()
-    val queue by viewModel.queue.collectAsState()
 
-    var showQueueSheet by remember { mutableStateOf(false) }
     var showTagDialog by remember { mutableStateOf(false) }
 
     val currentSong = playbackState.currentSong
@@ -140,7 +138,7 @@ fun PlayerScreen(
                 },
                 actions = {
                     // 播放队列按钮
-                    IconButton(onClick = { showQueueSheet = true }) {
+                    IconButton(onClick = onNavigateToQueue) {
                         Icon(
                             imageVector = Icons.Default.List,
                             contentDescription = "播放队列"
@@ -285,28 +283,6 @@ fun PlayerScreen(
                 Spacer(modifier = Modifier.height(48.dp))
             }
         }
-
-        // 播放队列弹窗
-        PlaybackQueueSheet(
-            isVisible = showQueueSheet,
-            queue = queue,
-            currentIndex = playbackState.currentIndex,
-            onDismiss = { showQueueSheet = false },
-            onSongClick = { index ->
-                viewModel.playAtIndex(index)
-                showQueueSheet = false
-            },
-            onRemoveSong = { index ->
-                viewModel.removeFromQueue(index)
-            },
-            onMoveSong = { fromIndex, toIndex ->
-                viewModel.moveSong(fromIndex, toIndex)
-            },
-            onClearQueue = {
-                viewModel.clearQueue()
-                showQueueSheet = false
-            }
-        )
 
         // 标签选择弹窗
         if (showTagDialog && currentSong != null) {

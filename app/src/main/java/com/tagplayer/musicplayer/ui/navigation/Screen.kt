@@ -59,4 +59,9 @@ sealed class Screen(
         route = "settings",
         title = "设置"
     )
+
+    data object Queue : Screen(
+        route = "queue",
+        title = "播放队列"
+    )
 }

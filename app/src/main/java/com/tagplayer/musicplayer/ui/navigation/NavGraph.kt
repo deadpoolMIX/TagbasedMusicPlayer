@@ -37,6 +37,7 @@ object Routes {
     const val ARTIST_DETAIL = "artist_detail/{artistName}"
     const val SETTINGS = "settings"
     const val LYRICS = "lyrics"
+    const val QUEUE = "queue"
 
     fun playlistDetail(playlistId: Long) = "playlist_detail/$playlistId"
     fun addSongsToPlaylist(playlistId: Long) = "add_songs_to_playlist/$playlistId"
@@ -172,6 +173,9 @@ fun NavGraph(
                 },
                 onNavigateToLyrics = {
                     navController.navigate(Routes.LYRICS)
+                },
+                onNavigateToQueue = {
+                    navController.navigate(Routes.QUEUE)
                 }
             )
         }
@@ -182,6 +186,11 @@ fun NavGraph(
         }
         composable(Routes.LYRICS) {
             LyricsScreen(
+                onBackClick = { navController.popBackStack() }
+            )
+        }
+        composable(Routes.QUEUE) {
+            com.tagplayer.musicplayer.ui.player.screen.PlaybackQueueScreen(
                 onBackClick = { navController.popBackStack() }
             )
         }
