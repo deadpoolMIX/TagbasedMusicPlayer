@@ -1,9 +1,6 @@
 package com.tagplayer.musicplayer.ui.player.screen
 
-import androidx.compose.animation.core.Animatable
-import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.animateFloatAsState
-import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectVerticalDragGestures
@@ -149,7 +146,7 @@ fun LyricsScreen(
                 .padding(paddingValues)
                 .alpha(animatedAlpha)
                 .scale(animatedScale)
-                .pointerInput(Unit) {
+                .pointerInput(listState.canScrollBackward) {
                     detectVerticalDragGestures(
                         onDragEnd = {
                             if (swipeOffset > 300) {
@@ -158,8 +155,9 @@ fun LyricsScreen(
                             swipeOffset = 0f
                         },
                         onVerticalDrag = { change, dragAmount ->
-                            change.consume()
-                            if (dragAmount > 0) {
+                            // 只在列表无法向下滚动时才处理下滑手势
+                            if (!listState.canScrollBackward && dragAmount > 0) {
+                                change.consume()
                                 swipeOffset += dragAmount
                             }
                         }
@@ -252,11 +250,30 @@ private fun LyricsList(
             val isCurrentLine = index == currentLineIndex
             val distance = kotlin.math.abs(index - currentLineIndex)
 
-            LyricLineItem(
+            Text(
                 text = line.text,
-                isCurrentLine = isCurrentLine,
-                distanceFromCurrent = distance,
-                onClick = { onLineClick(line) }
+                modifier = Modifier
+                    .fillMaxWidth(0.85f)
+                    .padding(horizontal = 16.dp, vertical = 12.dp)
+                    .alpha(
+                        when {
+                            isCurrentLine -> 1f
+                            distance == 1 -> 0.7f
+                            distance == 2 -> 0.5f
+                            else -> 0.35f
+                        }
+                    )
+                    .clickable { onLineClick(line) },
+                style = MaterialTheme.typography.bodyLarge.copy(
+                    fontSize = if (isCurrentLine) 18.sp else 16.sp
+                ),
+                color = if (isCurrentLine) {
+                    MaterialTheme.colorScheme.primary
+                } else {
+                    MaterialTheme.colorScheme.onBackground
+                },
+                textAlign = TextAlign.Center,
+                maxLines = 2
             )
         }
 
@@ -264,43 +281,6 @@ private fun LyricsList(
             Spacer(modifier = Modifier.height(200.dp))
         }
     }
-}
-
-@Composable
-private fun LyricLineItem(
-    text: String,
-    isCurrentLine: Boolean,
-    distanceFromCurrent: Int,
-    onClick: () -> Unit,
-    modifier: Modifier = Modifier
-) {
-    val alphaValue = when {
-        isCurrentLine -> 1f
-        distanceFromCurrent == 1 -> 0.7f
-        distanceFromCurrent == 2 -> 0.5f
-        else -> 0.3f.coerceAtLeast(0.3f)
-    }
-
-    val fontSizeValue = if (isCurrentLine) 18f else 16f
-
-    Text(
-        text = text.ifEmpty { "♪" },
-        modifier = modifier
-            .fillMaxWidth(0.85f)
-            .padding(horizontal = 16.dp, vertical = 12.dp)
-            .alpha(alphaValue)
-            .clickable(enabled = text.isNotEmpty()) { onClick() },
-        style = MaterialTheme.typography.bodyLarge.copy(
-            fontSize = fontSizeValue.sp
-        ),
-        color = if (isCurrentLine) {
-            MaterialTheme.colorScheme.primary
-        } else {
-            MaterialTheme.colorScheme.onBackground
-        },
-        textAlign = TextAlign.Center,
-        maxLines = 2
-    )
 }
 
 @Composable

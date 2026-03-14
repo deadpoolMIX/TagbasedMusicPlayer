@@ -21,9 +21,6 @@ object LyricsParser {
     // 标准 LRC 时间标签: [mm:ss.xx] 或 [mm:ss.xxx]
     private val LRC_TIME_REGEX = Regex("""\[(\d{2}):(\d{2})\.(\d{2,3})\]""")
 
-    // 完整的 LRC 行: [时间]内容
-    private val LRC_LINE_REGEX = Regex("""^(\[\d{2}:\d{2}\.\d{2,3}\])(.+)$""")
-
     suspend fun extractEmbeddedLyrics(context: Context, filePath: String): String? = withContext(Dispatchers.IO) {
         if (filePath.isEmpty()) return@withContext null
         val file = File(filePath)
@@ -36,7 +33,10 @@ object LyricsParser {
             retriever.setDataSource(filePath)
             val lyrics = retriever.extractMetadata(METADATA_KEY_LYRICS)
             if (!lyrics.isNullOrBlank()) {
-                return@withContext lyrics
+                // 检查是否是有效的歌词格式（包含时间标签或至少有多行文本）
+                if (isValidLyricsContent(lyrics)) {
+                    return@withContext lyrics
+                }
             }
             null
         } catch (e: Exception) {
@@ -48,6 +48,39 @@ object LyricsParser {
         }
     }
 
+    /**
+     * 检查歌词内容是否有效
+     */
+    private fun isValidLyricsContent(content: String): Boolean {
+        if (content.isBlank()) return false
+
+        // 如果是 LRC 格式，检查是否有时间标签
+        if (content.contains("[") && content.contains("]")) {
+            // 检查是否有时间标签 [mm:ss.xx]
+            if (LRC_TIME_REGEX.containsMatchIn(content)) {
+                return true
+            }
+            // 检查是否有元数据标签 [ti:] [ar:] [al:] 等
+            if (content.contains("[ti:") || content.contains("[ar:") || content.contains("[al:")) {
+                return true
+            }
+        }
+
+        // 检查是否有多行文本（至少2行非空内容）
+        val lines = content.lines().filter { it.isNotBlank() }
+        if (lines.size >= 2) {
+            return true
+        }
+
+        // 单行内容，检查是否是纯数字（不是有效歌词）
+        val singleLine = content.trim()
+        if (singleLine.length <= 6 && singleLine.all { it.isDigit() }) {
+            return false
+        }
+
+        return false
+    }
+
     suspend fun extractEmbeddedLyricsFromUri(context: Context, uri: Uri): String? = withContext(Dispatchers.IO) {
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.Q) return@withContext null
 
@@ -55,7 +88,7 @@ object LyricsParser {
         try {
             retriever.setDataSource(context, uri)
             val lyrics = retriever.extractMetadata(METADATA_KEY_LYRICS)
-            if (!lyrics.isNullOrBlank()) {
+            if (!lyrics.isNullOrBlank() && isValidLyricsContent(lyrics)) {
                 return@withContext lyrics
             }
             null
@@ -87,7 +120,7 @@ object LyricsParser {
             if (lrcFile.exists() && lrcFile.canRead()) {
                 try {
                     val content = readFileWithEncoding(lrcFile)
-                    if (!content.isNullOrBlank()) {
+                    if (!content.isNullOrBlank() && isValidLyricsContent(content)) {
                         return@withContext content
                     }
                 } catch (e: Exception) { }
@@ -130,11 +163,13 @@ object LyricsParser {
     }
 
     suspend fun getLyrics(context: Context, audioFilePath: String): String? = withContext(Dispatchers.IO) {
-        val embeddedLyrics = extractEmbeddedLyrics(context, audioFilePath)
-        if (!embeddedLyrics.isNullOrBlank()) {
-            return@withContext embeddedLyrics
+        // 优先尝试外部 .lrc 文件
+        val externalLyrics = loadLyricsFromExternalFile(audioFilePath)
+        if (!externalLyrics.isNullOrBlank()) {
+            return@withContext externalLyrics
         }
-        loadLyricsFromExternalFile(audioFilePath)
+        // 其次尝试内嵌歌词
+        extractEmbeddedLyrics(context, audioFilePath)
     }
 
     fun parseLrc(lrcContent: String): List<LyricLine> {
