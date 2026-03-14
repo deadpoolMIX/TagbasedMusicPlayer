@@ -176,7 +176,8 @@ ScanFolder (扫描文件夹)
 
 ### 歌词相关
 - **歌词无法显示**: 支持多种扩展名(.lrc/.LRC/.txt/.TXT)和编码(UTF-8/GBK)
-- **内嵌歌词读取**: Android MediaMetadataRetriever不支持，改为外部.lrc文件
+- **内嵌歌词读取**: 使用 MediaMetadataRetriever 提取内嵌歌词 (API 29+)
+- **歌词页面重写**: 全屏歌词页面，逐行高亮、点击跳转、自动滚动同步
 
 ### UI相关
 - **顶部空白问题**: 移除`enableEdgeToEdge()`调用
@@ -250,6 +251,7 @@ ScanFolder (扫描文件夹)
 
 | Commit | 说明 |
 |--------|------|
+| db97ae7 | feat(lyrics): 重写歌词功能，支持内嵌歌词提取 |
 | 59a3b6e | fix(player): 修复播放队列页面问题 |
 | c6fcdc8 | feat(player): 重构播放队列为全屏页面 |
 | 820429b | docs: 更新开发日志 |
