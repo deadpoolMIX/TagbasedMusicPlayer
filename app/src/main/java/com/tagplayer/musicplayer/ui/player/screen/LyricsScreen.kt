@@ -97,6 +97,8 @@ fun LyricsScreen(
 
     // 歌词项高度（用于居中计算）
     val itemHeightPx = with(LocalDensity.current) { 48.dp.toPx() }
+    // 两行歌词的高度偏移
+    val twoLinesOffsetPx = with(LocalDensity.current) { 96.dp.toPx() }
 
     // 更新当前歌词行并自动滚动
     LaunchedEffect(currentPosition, lyrics, isUserScrolling) {
@@ -106,12 +108,11 @@ fun LyricsScreen(
         if (newIndex != currentLineIndex && newIndex >= 0) {
             currentLineIndex = newIndex
 
-            // 计算居中偏移：屏幕高度的一半减去歌词项高度的一半
-            // 这样当前歌词会显示在屏幕中央
+            // 计算偏移：屏幕中央偏上两行的位置
             scope.launch {
                 listState.animateScrollToItem(
                     index = newIndex,
-                    scrollOffset = -(screenHeightPx / 2 - itemHeightPx / 2).toInt()
+                    scrollOffset = -(screenHeightPx / 2 - itemHeightPx / 2 + twoLinesOffsetPx).toInt()
                 )
             }
         }
