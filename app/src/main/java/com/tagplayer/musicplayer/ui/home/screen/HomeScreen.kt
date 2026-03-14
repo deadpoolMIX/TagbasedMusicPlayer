@@ -66,7 +66,6 @@ import com.tagplayer.musicplayer.data.local.entity.Song
 import com.tagplayer.musicplayer.ui.components.SongActionSheet
 import com.tagplayer.musicplayer.ui.components.SongItem
 import com.tagplayer.musicplayer.ui.components.TagSelectionDialog
-import com.tagplayer.musicplayer.ui.home.viewmodel.FilterType
 import com.tagplayer.musicplayer.ui.home.viewmodel.HomeViewModel
 import com.tagplayer.musicplayer.ui.home.viewmodel.SortType
 import com.tagplayer.musicplayer.ui.player.viewmodel.PlayerViewModel
@@ -86,7 +85,6 @@ fun HomeScreen(
 ) {
     val songs by viewModel.songs.collectAsState()
     val searchQuery by viewModel.searchQuery.collectAsState()
-    val filterType by viewModel.filterType.collectAsState()
     val isScanning by viewModel.isScanning.collectAsState()
     val selectedSong by viewModel.selectedSong.collectAsState()
     val showActionSheet by viewModel.showActionSheet.collectAsState()
@@ -190,22 +188,6 @@ fun HomeScreen(
                 .fillMaxSize()
                 .padding(paddingValues)
         ) {
-            // 筛选器
-            FilterChips(
-                selectedType = filterType,
-                onTypeSelected = { type ->
-                    viewModel.onFilterTypeChange(type)
-                },
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 16.dp, vertical = 8.dp)
-            )
-
-            HorizontalDivider(
-                modifier = Modifier.padding(horizontal = 16.dp),
-                color = MaterialTheme.colorScheme.outline.copy(alpha = 0.1f)
-            )
-
             // 统计信息
             Row(
                 modifier = Modifier
@@ -460,61 +442,6 @@ private fun SortDialog(
             }
         }
     )
-}
-
-@Composable
-private fun FilterChips(
-    selectedType: FilterType,
-    onTypeSelected: (FilterType) -> Unit,
-    modifier: Modifier = Modifier
-) {
-    Row(
-        modifier = modifier,
-        horizontalArrangement = Arrangement.spacedBy(8.dp)
-    ) {
-        // 只保留全部、最近播放
-        listOf(FilterType.ALL, FilterType.RECENT).forEach { type ->
-            FilterChip(
-                text = type.title,
-                isSelected = type == selectedType,
-                onClick = { onTypeSelected(type) }
-            )
-        }
-    }
-}
-
-@Composable
-private fun FilterChip(
-    text: String,
-    isSelected: Boolean,
-    onClick: () -> Unit
-) {
-    Surface(
-        modifier = Modifier
-            .clip(RoundedCornerShape(9999.dp))
-            .clickable(onClick = onClick),
-        color = if (isSelected) {
-            MaterialTheme.colorScheme.primaryContainer
-        } else {
-            MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
-        },
-        shape = RoundedCornerShape(9999.dp)
-    ) {
-        Box(
-            modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
-            contentAlignment = Alignment.Center
-        ) {
-            Text(
-                text = text,
-                style = MaterialTheme.typography.labelMedium,
-                color = if (isSelected) {
-                    MaterialTheme.colorScheme.onPrimaryContainer
-                } else {
-                    MaterialTheme.colorScheme.onSurfaceVariant
-                }
-            )
-        }
-    }
 }
 
 @Composable
