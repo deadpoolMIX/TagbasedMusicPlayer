@@ -34,6 +34,14 @@ class TagViewModel @Inject constructor(
             initialValue = emptyList()
         )
 
+    // 所有歌曲
+    val allSongs: StateFlow<List<Song>> = songRepository.getAllSongs()
+        .stateIn(
+            scope = viewModelScope,
+            started = SharingStarted.WhileSubscribed(5000),
+            initialValue = emptyList()
+        )
+
     // 标签数量
     val tagCount: StateFlow<Int> = tagRepository.getTagCount()
         .stateIn(
@@ -208,6 +216,15 @@ class TagViewModel @Inject constructor(
     fun addTagToSong(songId: Long, tagId: Long) {
         viewModelScope.launch {
             tagRepository.addTagToSong(songId, tagId)
+        }
+    }
+
+    // 批量给多首歌曲添加标签
+    fun addTagToSongs(tagId: Long, songIds: List<Long>) {
+        viewModelScope.launch {
+            songIds.forEach { songId ->
+                tagRepository.addTagToSong(songId, tagId)
+            }
         }
     }
 

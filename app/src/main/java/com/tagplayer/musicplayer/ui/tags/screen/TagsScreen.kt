@@ -55,6 +55,7 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.tagplayer.musicplayer.data.local.entity.Tag
 import com.tagplayer.musicplayer.ui.tags.viewmodel.TagViewModel
+import com.tagplayer.musicplayer.ui.theme.AppDimensions
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -284,7 +285,7 @@ private fun TagItem(
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(10.dp),
+                .padding(AppDimensions.ListItemPadding),
             verticalAlignment = Alignment.CenterVertically
         ) {
             // 左侧图标+名称
@@ -295,8 +296,8 @@ private fun TagItem(
                 // 标签图标
                 Box(
                     modifier = Modifier
-                        .size(40.dp)
-                        .clip(RoundedCornerShape(6.dp))
+                        .size(AppDimensions.ListItemIconSize)
+                        .clip(RoundedCornerShape(AppDimensions.ListItemIconCornerRadius))
                         .background(
                             androidx.compose.ui.graphics.Color(
                                 tag.color ?: MaterialTheme.colorScheme.primaryContainer.hashCode()
@@ -307,12 +308,12 @@ private fun TagItem(
                     Icon(
                         imageVector = Icons.Default.LocalOffer,
                         contentDescription = null,
-                        modifier = Modifier.size(20.dp),
+                        modifier = Modifier.size(AppDimensions.ListItemIconInternalSize),
                         tint = MaterialTheme.colorScheme.onPrimaryContainer
                     )
                 }
 
-                Spacer(modifier = Modifier.width(10.dp))
+                Spacer(modifier = Modifier.width(AppDimensions.ListItemSpacing))
 
                 // 标签名称
                 Text(
@@ -326,26 +327,26 @@ private fun TagItem(
             // 编辑按钮
             IconButton(
                 onClick = onEdit,
-                modifier = Modifier.size(36.dp)
+                modifier = Modifier.size(AppDimensions.ListItemActionButtonSize)
             ) {
                 Icon(
                     imageVector = Icons.Default.Edit,
                     contentDescription = "编辑",
                     tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.size(18.dp)
+                    modifier = Modifier.size(AppDimensions.ListItemActionIconSize)
                 )
             }
 
             // 删除按钮
             IconButton(
                 onClick = onDelete,
-                modifier = Modifier.size(36.dp)
+                modifier = Modifier.size(AppDimensions.ListItemActionButtonSize)
             ) {
                 Icon(
                     imageVector = Icons.Default.Delete,
                     contentDescription = "删除",
                     tint = MaterialTheme.colorScheme.error,
-                    modifier = Modifier.size(18.dp)
+                    modifier = Modifier.size(AppDimensions.ListItemActionIconSize)
                 )
             }
         }

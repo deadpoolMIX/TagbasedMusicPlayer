@@ -51,6 +51,7 @@ import com.tagplayer.musicplayer.ui.components.SongItem
 import com.tagplayer.musicplayer.ui.components.TagSelectionDialog
 import com.tagplayer.musicplayer.ui.player.viewmodel.PlayerViewModel
 import com.tagplayer.musicplayer.ui.playlist.viewmodel.PlaylistViewModel
+import com.tagplayer.musicplayer.ui.theme.AppDimensions
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -269,28 +270,28 @@ private fun PlaylistHeader(
     Surface(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(horizontal = 16.dp, vertical = 12.dp),
+            .padding(horizontal = AppDimensions.HeaderHorizontalPadding, vertical = AppDimensions.HeaderVerticalPadding),
         shape = RoundedCornerShape(12.dp),
         color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
     ) {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(12.dp),
+                .padding(AppDimensions.HeaderInternalPadding),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            // 封面占位 - 缩小尺寸
+            // 封面占位
             Box(
                 modifier = Modifier
-                    .size(56.dp)
-                    .clip(RoundedCornerShape(8.dp))
+                    .size(AppDimensions.HeaderIconSize)
+                    .clip(RoundedCornerShape(AppDimensions.HeaderIconCornerRadius))
                     .background(MaterialTheme.colorScheme.primaryContainer),
                 contentAlignment = Alignment.Center
             ) {
                 Icon(
                     imageVector = Icons.Default.MusicNote,
                     contentDescription = null,
-                    modifier = Modifier.size(28.dp),
+                    modifier = Modifier.size(AppDimensions.HeaderIconInternalSize),
                     tint = MaterialTheme.colorScheme.onPrimaryContainer
                 )
             }
@@ -320,12 +321,12 @@ private fun PlaylistHeader(
             if (songCount > 0) {
                 IconButton(
                     onClick = onPlayAll,
-                    modifier = Modifier.size(40.dp)
+                    modifier = Modifier.size(AppDimensions.HeaderPlayButtonSize)
                 ) {
                     Icon(
                         imageVector = Icons.Default.PlayArrow,
                         contentDescription = "播放全部",
-                        modifier = Modifier.size(28.dp),
+                        modifier = Modifier.size(AppDimensions.HeaderPlayIconSize),
                         tint = MaterialTheme.colorScheme.primary
                     )
                 }

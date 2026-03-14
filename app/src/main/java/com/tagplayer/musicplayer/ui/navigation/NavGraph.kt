@@ -15,6 +15,7 @@ import com.tagplayer.musicplayer.ui.playlist.screen.PlaylistDetailScreen
 import com.tagplayer.musicplayer.ui.playlist.screen.AddSongsToPlaylistScreen
 import com.tagplayer.musicplayer.ui.tags.screen.TagsScreen
 import com.tagplayer.musicplayer.ui.tags.screen.TagDetailScreen
+import com.tagplayer.musicplayer.ui.tags.screen.AddSongsToTagScreen
 import com.tagplayer.musicplayer.ui.filter.screen.FilterScreen
 import com.tagplayer.musicplayer.ui.player.screen.PlayerScreen
 import com.tagplayer.musicplayer.ui.player.screen.LyricsScreen
@@ -29,6 +30,7 @@ object Routes {
     const val ADD_SONGS_TO_PLAYLIST = "add_songs_to_playlist/{playlistId}"
     const val TAGS = "tags"
     const val TAG_DETAIL = "tag_detail/{tagId}"
+    const val ADD_SONGS_TO_TAG = "add_songs_to_tag/{tagId}"
     const val FILTER = "filter"
     const val PLAYER = "player"
     const val ARTIST = "artist"
@@ -39,6 +41,7 @@ object Routes {
     fun playlistDetail(playlistId: Long) = "playlist_detail/$playlistId"
     fun addSongsToPlaylist(playlistId: Long) = "add_songs_to_playlist/$playlistId"
     fun tagDetail(tagId: Long) = "tag_detail/$tagId"
+    fun addSongsToTag(tagId: Long) = "add_songs_to_tag/$tagId"
     fun artistDetail(artistName: String) = "artist_detail/$artistName"
 }
 
@@ -110,6 +113,23 @@ fun NavGraph(
         ) { backStackEntry ->
             val tagId = backStackEntry.arguments?.getLong("tagId") ?: return@composable
             TagDetailScreen(
+                tagId = tagId,
+                onBackClick = {
+                    navController.popBackStack()
+                },
+                onAddSongsClick = {
+                    navController.navigate(Routes.addSongsToTag(tagId))
+                }
+            )
+        }
+        composable(
+            route = Routes.ADD_SONGS_TO_TAG,
+            arguments = listOf(
+                navArgument("tagId") { type = NavType.LongType }
+            )
+        ) { backStackEntry ->
+            val tagId = backStackEntry.arguments?.getLong("tagId") ?: return@composable
+            AddSongsToTagScreen(
                 tagId = tagId,
                 onBackClick = {
                     navController.popBackStack()

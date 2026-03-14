@@ -18,6 +18,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.LocalOffer
 import androidx.compose.material.icons.filled.MusicNote
 import androidx.compose.material.icons.filled.PlayArrow
@@ -51,12 +52,14 @@ import com.tagplayer.musicplayer.ui.components.SongItem
 import com.tagplayer.musicplayer.ui.components.TagSelectionDialog
 import com.tagplayer.musicplayer.ui.player.viewmodel.PlayerViewModel
 import com.tagplayer.musicplayer.ui.tags.viewmodel.TagViewModel
+import com.tagplayer.musicplayer.ui.theme.AppDimensions
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun TagDetailScreen(
     tagId: Long,
     onBackClick: () -> Unit,
+    onAddSongsClick: () -> Unit,
     modifier: Modifier = Modifier,
     viewModel: TagViewModel = hiltViewModel(),
     playerViewModel: PlayerViewModel = hiltViewModel()
@@ -112,6 +115,16 @@ fun TagDetailScreen(
                         Icon(
                             imageVector = Icons.AutoMirrored.Filled.ArrowBack,
                             contentDescription = "返回"
+                        )
+                    }
+                },
+                actions = {
+                    // 添加歌曲按钮
+                    IconButton(onClick = onAddSongsClick) {
+                        Icon(
+                            imageVector = Icons.Default.Add,
+                            contentDescription = "添加歌曲",
+                            tint = MaterialTheme.colorScheme.onSurface
                         )
                     }
                 },
@@ -253,21 +266,21 @@ private fun TagHeader(
     Surface(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(horizontal = 16.dp, vertical = 12.dp),
+            .padding(horizontal = AppDimensions.HeaderHorizontalPadding, vertical = AppDimensions.HeaderVerticalPadding),
         shape = RoundedCornerShape(12.dp),
         color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
     ) {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(12.dp),
+                .padding(AppDimensions.HeaderInternalPadding),
             verticalAlignment = Alignment.CenterVertically
         ) {
             // 标签图标
             Box(
                 modifier = Modifier
-                    .size(56.dp)
-                    .clip(RoundedCornerShape(8.dp))
+                    .size(AppDimensions.HeaderIconSize)
+                    .clip(RoundedCornerShape(AppDimensions.HeaderIconCornerRadius))
                     .background(
                         tag.color?.let {
                             androidx.compose.ui.graphics.Color(it)
@@ -278,7 +291,7 @@ private fun TagHeader(
                 Icon(
                     imageVector = Icons.Default.LocalOffer,
                     contentDescription = null,
-                    modifier = Modifier.size(28.dp),
+                    modifier = Modifier.size(AppDimensions.HeaderIconInternalSize),
                     tint = MaterialTheme.colorScheme.onPrimaryContainer
                 )
             }
@@ -306,12 +319,12 @@ private fun TagHeader(
             if (songCount > 0) {
                 IconButton(
                     onClick = onPlayAll,
-                    modifier = Modifier.size(40.dp)
+                    modifier = Modifier.size(AppDimensions.HeaderPlayButtonSize)
                 ) {
                     Icon(
                         imageVector = Icons.Default.PlayArrow,
                         contentDescription = "播放全部",
-                        modifier = Modifier.size(28.dp),
+                        modifier = Modifier.size(AppDimensions.HeaderPlayIconSize),
                         tint = MaterialTheme.colorScheme.primary
                     )
                 }

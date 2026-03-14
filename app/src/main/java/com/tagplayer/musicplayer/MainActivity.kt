@@ -65,6 +65,7 @@ class MainActivity : ComponentActivity() {
                     derivedStateOf {
                         currentRoute?.let { route ->
                             route.startsWith(Routes.ADD_SONGS_TO_PLAYLIST) ||
+                            route.startsWith(Routes.ADD_SONGS_TO_TAG) ||
                             route.startsWith(Routes.ARTIST_DETAIL) ||
                             route.startsWith(Routes.SETTINGS) ||
                             route.startsWith(Routes.LYRICS)

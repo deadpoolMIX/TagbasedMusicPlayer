@@ -44,6 +44,7 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.tagplayer.musicplayer.data.local.entity.Playlist
 import com.tagplayer.musicplayer.ui.playlist.viewmodel.PlaylistViewModel
+import com.tagplayer.musicplayer.ui.theme.AppDimensions
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -156,26 +157,26 @@ private fun PlaylistItem(
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(12.dp),
+                .padding(AppDimensions.ListItemPadding),
             verticalAlignment = Alignment.CenterVertically
         ) {
             // 封面占位
             Box(
                 modifier = Modifier
-                    .size(48.dp)
-                    .clip(RoundedCornerShape(6.dp))
+                    .size(AppDimensions.ListItemIconSize)
+                    .clip(RoundedCornerShape(AppDimensions.ListItemIconCornerRadius))
                     .background(MaterialTheme.colorScheme.primaryContainer),
                 contentAlignment = Alignment.Center
             ) {
                 Icon(
                     imageVector = Icons.Default.MusicNote,
                     contentDescription = null,
-                    modifier = Modifier.size(24.dp),
+                    modifier = Modifier.size(AppDimensions.ListItemIconInternalSize),
                     tint = MaterialTheme.colorScheme.onPrimaryContainer
                 )
             }
 
-            Spacer(modifier = Modifier.width(12.dp))
+            Spacer(modifier = Modifier.width(AppDimensions.ListItemSpacing))
 
             // 歌单信息
             Column(
@@ -198,12 +199,12 @@ private fun PlaylistItem(
             if (onDelete != null) {
                 IconButton(
                     onClick = onDelete,
-                    modifier = Modifier.size(36.dp)
+                    modifier = Modifier.size(AppDimensions.ListItemActionButtonSize)
                 ) {
                     Icon(
                         imageVector = Icons.Default.Delete,
                         contentDescription = "删除歌单",
-                        modifier = Modifier.size(18.dp),
+                        modifier = Modifier.size(AppDimensions.ListItemActionIconSize),
                         tint = MaterialTheme.colorScheme.error
                     )
                 }
