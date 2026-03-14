@@ -2,6 +2,7 @@ package com.tagplayer.musicplayer.ui.player.screen
 
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.LinearEasing
+import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -13,13 +14,12 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.KeyboardArrowLeft
+import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -32,6 +32,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -40,6 +41,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInput
@@ -53,14 +55,6 @@ import com.tagplayer.musicplayer.util.LyricLine
 import com.tagplayer.musicplayer.util.LyricsParser
 import kotlinx.coroutines.launch
 
-/**
- * 全屏歌词页面
- * 功能：
- * - 逐行高亮显示
- * - 点击歌词跳转
- * - 歌词滚动同步
- * - 下拉/上滑关闭手势
- */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun LyricsScreen(
@@ -83,9 +77,19 @@ fun LyricsScreen(
     // 当前歌词行索引
     var currentLineIndex by remember { mutableIntStateOf(-1) }
 
-    // 是否正在手动滚动（手动滚动时暂停自动滚动）
+    // 下滑关闭手势
+    var swipeOffset by remember { mutableFloatStateOf(0f) }
+    val animatedScale by animateFloatAsState(
+        targetValue = 1f - (swipeOffset / 1000f).coerceIn(0f, 0.3f),
+        label = "scale"
+    )
+    val animatedAlpha by animateFloatAsState(
+        targetValue = 1f - (swipeOffset / 500f).coerceIn(0f, 1f),
+        label = "alpha"
+    )
+
+    // 是否正在手动滚动
     var isUserScrolling by remember { mutableStateOf(false) }
-    var userScrollJob by remember { mutableStateOf<kotlinx.coroutines.Job?>(null) }
 
     // 更新当前歌词行并自动滚动
     LaunchedEffect(currentPosition, lyrics, isUserScrolling) {
@@ -95,11 +99,10 @@ fun LyricsScreen(
         if (newIndex != currentLineIndex && newIndex >= 0) {
             currentLineIndex = newIndex
 
-            // 自动滚动到当前行（居中显示）
             scope.launch {
                 listState.animateScrollToItem(
                     index = newIndex,
-                    scrollOffset = -300 // 负值让当前行偏上，更接近视觉中心
+                    scrollOffset = -200
                 )
             }
         }
@@ -128,13 +131,13 @@ fun LyricsScreen(
                 navigationIcon = {
                     IconButton(onClick = onBackClick) {
                         Icon(
-                            imageVector = Icons.AutoMirrored.Filled.KeyboardArrowLeft,
-                            contentDescription = "返回"
+                            imageVector = Icons.Default.KeyboardArrowDown,
+                            contentDescription = "关闭"
                         )
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = Color.Transparent
+                    containerColor = MaterialTheme.colorScheme.background
                 )
             )
         },
@@ -144,50 +147,50 @@ fun LyricsScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(paddingValues)
+                .alpha(animatedAlpha)
+                .scale(animatedScale)
                 .pointerInput(Unit) {
                     detectVerticalDragGestures(
                         onDragEnd = {
-                            // 可选：下拉关闭功能
+                            if (swipeOffset > 300) {
+                                onBackClick()
+                            }
+                            swipeOffset = 0f
                         },
-                        onVerticalDrag = { _, _ ->
-                            // 可选：下拉手势处理
-                        }
-                    )
-                }
-        ) {
-            when {
-                lyrics.isEmpty() -> {
-                    // 无歌词提示
-                    EmptyLyricsContent()
-                }
-                else -> {
-                    // 歌词列表
-                    LyricsList(
-                        lyrics = lyrics,
-                        currentLineIndex = currentLineIndex,
-                        listState = listState,
-                        onLineClick = { line ->
-                            // 点击歌词跳转到对应时间
-                            viewModel.seekTo(line.timestampMs)
-                        },
-                        onUserScroll = {
-                            // 用户手动滚动时暂停自动滚动
-                            isUserScrolling = true
-                            userScrollJob?.cancel()
-                            userScrollJob = scope.launch {
-                                kotlinx.coroutines.delay(3000) // 3秒后恢复自动滚动
-                                isUserScrolling = false
+                        onVerticalDrag = { change, dragAmount ->
+                            change.consume()
+                            if (dragAmount > 0) {
+                                swipeOffset += dragAmount
                             }
                         }
                     )
                 }
+        ) {
+            if (lyrics.isEmpty()) {
+                EmptyLyricsContent()
+            } else {
+                LyricsList(
+                    lyrics = lyrics,
+                    currentLineIndex = currentLineIndex,
+                    listState = listState,
+                    onLineClick = { line ->
+                        viewModel.seekTo(line.timestampMs)
+                    },
+                    onUserScroll = {
+                        isUserScrolling = true
+                        scope.launch {
+                            kotlinx.coroutines.delay(3000)
+                            isUserScrolling = false
+                        }
+                    }
+                )
             }
 
             // 顶部渐变遮罩
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(80.dp)
+                    .height(60.dp)
                     .align(Alignment.TopCenter)
                     .background(
                         Brush.verticalGradient(
@@ -203,7 +206,7 @@ fun LyricsScreen(
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(80.dp)
+                    .height(60.dp)
                     .align(Alignment.BottomCenter)
                     .background(
                         Brush.verticalGradient(
@@ -218,9 +221,6 @@ fun LyricsScreen(
     }
 }
 
-/**
- * 歌词列表组件
- */
 @Composable
 private fun LyricsList(
     lyrics: List<LyricLine>,
@@ -230,9 +230,6 @@ private fun LyricsList(
     onUserScroll: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    val scope = rememberCoroutineScope()
-
-    // 监听滚动状态
     LaunchedEffect(listState.isScrollInProgress) {
         if (listState.isScrollInProgress) {
             onUserScroll()
@@ -244,9 +241,8 @@ private fun LyricsList(
         modifier = modifier.fillMaxSize(),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        // 顶部占位，让第一行歌词能居中显示
         item {
-            Spacer(modifier = Modifier.height(250.dp))
+            Spacer(modifier = Modifier.height(200.dp))
         }
 
         itemsIndexed(
@@ -257,63 +253,45 @@ private fun LyricsList(
             val distance = kotlin.math.abs(index - currentLineIndex)
 
             LyricLineItem(
-                line = line,
+                text = line.text,
                 isCurrentLine = isCurrentLine,
                 distanceFromCurrent = distance,
                 onClick = { onLineClick(line) }
             )
         }
 
-        // 底部占位
         item {
-            Spacer(modifier = Modifier.height(300.dp))
+            Spacer(modifier = Modifier.height(200.dp))
         }
     }
 }
 
-/**
- * 单行歌词组件
- */
 @Composable
 private fun LyricLineItem(
-    line: LyricLine,
+    text: String,
     isCurrentLine: Boolean,
     distanceFromCurrent: Int,
     onClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    // 动画属性
-    val alpha = remember { Animatable(0.5f) }
-    val fontSize = remember { Animatable(16f) }
-
-    LaunchedEffect(isCurrentLine, distanceFromCurrent) {
-        val targetAlpha = when {
-            isCurrentLine -> 1f
-            distanceFromCurrent == 1 -> 0.7f
-            distanceFromCurrent == 2 -> 0.5f
-            else -> 0.3f.coerceAtLeast(0.2f)
-        }
-        val targetFontSize = if (isCurrentLine) 18f else 16f
-
-        alpha.animateTo(
-            targetValue = targetAlpha,
-            animationSpec = tween(durationMillis = 300, easing = LinearEasing)
-        )
-        fontSize.animateTo(
-            targetValue = targetFontSize,
-            animationSpec = tween(durationMillis = 300, easing = LinearEasing)
-        )
+    val alphaValue = when {
+        isCurrentLine -> 1f
+        distanceFromCurrent == 1 -> 0.7f
+        distanceFromCurrent == 2 -> 0.5f
+        else -> 0.3f.coerceAtLeast(0.3f)
     }
 
+    val fontSizeValue = if (isCurrentLine) 18f else 16f
+
     Text(
-        text = line.text.ifEmpty { "♪" },
+        text = text.ifEmpty { "♪" },
         modifier = modifier
             .fillMaxWidth(0.85f)
-            .padding(horizontal = 16.dp, vertical = 10.dp)
-            .alpha(alpha.value)
-            .clickable(enabled = line.text.isNotEmpty()) { onClick() },
+            .padding(horizontal = 16.dp, vertical = 12.dp)
+            .alpha(alphaValue)
+            .clickable(enabled = text.isNotEmpty()) { onClick() },
         style = MaterialTheme.typography.bodyLarge.copy(
-            fontSize = fontSize.value.sp
+            fontSize = fontSizeValue.sp
         ),
         color = if (isCurrentLine) {
             MaterialTheme.colorScheme.primary
@@ -325,9 +303,6 @@ private fun LyricLineItem(
     )
 }
 
-/**
- * 无歌词提示组件
- */
 @Composable
 private fun EmptyLyricsContent(
     modifier: Modifier = Modifier

@@ -18,9 +18,11 @@ object LyricsParser {
 
     private const val METADATA_KEY_LYRICS = 20
 
-    private val LRC_TIME_REGEX = Regex("\\[(\\d{2}):(\\d{2})\\.(\\d{2,3})\\]")
-    private val ENHANCED_LRC_REGEX = Regex("((?:\\[\\d{1,2}:\\d{2}(?:\\.\\d{2,3})?\\])+)(.*)")
-    private val METADATA_REGEX = Regex("^\\[[a-zA-Z]+:.+\\]$")
+    // 标准 LRC 时间标签: [mm:ss.xx] 或 [mm:ss.xxx]
+    private val LRC_TIME_REGEX = Regex("""\[(\d{2}):(\d{2})\.(\d{2,3})\]""")
+
+    // 完整的 LRC 行: [时间]内容
+    private val LRC_LINE_REGEX = Regex("""^(\[\d{2}:\d{2}\.\d{2,3}\])(.+)$""")
 
     suspend fun extractEmbeddedLyrics(context: Context, filePath: String): String? = withContext(Dispatchers.IO) {
         if (filePath.isEmpty()) return@withContext null
@@ -77,9 +79,7 @@ object LyricsParser {
 
         val possibleNames = listOf(
             "$fileNameWithoutExt.lrc",
-            "$fileNameWithoutExt.LRC",
-            "${audioFile.name}.lrc",
-            "${audioFile.name}.LRC"
+            "$fileNameWithoutExt.LRC"
         )
 
         for (lrcFileName in possibleNames) {
@@ -100,6 +100,7 @@ object LyricsParser {
     private fun readFileWithEncoding(file: File): String? {
         val bytes = file.readBytes()
 
+        // 尝试 UTF-8
         try {
             val content = String(bytes, Charsets.UTF_8)
             if (!content.contains("\uFFFD")) {
@@ -107,10 +108,12 @@ object LyricsParser {
             }
         } catch (e: Exception) { }
 
+        // 尝试 GBK（常见中文编码）
         try {
             return String(bytes, Charset.forName("GBK"))
         } catch (e: Exception) { }
 
+        // 尝试 UTF-16
         try {
             return String(bytes, Charsets.UTF_16)
         } catch (e: Exception) { }
@@ -143,28 +146,39 @@ object LyricsParser {
             val trimmedLine = line.trim()
             if (trimmedLine.isEmpty()) return@forEach
 
-            if (METADATA_REGEX.matches(trimmedLine)) {
-                return@forEach
+            // 跳过元数据行 [ti:], [ar:], [al:], [by:], [offset:] 等
+            if (trimmedLine.startsWith("[") && !trimmedLine.startsWith("[0") && !trimmedLine.startsWith("[1") && !trimmedLine.startsWith("[2")) {
+                val colonIndex = trimmedLine.indexOf(':')
+                if (colonIndex > 0 && colonIndex < trimmedLine.indexOf(']')) {
+                    return@forEach
+                }
             }
 
-            val matchResult = ENHANCED_LRC_REGEX.find(trimmedLine)
-            if (matchResult != null) {
-                val timeTags = matchResult.groupValues[1]
-                val text = matchResult.groupValues[2].trim()
+            // 查找时间标签
+            val timeMatches = LRC_TIME_REGEX.findAll(trimmedLine).toList()
+            if (timeMatches.isEmpty()) return@forEach
 
-                LRC_TIME_REGEX.findAll(timeTags).forEach { timeMatch ->
-                    val minutes = timeMatch.groupValues[1].toIntOrNull() ?: 0
-                    val seconds = timeMatch.groupValues[2].toIntOrNull() ?: 0
-                    val millisStr = timeMatch.groupValues[3]
-                    val millis = if (millisStr.length == 2) {
-                        millisStr.toInt() * 10
-                    } else {
-                        millisStr.toInt()
-                    }
+            // 提取歌词文本（最后一个 ] 之后的内容）
+            val lastBracketIndex = trimmedLine.lastIndexOf(']')
+            val text = if (lastBracketIndex >= 0 && lastBracketIndex < trimmedLine.length - 1) {
+                trimmedLine.substring(lastBracketIndex + 1).trim()
+            } else {
+                ""
+            }
 
-                    val totalMillis = (minutes * 60L + seconds) * 1000L + millis
-                    lines.add(LyricLine(totalMillis, text))
+            // 为每个时间标签创建歌词行
+            timeMatches.forEach { match ->
+                val minutes = match.groupValues[1].toIntOrNull() ?: 0
+                val seconds = match.groupValues[2].toIntOrNull() ?: 0
+                val millisStr = match.groupValues[3]
+                val millis = if (millisStr.length == 2) {
+                    millisStr.toInt() * 10
+                } else {
+                    millisStr.toInt()
                 }
+
+                val totalMillis = (minutes * 60L + seconds) * 1000L + millis
+                lines.add(LyricLine(totalMillis, text))
             }
         }
 
@@ -215,6 +229,7 @@ object LyricsParser {
         return if (isLrcFormat(content)) {
             parseLrc(content)
         } else {
+            // 纯文本歌词
             content.lines()
                 .filter { it.isNotBlank() }
                 .mapIndexed { index, line ->
