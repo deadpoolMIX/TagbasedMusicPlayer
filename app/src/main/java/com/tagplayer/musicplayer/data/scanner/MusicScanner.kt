@@ -3,18 +3,15 @@ package com.tagplayer.musicplayer.data.scanner
 import android.content.ContentResolver
 import android.content.Context
 import android.database.Cursor
-import android.media.MediaMetadataRetriever
-import android.net.Uri
-import android.provider.MediaStore
 import android.provider.MediaStore.Audio.Media
 import com.tagplayer.musicplayer.data.local.entity.Song
+import com.tagplayer.musicplayer.util.LyricsParser
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.withContext
-import java.nio.charset.Charset
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -124,9 +121,11 @@ class MusicScanner @Inject constructor(
         return projection.associateWith { cursor.getColumnIndexOrThrow(it) }
     }
 
-    private fun cursorToSong(cursor: Cursor, columnMap: Map<String, Int>): Song {
+    private suspend fun cursorToSong(cursor: Cursor, columnMap: Map<String, Int>): Song {
         val filePath = cursor.getString(columnMap[Media.DATA]!!) ?: ""
-        val lyrics = loadLyricsFromFile(filePath)
+
+        // 优先提取内嵌歌词，其次从外部 .lrc 文件读取
+        val lyrics = LyricsParser.getLyrics(context, filePath)
 
         return Song(
             id = cursor.getLong(columnMap[Media._ID]!!),
@@ -142,47 +141,5 @@ class MusicScanner @Inject constructor(
             size = cursor.getLong(columnMap[Media.SIZE]!!),
             lyrics = lyrics
         )
-    }
-
-    private fun loadLyricsFromFile(filePath: String): String? {
-        if (filePath.isEmpty()) return null
-
-        val file = java.io.File(filePath)
-        if (!file.exists()) return null
-
-        // 尝试查找同名的 .lrc 文件
-        val parentDir = file.parentFile ?: return null
-        val fileNameWithoutExt = file.nameWithoutExtension
-
-        val possibleNames = listOf(
-            "$fileNameWithoutExt.lrc",
-            "$fileNameWithoutExt.LRC",
-            "$fileNameWithoutExt.txt",
-            "$fileNameWithoutExt.TXT"
-        )
-
-        for (lrcFileName in possibleNames) {
-            val lrcFile = java.io.File(parentDir, lrcFileName)
-            if (lrcFile.exists() && lrcFile.canRead()) {
-                try {
-                    val content = lrcFile.readText(Charsets.UTF_8)
-                    if (content.isNotBlank()) {
-                        return content
-                    }
-                } catch (e: Exception) {
-                    try {
-                        val bytes = lrcFile.readBytes()
-                        val content = String(bytes, Charset.forName("GBK"))
-                        if (content.isNotBlank()) {
-                            return content
-                        }
-                    } catch (e2: Exception) {
-                        // 继续尝试下一个文件
-                    }
-                }
-            }
-        }
-
-        return null
     }
 }
