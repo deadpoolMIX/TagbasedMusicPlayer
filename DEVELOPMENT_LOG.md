@@ -100,7 +100,7 @@ ScanFolder (扫描文件夹)
 
 ### 阶段九: 正在播放页实现
 - [x] PlayerScreen完整播放器界面
-- [x] PlaybackQueueSheet播放队列弹窗
+- [x] PlaybackQueueScreen全屏播放队列页面
 - [x] LyricsParser LRC歌词解析器
 - [x] LyricsScreen全屏歌词页面
 - [x] 播放控制增强
@@ -149,7 +149,7 @@ ScanFolder (扫描文件夹)
 | PlaylistScreen.kt, PlaylistDetailScreen.kt, AddSongsToPlaylistScreen.kt | 歌单相关页面 |
 | TagsScreen.kt, TagDetailScreen.kt, AddSongsToTagScreen.kt | 标签相关页面 |
 | FilterScreen.kt | 筛选页面 |
-| PlayerScreen.kt, LyricsScreen.kt, PlaybackQueueSheet.kt | 播放相关页面 |
+| PlayerScreen.kt, LyricsScreen.kt, PlaybackQueueScreen.kt | 播放相关页面 |
 | ArtistListScreen.kt, ArtistDetailScreen.kt | 艺术家相关页面 |
 | SettingsScreen.kt | 设置页面 |
 | MiniPlayer.kt, SongItem.kt, TagChip.kt | 通用组件 |
@@ -172,6 +172,7 @@ ScanFolder (扫描文件夹)
 - **播放队列删除不刷新**: 删除后同步更新`_currentIndex`和`PlaybackState.currentIndex`
 - **播放列表拖拽中断**: 使用稳定Key(`song.id`)和状态提升修复
 - **播放列表key重复**: 使用`"${index}_${song.id}"`避免重复
+- **播放队列页面问题**: 重构为全屏页面，只显示当前播放歌曲及之后的歌曲
 
 ### 歌词相关
 - **歌词无法显示**: 支持多种扩展名(.lrc/.LRC/.txt/.TXT)和编码(UTF-8/GBK)
@@ -199,6 +200,8 @@ ScanFolder (扫描文件夹)
 - 点击封面跳转歌词页
 - 标签快捷位显示当前歌曲标签
 - "我喜欢"歌单功能(心形按钮收藏)
+- 播放队列全屏页面(下滑关闭，隐藏底部导航栏和MiniPlayer)
+- 播放队列只显示当前播放歌曲及之后的歌曲
 
 ### 导航改进
 - 隐藏特定页面底部导航栏
@@ -247,6 +250,8 @@ ScanFolder (扫描文件夹)
 
 | Commit | 说明 |
 |--------|------|
+| 59a3b6e | fix(player): 修复播放队列页面问题 |
+| c6fcdc8 | feat(player): 重构播放队列为全屏页面 |
 | 820429b | docs: 更新开发日志 |
 | e392434 | feat(ui): UI尺寸统一和添加标签歌曲功能 |
 | 266b55b | style(ui): 缩小首页统计信息行高度 |
