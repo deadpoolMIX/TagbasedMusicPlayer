@@ -68,7 +68,8 @@ class MainActivity : ComponentActivity() {
                             route.startsWith(Routes.ADD_SONGS_TO_TAG) ||
                             route.startsWith(Routes.ARTIST_DETAIL) ||
                             route.startsWith(Routes.SETTINGS) ||
-                            route.startsWith(Routes.LYRICS)
+                            route.startsWith(Routes.LYRICS) ||
+                            route.startsWith(Routes.QUEUE)
                         } == true
                     }
                 }

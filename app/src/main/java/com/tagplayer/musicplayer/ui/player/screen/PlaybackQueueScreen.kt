@@ -12,7 +12,6 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -35,7 +34,6 @@ import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
@@ -49,6 +47,7 @@ import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
+import com.tagplayer.musicplayer.data.local.entity.Song
 import com.tagplayer.musicplayer.ui.player.viewmodel.PlayerViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -57,27 +56,27 @@ fun PlaybackQueueScreen(
     onBackClick: () -> Unit,
     viewModel: PlayerViewModel = hiltViewModel()
 ) {
-    val queue by viewModel.queue.collectAsState()
+    val fullQueue by viewModel.queue.collectAsState()
     val currentIndex by viewModel.currentIndex.collectAsState()
+
+    // 只显示当前播放歌曲及之后的歌曲
+    val visibleQueue: List<Song> = remember(fullQueue, currentIndex) {
+        if (currentIndex >= 0 && currentIndex < fullQueue.size) {
+            fullQueue.drop(currentIndex)
+        } else {
+            fullQueue
+        }
+    }
 
     // 滑动关闭手势
     var swipeOffset by remember { mutableFloatStateOf(0f) }
-
-    val listState = rememberLazyListState()
-
-    // 自动滚动到当前播放位置
-    LaunchedEffect(currentIndex) {
-        if (currentIndex >= 0 && queue.isNotEmpty()) {
-            listState.animateScrollToItem(currentIndex.coerceIn(0, queue.size - 1))
-        }
-    }
 
     Scaffold(
         topBar = {
             TopAppBar(
                 title = {
                     Text(
-                        text = "播放队列 (${queue.size})",
+                        text = "播放队列 (${visibleQueue.size})",
                         style = MaterialTheme.typography.titleMedium
                     )
                 },
@@ -90,7 +89,7 @@ fun PlaybackQueueScreen(
                     }
                 },
                 actions = {
-                    if (queue.isNotEmpty()) {
+                    if (visibleQueue.isNotEmpty()) {
                         TextButton(onClick = { viewModel.clearQueue() }) {
                             Text("清空")
                         }
@@ -125,7 +124,7 @@ fun PlaybackQueueScreen(
                 .padding(paddingValues)
                 .padding(horizontal = 8.dp)
         ) {
-            if (queue.isEmpty()) {
+            if (visibleQueue.isEmpty()) {
                 // 空列表提示
                 Box(
                     modifier = Modifier.fillMaxSize(),
@@ -139,25 +138,28 @@ fun PlaybackQueueScreen(
                 }
             } else {
                 LazyColumn(
-                    state = listState,
                     modifier = Modifier.fillMaxSize(),
                     contentPadding = PaddingValues(vertical = 8.dp)
                 ) {
                     itemsIndexed(
-                        items = queue,
-                        key = { index, song -> "${index}_${song.id}" }
-                    ) { index, song ->
-                        val isPlaying = index == currentIndex
+                        items = visibleQueue,
+                        key = { index, song -> "${currentIndex + index}_${song.id}" }
+                    ) { displayIndex, song ->
+                        // 第一项是当前播放的歌曲
+                        val isCurrentPlaying = displayIndex == 0
+                        // 实际在队列中的索引
+                        val actualIndex = currentIndex + displayIndex
+
                         QueueItem(
                             songTitle = song.title,
                             songArtist = song.artist,
-                            isPlaying = isPlaying,
-                            canMoveUp = index > 0,
-                            canMoveDown = index < queue.size - 1,
-                            onClick = { viewModel.playAtIndex(index) },
-                            onMoveUp = { viewModel.moveSong(index, index - 1) },
-                            onMoveDown = { viewModel.moveSong(index, index + 1) },
-                            onRemove = { viewModel.removeFromQueue(index) }
+                            isCurrentPlaying = isCurrentPlaying,
+                            canMoveUp = displayIndex > 0,
+                            canMoveDown = displayIndex < visibleQueue.size - 1,
+                            onClick = { viewModel.playAtIndex(actualIndex) },
+                            onMoveUp = { viewModel.moveSong(actualIndex, actualIndex - 1) },
+                            onMoveDown = { viewModel.moveSong(actualIndex, actualIndex + 1) },
+                            onRemove = { viewModel.removeFromQueue(actualIndex) }
                         )
                     }
                 }
@@ -170,7 +172,7 @@ fun PlaybackQueueScreen(
 private fun QueueItem(
     songTitle: String,
     songArtist: String,
-    isPlaying: Boolean,
+    isCurrentPlaying: Boolean,
     canMoveUp: Boolean,
     canMoveDown: Boolean,
     onClick: () -> Unit,
@@ -179,7 +181,7 @@ private fun QueueItem(
     onRemove: () -> Unit
 ) {
     val scale by animateFloatAsState(
-        targetValue = if (isPlaying) 1.02f else 1f,
+        targetValue = if (isCurrentPlaying) 1.02f else 1f,
         label = "scale"
     )
 
@@ -188,7 +190,7 @@ private fun QueueItem(
             .fillMaxWidth()
             .scale(scale)
             .then(
-                if (isPlaying) {
+                if (isCurrentPlaying) {
                     Modifier.background(
                         MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.3f),
                         RoundedCornerShape(8.dp)
@@ -202,7 +204,7 @@ private fun QueueItem(
         verticalAlignment = Alignment.CenterVertically
     ) {
         // 正在播放指示器
-        if (isPlaying) {
+        if (isCurrentPlaying) {
             Box(
                 modifier = Modifier
                     .size(4.dp)
@@ -219,7 +221,7 @@ private fun QueueItem(
             imageVector = Icons.Default.MusicNote,
             contentDescription = null,
             modifier = Modifier.size(24.dp),
-            tint = if (isPlaying) {
+            tint = if (isCurrentPlaying) {
                 MaterialTheme.colorScheme.primary
             } else {
                 MaterialTheme.colorScheme.onSurfaceVariant
@@ -237,7 +239,7 @@ private fun QueueItem(
                 style = MaterialTheme.typography.bodyMedium,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
-                color = if (isPlaying) {
+                color = if (isCurrentPlaying) {
                     MaterialTheme.colorScheme.primary
                 } else {
                     MaterialTheme.colorScheme.onSurface
