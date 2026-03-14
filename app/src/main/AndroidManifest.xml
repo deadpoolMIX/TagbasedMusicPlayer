@@ -43,6 +43,18 @@
             </intent-filter>
         </service>
 
+        <!-- Notification Action Receiver -->
+        <receiver
+            android:name=".player.NotificationActionReceiver"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="com.tagplayer.musicplayer.ACTION_PLAY_PAUSE" />
+                <action android:name="com.tagplayer.musicplayer.ACTION_PREVIOUS" />
+                <action android:name="com.tagplayer.musicplayer.ACTION_NEXT" />
+                <action android:name="com.tagplayer.musicplayer.ACTION_STOP" />
+            </intent-filter>
+        </receiver>
+
     </application>
 
 </manifest>
