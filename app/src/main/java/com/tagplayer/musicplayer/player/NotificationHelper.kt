@@ -12,11 +12,9 @@ import android.net.Uri
 import android.os.Build
 import android.widget.RemoteViews
 import androidx.core.app.NotificationCompat
-import androidx.media3.common.util.UnstableApi
 import com.tagplayer.musicplayer.MainActivity
 import com.tagplayer.musicplayer.R
 import dagger.hilt.android.qualifiers.ApplicationContext
-import java.io.FileInputStream
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -54,7 +52,6 @@ class NotificationHelper @Inject constructor(
         }
     }
 
-    @UnstableApi
     fun createNotification(
         title: String,
         artist: String,

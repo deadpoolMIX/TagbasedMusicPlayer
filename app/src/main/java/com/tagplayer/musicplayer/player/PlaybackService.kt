@@ -1,10 +1,11 @@
 package com.tagplayer.musicplayer.player
 
 import android.content.Intent
+import android.os.Build
+import androidx.core.app.ServiceCompat
 import androidx.media3.common.util.UnstableApi
 import androidx.media3.session.MediaSession
 import androidx.media3.session.MediaSessionService
-import com.tagplayer.musicplayer.player.NotificationHelper
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -47,6 +48,11 @@ class PlaybackService : MediaSessionService() {
         return mediaSession
     }
 
+    @UnstableApi
+    override fun onUpdateNotification(session: MediaSession) {
+        // 让 MediaSessionService 自动管理通知
+    }
+
     override fun onTaskRemoved(rootIntent: Intent?) {
         val player = mediaSession?.player
         if (player?.playWhenReady == false || player?.playbackState == androidx.media3.common.Player.STATE_ENDED) {
@@ -81,13 +87,27 @@ class PlaybackService : MediaSessionService() {
             musicPlayer.playbackState.collectLatest { state ->
                 val song = state.currentSong
                 if (song != null) {
-                    val notification = notificationHelper.createNotification(
-                        title = song.title,
-                        artist = song.artist,
-                        albumId = song.albumId,
-                        isPlaying = state.isPlaying
-                    )
-                    notificationHelper.showNotification(notification)
+                    try {
+                        val notification = notificationHelper.createNotification(
+                            title = song.title,
+                            artist = song.artist,
+                            albumId = song.albumId,
+                            isPlaying = state.isPlaying
+                        )
+                        notificationHelper.showNotification(notification)
+
+                        // 设置为前台服务
+                        ServiceCompat.startForeground(
+                            this@PlaybackService,
+                            NotificationHelper.NOTIFICATION_ID,
+                            notification,
+                            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                                android.content.pm.ServiceInfo.FOREGROUND_SERVICE_TYPE_MEDIA_PLAYBACK
+                            } else 0
+                        )
+                    } catch (e: Exception) {
+                        e.printStackTrace()
+                    }
                 } else {
                     notificationHelper.hideNotification()
                 }
