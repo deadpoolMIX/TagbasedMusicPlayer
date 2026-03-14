@@ -1,8 +1,11 @@
 package com.tagplayer.musicplayer.ui.player.screen
 
 import android.content.ContentUris
+import android.graphics.Bitmap
+import android.graphics.BitmapFactory
 import android.net.Uri
 import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectVerticalDragGestures
@@ -31,6 +34,7 @@ import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.FavoriteBorder
 import androidx.compose.material.icons.filled.KeyboardArrowDown
+import androidx.compose.material.icons.filled.MusicNote
 import androidx.compose.material.icons.filled.Pause
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Repeat
@@ -54,12 +58,14 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
@@ -68,8 +74,6 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.compose.material.icons.filled.List
-import coil.compose.SubcomposeAsyncImage
-import coil.request.ImageRequest
 import com.tagplayer.musicplayer.data.local.entity.Tag
 import com.tagplayer.musicplayer.player.RepeatMode
 import com.tagplayer.musicplayer.ui.components.TagSelectionDialog
@@ -77,6 +81,8 @@ import com.tagplayer.musicplayer.ui.player.components.PlaybackQueueSheet
 import com.tagplayer.musicplayer.ui.player.viewmodel.PlayerViewModel
 import com.tagplayer.musicplayer.ui.playlist.viewmodel.PlaylistViewModel
 import com.tagplayer.musicplayer.ui.tags.viewmodel.TagViewModel
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import kotlin.math.max
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -99,8 +105,9 @@ fun PlayerScreen(
 
     val currentSong = playbackState.currentSong
 
-    // 检查当前歌曲是否已收藏
-    val isFavorite = currentSong?.let { playlistViewModel.isSongFavorite(it.id) } ?: false
+    // 收藏状态 - 使用 collectAsState 监听变化
+    val favoriteSongIds by playlistViewModel.favoriteSongIds.collectAsState()
+    val isFavorite = currentSong?.let { favoriteSongIds.contains(it.id) } ?: false
 
     // 获取当前歌曲的标签
     val songTags = remember(currentSong) {
@@ -330,61 +337,50 @@ private fun AlbumArt(
 ) {
     val context = LocalContext.current
 
-    // 使用正确的 MediaStore URI 获取专辑封面
-    val albumArtUri = remember(albumId) {
-        if (albumId <= 0) null
-        else ContentUris.withAppendedId(
-            Uri.parse("content://media/external/audio/albumart"),
-            albumId
-        )
+    // 使用 produceState 异步加载专辑封面
+    val bitmap = produceState<Bitmap?>(initialValue = null, albumId) {
+        value = withContext(Dispatchers.IO) {
+            loadPlayerAlbumArt(context, albumId)
+        }
     }
 
     Box(
         modifier = modifier
+            .clip(RoundedCornerShape(16.dp))
             .background(MaterialTheme.colorScheme.surfaceVariant),
         contentAlignment = Alignment.Center
     ) {
-        if (albumArtUri != null) {
-            SubcomposeAsyncImage(
-                model = ImageRequest.Builder(context)
-                    .data(albumArtUri)
-                    .crossfade(true)
-                    .build(),
+        if (bitmap.value != null) {
+            Image(
+                bitmap = bitmap.value!!.asImageBitmap(),
                 contentDescription = "专辑封面",
                 contentScale = ContentScale.Crop,
-                modifier = Modifier.fillMaxSize(),
-                loading = {
-                    Box(
-                        modifier = Modifier.fillMaxSize(),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Text(
-                            text = "♪",
-                            style = MaterialTheme.typography.displayLarge,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)
-                        )
-                    }
-                },
-                error = {
-                    Box(
-                        modifier = Modifier.fillMaxSize(),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Text(
-                            text = "♪",
-                            style = MaterialTheme.typography.displayLarge,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)
-                        )
-                    }
-                }
+                modifier = Modifier.fillMaxSize()
             )
         } else {
-            Text(
-                text = "♪",
-                style = MaterialTheme.typography.displayLarge,
-                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)
+            Icon(
+                imageVector = Icons.Default.MusicNote,
+                contentDescription = null,
+                modifier = Modifier.size(64.dp),
+                tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)
             )
         }
+    }
+}
+
+private fun loadPlayerAlbumArt(context: android.content.Context, albumId: Long): Bitmap? {
+    if (albumId <= 0) return null
+
+    return try {
+        val uri = ContentUris.withAppendedId(
+            Uri.parse("content://media/external/audio/albumart"),
+            albumId
+        )
+        context.contentResolver.openInputStream(uri)?.use { inputStream ->
+            BitmapFactory.decodeStream(inputStream)
+        }
+    } catch (e: Exception) {
+        null
     }
 }
 

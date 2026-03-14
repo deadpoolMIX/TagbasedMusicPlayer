@@ -1,9 +1,11 @@
 package com.tagplayer.musicplayer.ui.components
 
-import android.content.ContentResolver
 import android.content.ContentUris
+import android.graphics.Bitmap
+import android.graphics.BitmapFactory
 import android.net.Uri
 import android.provider.MediaStore
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
@@ -23,17 +25,19 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import coil.compose.SubcomposeAsyncImage
-import coil.request.ImageRequest
 import com.tagplayer.musicplayer.data.local.entity.Song
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 
 @Composable
 fun SongItem(
@@ -95,13 +99,11 @@ fun AlbumArt(
 ) {
     val context = LocalContext.current
 
-    // 使用正确的 MediaStore URI 获取专辑封面
-    val albumArtUri = remember(albumId) {
-        if (albumId <= 0) null
-        else ContentUris.withAppendedId(
-            Uri.parse("content://media/external/audio/albumart"),
-            albumId
-        )
+    // 使用 produceState 异步加载专辑封面
+    val bitmap = produceState<Bitmap?>(initialValue = null, albumId) {
+        value = withContext(Dispatchers.IO) {
+            loadAlbumArt(context, albumId)
+        }
     }
 
     Box(
@@ -110,41 +112,12 @@ fun AlbumArt(
             .background(MaterialTheme.colorScheme.surfaceVariant),
         contentAlignment = Alignment.Center
     ) {
-        if (albumArtUri != null) {
-            SubcomposeAsyncImage(
-                model = ImageRequest.Builder(context)
-                    .data(albumArtUri)
-                    .crossfade(true)
-                    .build(),
+        if (bitmap.value != null) {
+            Image(
+                bitmap = bitmap.value!!.asImageBitmap(),
                 contentDescription = "专辑封面",
                 contentScale = contentScale,
-                modifier = Modifier.matchParentSize(),
-                loading = {
-                    Box(
-                        modifier = Modifier.fillMaxWidth(),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.MusicNote,
-                            contentDescription = null,
-                            tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f),
-                            modifier = Modifier.size(24.dp)
-                        )
-                    }
-                },
-                error = {
-                    Box(
-                        modifier = Modifier.fillMaxWidth(),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.MusicNote,
-                            contentDescription = null,
-                            tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f),
-                            modifier = Modifier.size(24.dp)
-                        )
-                    }
-                }
+                modifier = Modifier.matchParentSize()
             )
         } else {
             Icon(
@@ -154,5 +127,21 @@ fun AlbumArt(
                 modifier = Modifier.size(24.dp)
             )
         }
+    }
+}
+
+private fun loadAlbumArt(context: android.content.Context, albumId: Long): Bitmap? {
+    if (albumId <= 0) return null
+
+    return try {
+        val uri = ContentUris.withAppendedId(
+            Uri.parse("content://media/external/audio/albumart"),
+            albumId
+        )
+        context.contentResolver.openInputStream(uri)?.use { inputStream ->
+            BitmapFactory.decodeStream(inputStream)
+        }
+    } catch (e: Exception) {
+        null
     }
 }

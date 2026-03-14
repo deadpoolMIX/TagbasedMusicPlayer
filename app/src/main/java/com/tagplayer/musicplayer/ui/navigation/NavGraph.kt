@@ -2,7 +2,6 @@ package com.tagplayer.musicplayer.ui.navigation
 
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.navigation.NavHostController
@@ -21,8 +20,6 @@ import com.tagplayer.musicplayer.ui.player.screen.PlayerScreen
 import com.tagplayer.musicplayer.ui.player.screen.LyricsScreen
 import com.tagplayer.musicplayer.ui.artist.screen.ArtistListScreen
 import com.tagplayer.musicplayer.ui.artist.screen.ArtistDetailScreen
-import com.tagplayer.musicplayer.ui.album.screen.AlbumListScreen
-import com.tagplayer.musicplayer.ui.album.screen.AlbumDetailScreen
 import com.tagplayer.musicplayer.ui.settings.screen.SettingsScreen
 
 object Routes {
@@ -34,10 +31,8 @@ object Routes {
     const val TAG_DETAIL = "tag_detail/{tagId}"
     const val FILTER = "filter"
     const val PLAYER = "player"
-    const val ARTIST_LIST = "artist_list"
+    const val ARTIST = "artist"
     const val ARTIST_DETAIL = "artist_detail/{artistName}"
-    const val ALBUM_LIST = "album_list"
-    const val ALBUM_DETAIL = "album_detail/{albumName}/{artistName}"
     const val SETTINGS = "settings"
     const val LYRICS = "lyrics"
 
@@ -45,7 +40,6 @@ object Routes {
     fun addSongsToPlaylist(playlistId: Long) = "add_songs_to_playlist/$playlistId"
     fun tagDetail(tagId: Long) = "tag_detail/$tagId"
     fun artistDetail(artistName: String) = "artist_detail/$artistName"
-    fun albumDetail(albumName: String, artistName: String) = "album_detail/$albumName/$artistName"
 }
 
 @Composable
@@ -60,8 +54,6 @@ fun NavGraph(
     ) {
         composable(Routes.HOME) {
             HomeScreen(
-                onNavigateToArtist = { navController.navigate(Routes.ARTIST_LIST) },
-                onNavigateToAlbum = { navController.navigate(Routes.ALBUM_LIST) },
                 onNavigateToSettings = { navController.navigate(Routes.SETTINGS) }
             )
         }
@@ -127,9 +119,9 @@ fun NavGraph(
         composable(Routes.FILTER) {
             FilterScreen()
         }
-        composable(Routes.ARTIST_LIST) {
+        composable(Routes.ARTIST) {
             ArtistListScreen(
-                onBackClick = { navController.popBackStack() },
+                onBackClick = null,
                 onArtistClick = { artist ->
                     navController.navigate(Routes.artistDetail(artist.name))
                 }
@@ -143,29 +135,6 @@ fun NavGraph(
         ) { backStackEntry ->
             val artistName = backStackEntry.arguments?.getString("artistName") ?: return@composable
             ArtistDetailScreen(
-                artistName = artistName,
-                onBackClick = { navController.popBackStack() }
-            )
-        }
-        composable(Routes.ALBUM_LIST) {
-            AlbumListScreen(
-                onBackClick = { navController.popBackStack() },
-                onAlbumClick = { album ->
-                    navController.navigate(Routes.albumDetail(album.name, album.artist))
-                }
-            )
-        }
-        composable(
-            route = Routes.ALBUM_DETAIL,
-            arguments = listOf(
-                navArgument("albumName") { type = NavType.StringType },
-                navArgument("artistName") { type = NavType.StringType }
-            )
-        ) { backStackEntry ->
-            val albumName = backStackEntry.arguments?.getString("albumName") ?: return@composable
-            val artistName = backStackEntry.arguments?.getString("artistName") ?: return@composable
-            AlbumDetailScreen(
-                albumName = albumName,
                 artistName = artistName,
                 onBackClick = { navController.popBackStack() }
             )

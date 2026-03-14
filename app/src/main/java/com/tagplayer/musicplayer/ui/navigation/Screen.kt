@@ -3,10 +3,12 @@ package com.tagplayer.musicplayer.ui.navigation
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.LibraryMusic
+import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Sell
 import androidx.compose.material.icons.filled.Tune
 import androidx.compose.material.icons.outlined.Home
 import androidx.compose.material.icons.outlined.LibraryMusic
+import androidx.compose.material.icons.outlined.Person
 import androidx.compose.material.icons.outlined.Sell
 import androidx.compose.material.icons.outlined.Tune
 import androidx.compose.ui.graphics.vector.ImageVector
@@ -36,6 +38,13 @@ sealed class Screen(
         title = "标签",
         selectedIcon = Icons.Filled.Sell,
         unselectedIcon = Icons.Outlined.Sell
+    )
+
+    data object Artist : Screen(
+        route = "artist",
+        title = "歌手",
+        selectedIcon = Icons.Filled.Person,
+        unselectedIcon = Icons.Outlined.Person
     )
 
     data object Filter : Screen(

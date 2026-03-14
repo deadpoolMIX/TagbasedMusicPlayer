@@ -62,7 +62,7 @@ import kotlinx.coroutines.awaitCancellation
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ArtistListScreen(
-    onBackClick: () -> Unit,
+    onBackClick: (() -> Unit)?,
     onArtistClick: (Artist) -> Unit,
     modifier: Modifier = Modifier,
     viewModel: ArtistViewModel = hiltViewModel()
@@ -97,16 +97,19 @@ fun ArtistListScreen(
             TopAppBar(
                 title = {
                     Text(
-                        text = "艺术家",
-                        style = MaterialTheme.typography.titleLarge
+                        text = "歌手",
+                        style = MaterialTheme.typography.titleMedium
                     )
                 },
                 navigationIcon = {
-                    IconButton(onClick = onBackClick) {
-                        Icon(
-                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                            contentDescription = "返回"
-                        )
+                    // 作为底部Tab时不显示返回按钮
+                    if (onBackClick != null) {
+                        IconButton(onClick = onBackClick) {
+                            Icon(
+                                imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                                contentDescription = "返回"
+                            )
+                        }
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
@@ -191,14 +194,14 @@ private fun LetterHeader(
     Surface(
         modifier = modifier
             .fillMaxWidth()
-            .padding(vertical = 8.dp),
+            .padding(vertical = 6.dp),
         color = MaterialTheme.colorScheme.surface
     ) {
         Text(
             text = letter.toString(),
-            style = MaterialTheme.typography.titleMedium,
+            style = MaterialTheme.typography.titleSmall,
             color = MaterialTheme.colorScheme.primary,
-            modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
+            modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp)
         )
     }
 }
@@ -217,13 +220,13 @@ private fun ArtistItem(
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 16.dp, vertical = 12.dp),
+                .padding(horizontal = 12.dp, vertical = 10.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
             // 艺术家头像
             Box(
                 modifier = Modifier
-                    .size(48.dp)
+                    .size(42.dp)
                     .clip(CircleShape)
                     .background(MaterialTheme.colorScheme.primaryContainer),
                 contentAlignment = Alignment.Center
@@ -231,12 +234,12 @@ private fun ArtistItem(
                 Icon(
                     imageVector = Icons.Default.MusicNote,
                     contentDescription = null,
-                    modifier = Modifier.size(24.dp),
+                    modifier = Modifier.size(20.dp),
                     tint = MaterialTheme.colorScheme.onPrimaryContainer
                 )
             }
 
-            Spacer(modifier = Modifier.width(16.dp))
+            Spacer(modifier = Modifier.width(12.dp))
 
             // 艺术家信息
             Column(
@@ -244,13 +247,13 @@ private fun ArtistItem(
             ) {
                 Text(
                     text = artist.name,
-                    style = MaterialTheme.typography.bodyLarge,
+                    style = MaterialTheme.typography.bodyMedium,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis
                 )
                 Text(
                     text = "${artist.songCount} 首歌曲",
-                    style = MaterialTheme.typography.bodyMedium,
+                    style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }

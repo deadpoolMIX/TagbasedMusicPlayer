@@ -44,7 +44,6 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.tagplayer.musicplayer.data.local.entity.Playlist
 import com.tagplayer.musicplayer.ui.playlist.viewmodel.PlaylistViewModel
-import com.tagplayer.musicplayer.ui.playlist.viewmodel.PlaylistViewModel.Companion.FAVORITES_PLAYLIST_ID
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -64,7 +63,7 @@ fun PlaylistScreen(
                 title = {
                     Text(
                         text = "我的歌单",
-                        style = MaterialTheme.typography.titleLarge
+                        style = MaterialTheme.typography.titleMedium
                     )
                 },
                 actions = {
@@ -93,7 +92,7 @@ fun PlaylistScreen(
                 text = "$playlistCount 个歌单",
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp)
+                modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
             )
 
             // 歌单列表
@@ -104,7 +103,7 @@ fun PlaylistScreen(
             } else {
                 LazyColumn(
                     modifier = Modifier.fillMaxSize(),
-                    verticalArrangement = Arrangement.spacedBy(12.dp),
+                    verticalArrangement = Arrangement.spacedBy(8.dp),
                     contentPadding = androidx.compose.foundation.layout.PaddingValues(16.dp)
                 ) {
                     // 对歌单排序：系统歌单在前，然后按 sortOrder 排序
@@ -149,7 +148,7 @@ private fun PlaylistItem(
         modifier = Modifier
             .fillMaxWidth()
             .clickable(onClick = onClick),
-        shape = RoundedCornerShape(12.dp),
+        shape = RoundedCornerShape(10.dp),
         colors = CardDefaults.cardColors(
             containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
         )
@@ -157,25 +156,26 @@ private fun PlaylistItem(
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(16.dp),
+                .padding(12.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
             // 封面占位
             Box(
                 modifier = Modifier
-                    .size(56.dp)
-                    .clip(RoundedCornerShape(8.dp))
+                    .size(48.dp)
+                    .clip(RoundedCornerShape(6.dp))
                     .background(MaterialTheme.colorScheme.primaryContainer),
                 contentAlignment = Alignment.Center
             ) {
                 Icon(
                     imageVector = Icons.Default.MusicNote,
                     contentDescription = null,
+                    modifier = Modifier.size(24.dp),
                     tint = MaterialTheme.colorScheme.onPrimaryContainer
                 )
             }
 
-            Spacer(modifier = Modifier.width(16.dp))
+            Spacer(modifier = Modifier.width(12.dp))
 
             // 歌单信息
             Column(
@@ -183,23 +183,27 @@ private fun PlaylistItem(
             ) {
                 Text(
                     text = playlist.name,
-                    style = MaterialTheme.typography.titleMedium,
+                    style = MaterialTheme.typography.titleSmall,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis
                 )
                 Text(
                     text = "${playlist.songCount} 首歌曲",
-                    style = MaterialTheme.typography.bodyMedium,
+                    style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
 
             // 删除按钮（系统歌单不显示）
             if (onDelete != null) {
-                IconButton(onClick = onDelete) {
+                IconButton(
+                    onClick = onDelete,
+                    modifier = Modifier.size(36.dp)
+                ) {
                     Icon(
                         imageVector = Icons.Default.Delete,
                         contentDescription = "删除歌单",
+                        modifier = Modifier.size(18.dp),
                         tint = MaterialTheme.colorScheme.error
                     )
                 }
@@ -234,7 +238,7 @@ private fun EmptyPlaylistState(
             )
 
             Text(
-                text = "点击右下角按钮创建歌单",
+                text = "点击右上角按钮创建歌单",
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
             )

@@ -65,10 +65,7 @@ class MainActivity : ComponentActivity() {
                     derivedStateOf {
                         currentRoute?.let { route ->
                             route.startsWith(Routes.ADD_SONGS_TO_PLAYLIST) ||
-                            route.startsWith(Routes.ALBUM_LIST) ||
-                            route.startsWith(Routes.ARTIST_LIST) ||
                             route.startsWith(Routes.ARTIST_DETAIL) ||
-                            route.startsWith(Routes.ALBUM_DETAIL) ||
                             route.startsWith(Routes.SETTINGS) ||
                             route.startsWith(Routes.LYRICS)
                         } == true

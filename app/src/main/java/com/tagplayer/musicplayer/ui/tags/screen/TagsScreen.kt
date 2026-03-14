@@ -29,7 +29,6 @@ import androidx.compose.material.icons.filled.MusicNote
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -44,7 +43,9 @@ import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -53,7 +54,6 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.tagplayer.musicplayer.data.local.entity.Tag
-import com.tagplayer.musicplayer.ui.components.SearchBar
 import com.tagplayer.musicplayer.ui.tags.viewmodel.TagViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -72,16 +72,27 @@ fun TagsScreen(
     val tagNameInput by viewModel.tagNameInput.collectAsState()
     val focusManager = LocalFocusManager.current
 
+    // 搜索对话框状态
+    var showSearchDialog by remember { mutableStateOf(false) }
+
     Scaffold(
         topBar = {
             TopAppBar(
                 title = {
                     Text(
                         text = "标签管理",
-                        style = MaterialTheme.typography.titleLarge
+                        style = MaterialTheme.typography.titleMedium
                     )
                 },
                 actions = {
+                    // 搜索按钮
+                    IconButton(onClick = { showSearchDialog = true }) {
+                        Icon(
+                            imageVector = Icons.Default.Search,
+                            contentDescription = "搜索",
+                            tint = MaterialTheme.colorScheme.onSurface
+                        )
+                    }
                     // 添加标签按钮
                     IconButton(onClick = { viewModel.showCreateDialog() }) {
                         Icon(
@@ -103,16 +114,6 @@ fun TagsScreen(
                 .fillMaxSize()
                 .padding(paddingValues)
         ) {
-            // 搜索栏
-            SearchBar(
-                query = searchQuery,
-                onQueryChange = viewModel::onSearchQueryChange,
-                placeholder = "搜索标签...",
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 16.dp, vertical = 8.dp)
-            )
-
             // 标签数量
             Text(
                 text = "$tagCount 个标签",
@@ -140,7 +141,7 @@ fun TagsScreen(
                             onClickLabel = null,
                             onClick = { focusManager.clearFocus() }
                         ),
-                    verticalArrangement = Arrangement.spacedBy(8.dp),
+                    verticalArrangement = Arrangement.spacedBy(6.dp),
                     contentPadding = PaddingValues(16.dp)
                 ) {
                     items(
@@ -167,6 +168,18 @@ fun TagsScreen(
                 }
             }
         }
+    }
+
+    // 搜索对话框
+    if (showSearchDialog) {
+        SearchDialog(
+            initialQuery = searchQuery,
+            onDismiss = { showSearchDialog = false },
+            onSearch = { query ->
+                viewModel.onSearchQueryChange(query)
+                showSearchDialog = false
+            }
+        )
     }
 
     // 创建标签对话框
@@ -217,6 +230,39 @@ fun TagsScreen(
 }
 
 @Composable
+private fun SearchDialog(
+    initialQuery: String,
+    onDismiss: () -> Unit,
+    onSearch: (String) -> Unit
+) {
+    var query by remember { mutableStateOf(initialQuery) }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("搜索标签") },
+        text = {
+            OutlinedTextField(
+                value = query,
+                onValueChange = { query = it },
+                placeholder = { Text("搜索标签...") },
+                singleLine = true,
+                modifier = Modifier.fillMaxWidth()
+            )
+        },
+        confirmButton = {
+            TextButton(onClick = { onSearch(query) }) {
+                Text("搜索")
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text("取消")
+            }
+        }
+    )
+}
+
+@Composable
 private fun TagItem(
     tag: Tag,
     onClick: () -> Unit,
@@ -232,16 +278,16 @@ private fun TagItem(
                 onClickLabel = "查看标签详情",
                 onClick = onClick
             ),
-        shape = RoundedCornerShape(12.dp),
+        shape = RoundedCornerShape(10.dp),
         color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
     ) {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(12.dp),
+                .padding(10.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            // 左侧图标+名称（不再单独设置点击）
+            // 左侧图标+名称
             Row(
                 modifier = Modifier.weight(1f),
                 verticalAlignment = Alignment.CenterVertically
@@ -249,8 +295,8 @@ private fun TagItem(
                 // 标签图标
                 Box(
                     modifier = Modifier
-                        .size(48.dp)
-                        .clip(RoundedCornerShape(8.dp))
+                        .size(40.dp)
+                        .clip(RoundedCornerShape(6.dp))
                         .background(
                             androidx.compose.ui.graphics.Color(
                                 tag.color ?: MaterialTheme.colorScheme.primaryContainer.hashCode()
@@ -261,44 +307,45 @@ private fun TagItem(
                     Icon(
                         imageVector = Icons.Default.LocalOffer,
                         contentDescription = null,
+                        modifier = Modifier.size(20.dp),
                         tint = MaterialTheme.colorScheme.onPrimaryContainer
                     )
                 }
 
-                Spacer(modifier = Modifier.width(12.dp))
+                Spacer(modifier = Modifier.width(10.dp))
 
                 // 标签名称
                 Text(
                     text = tag.name,
-                    style = MaterialTheme.typography.titleMedium,
+                    style = MaterialTheme.typography.titleSmall,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis
                 )
             }
 
-            // 编辑按钮（使用pointerInput优先消费点击）
+            // 编辑按钮
             IconButton(
                 onClick = onEdit,
-                modifier = Modifier.size(40.dp)
+                modifier = Modifier.size(36.dp)
             ) {
                 Icon(
                     imageVector = Icons.Default.Edit,
                     contentDescription = "编辑",
                     tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.size(20.dp)
+                    modifier = Modifier.size(18.dp)
                 )
             }
 
             // 删除按钮
             IconButton(
                 onClick = onDelete,
-                modifier = Modifier.size(40.dp)
+                modifier = Modifier.size(36.dp)
             ) {
                 Icon(
                     imageVector = Icons.Default.Delete,
                     contentDescription = "删除",
                     tint = MaterialTheme.colorScheme.error,
-                    modifier = Modifier.size(20.dp)
+                    modifier = Modifier.size(18.dp)
                 )
             }
         }
@@ -329,7 +376,7 @@ private fun EmptyTagsState() {
             )
 
             Text(
-                text = "点击右下角按钮创建标签",
+                text = "点击右上角按钮创建标签",
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
             )

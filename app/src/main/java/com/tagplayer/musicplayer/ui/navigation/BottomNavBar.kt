@@ -6,12 +6,10 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.NavigationBarItemDefaults
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import androidx.navigation.compose.currentBackStackEntryAsState
 
@@ -24,11 +22,12 @@ fun BottomNavBar(
         Screen.Home,
         Screen.Playlist,
         Screen.Tags,
+        Screen.Artist,
         Screen.Filter
     )
 
     NavigationBar(
-        modifier = modifier.height(80.dp),
+        modifier = modifier.height(56.dp),
         containerColor = MaterialTheme.colorScheme.surface,
         tonalElevation = 0.dp
     ) {
@@ -42,12 +41,6 @@ fun BottomNavBar(
                     Icon(
                         imageVector = if (selected) screen.selectedIcon!! else screen.unselectedIcon!!,
                         contentDescription = screen.title
-                    )
-                },
-                label = {
-                    Text(
-                        text = screen.title,
-                        fontSize = 10.sp
                     )
                 },
                 selected = selected,

@@ -63,7 +63,6 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.tagplayer.musicplayer.data.local.entity.ScanFolder
 import com.tagplayer.musicplayer.data.local.entity.Song
-import com.tagplayer.musicplayer.ui.components.SearchBar
 import com.tagplayer.musicplayer.ui.components.SongActionSheet
 import com.tagplayer.musicplayer.ui.components.SongItem
 import com.tagplayer.musicplayer.ui.components.TagSelectionDialog
@@ -78,8 +77,6 @@ import com.tagplayer.musicplayer.util.PermissionUtils
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun HomeScreen(
-    onNavigateToArtist: () -> Unit = {},
-    onNavigateToAlbum: () -> Unit = {},
     onNavigateToSettings: () -> Unit = {},
     modifier: Modifier = Modifier,
     viewModel: HomeViewModel = hiltViewModel(),
@@ -99,6 +96,9 @@ fun HomeScreen(
     val showSortDialog by viewModel.showSortDialog.collectAsState()
     val sortType by viewModel.sortType.collectAsState()
     val scanFolders by viewModel.scanFolders.collectAsState()
+
+    // 搜索对话框状态
+    var showSearchDialog by remember { mutableStateOf(false) }
 
     // 权限申请启动器
     val permissionLauncher = rememberLauncherForActivityResult(
@@ -135,10 +135,17 @@ fun HomeScreen(
                 title = {
                     Text(
                         text = "我的音乐",
-                        style = MaterialTheme.typography.titleLarge
+                        style = MaterialTheme.typography.titleMedium
                     )
                 },
                 actions = {
+                    // 搜索按钮
+                    IconButton(onClick = { showSearchDialog = true }) {
+                        Icon(
+                            imageVector = Icons.Default.Search,
+                            contentDescription = "搜索"
+                        )
+                    }
                     // 设置按钮
                     IconButton(onClick = onNavigateToSettings) {
                         Icon(
@@ -183,25 +190,11 @@ fun HomeScreen(
                 .fillMaxSize()
                 .padding(paddingValues)
         ) {
-            // 搜索栏
-            SearchBar(
-                query = searchQuery,
-                onQueryChange = viewModel::onSearchQueryChange,
-                placeholder = "搜索歌曲、艺术家、专辑...",
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 16.dp, vertical = 8.dp)
-            )
-
             // 筛选器
             FilterChips(
                 selectedType = filterType,
                 onTypeSelected = { type ->
-                    when (type) {
-                        FilterType.ARTIST -> onNavigateToArtist()
-                        FilterType.ALBUM -> onNavigateToAlbum()
-                        else -> viewModel.onFilterTypeChange(type)
-                    }
+                    viewModel.onFilterTypeChange(type)
                 },
                 modifier = Modifier
                     .fillMaxWidth()
@@ -286,6 +279,18 @@ fun HomeScreen(
                 }
             }
         }
+    }
+
+    // 搜索对话框
+    if (showSearchDialog) {
+        SearchDialog(
+            initialQuery = searchQuery,
+            onDismiss = { showSearchDialog = false },
+            onSearch = { query ->
+                viewModel.onSearchQueryChange(query)
+                showSearchDialog = false
+            }
+        )
     }
 
     // 权限请求对话框
@@ -378,6 +383,39 @@ fun HomeScreen(
 }
 
 @Composable
+private fun SearchDialog(
+    initialQuery: String,
+    onDismiss: () -> Unit,
+    onSearch: (String) -> Unit
+) {
+    var query by remember { mutableStateOf(initialQuery) }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("搜索") },
+        text = {
+            androidx.compose.material3.OutlinedTextField(
+                value = query,
+                onValueChange = { query = it },
+                placeholder = { Text("搜索歌曲、艺术家、专辑...") },
+                singleLine = true,
+                modifier = Modifier.fillMaxWidth()
+            )
+        },
+        confirmButton = {
+            TextButton(onClick = { onSearch(query) }) {
+                Text("搜索")
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text("取消")
+            }
+        }
+    )
+}
+
+@Composable
 private fun SortDialog(
     currentSortType: SortType,
     onDismiss: () -> Unit,
@@ -434,7 +472,8 @@ private fun FilterChips(
         modifier = modifier,
         horizontalArrangement = Arrangement.spacedBy(8.dp)
     ) {
-        FilterType.values().forEach { type ->
+        // 只保留全部、最近播放
+        listOf(FilterType.ALL, FilterType.RECENT).forEach { type ->
             FilterChip(
                 text = type.title,
                 isSelected = type == selectedType,

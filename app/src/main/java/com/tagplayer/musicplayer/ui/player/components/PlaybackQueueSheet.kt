@@ -1,5 +1,6 @@
 package com.tagplayer.musicplayer.ui.player.components
 
+import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectVerticalDragGestures
@@ -23,6 +24,8 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.KeyboardArrowUp
+import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.MusicNote
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -35,16 +38,21 @@ import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.scale
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.zIndex
 import com.tagplayer.musicplayer.data.local.entity.Song
+import kotlinx.coroutines.launch
 
 @Composable
 fun PlaybackQueueSheet(
@@ -104,7 +112,16 @@ private fun QueueContent(
     onClearQueue: () -> Unit
 ) {
     var swipeOffset by remember { mutableFloatStateOf(0f) }
-    var isDragging by remember { mutableStateOf(false) }
+    var isDraggingSheet by remember { mutableStateOf(false) }
+    val listState = rememberLazyListState()
+    val coroutineScope = rememberCoroutineScope()
+
+    // 自动滚动到当前播放位置
+    androidx.compose.runtime.LaunchedEffect(currentIndex) {
+        if (currentIndex >= 0) {
+            listState.animateScrollToItem(currentIndex.coerceIn(0, queue.size - 1))
+        }
+    }
 
     Column(
         modifier = Modifier
@@ -117,13 +134,13 @@ private fun QueueContent(
                             onDismiss()
                         }
                         swipeOffset = 0f
-                        isDragging = false
+                        isDraggingSheet = false
                     },
                     onVerticalDrag = { change: androidx.compose.ui.input.pointer.PointerInputChange, dragAmount: Float ->
                         change.consume()
                         if (dragAmount > 0) {
                             swipeOffset += dragAmount
-                            isDragging = true
+                            isDraggingSheet = true
                         }
                     }
                 )
@@ -173,25 +190,35 @@ private fun QueueContent(
         HorizontalDivider()
         Spacer(modifier = Modifier.height(8.dp))
 
-        // Queue List - 只显示当前播放及之后的歌曲
-        val visibleQueue = queue.drop(currentIndex.coerceAtLeast(0))
+        // Queue List - 显示所有歌曲
         LazyColumn(
-            state = rememberLazyListState(),
+            state = listState,
             modifier = Modifier
                 .fillMaxWidth()
                 .fillMaxHeight(),
             contentPadding = PaddingValues(vertical = 8.dp)
         ) {
             itemsIndexed(
-                items = visibleQueue,
-                key = { relativeIndex, song -> "${relativeIndex}_${song.id}" }
-            ) { relativeIndex, song ->
-                val actualIndex = currentIndex + relativeIndex
+                items = queue,
+                key = { index, song -> "${index}_${song.id}" }
+            ) { index, song ->
                 QueueItem(
                     song = song,
-                    isPlaying = actualIndex == currentIndex,
-                    onClick = { onSongClick(actualIndex) },
-                    onRemove = { onRemoveSong(actualIndex) }
+                    isPlaying = index == currentIndex,
+                    onClick = { onSongClick(index) },
+                    onRemove = { onRemoveSong(index) },
+                    canMoveUp = index > 0,
+                    canMoveDown = index < queue.size - 1,
+                    onMoveUp = {
+                        if (index > 0) {
+                            onMoveSong(index, index - 1)
+                        }
+                    },
+                    onMoveDown = {
+                        if (index < queue.size - 1) {
+                            onMoveSong(index, index + 1)
+                        }
+                    }
                 )
             }
         }
@@ -203,12 +230,34 @@ private fun QueueItem(
     song: Song,
     isPlaying: Boolean,
     onClick: () -> Unit,
-    onRemove: () -> Unit
+    onRemove: () -> Unit,
+    canMoveUp: Boolean,
+    canMoveDown: Boolean,
+    onMoveUp: () -> Unit,
+    onMoveDown: () -> Unit
 ) {
+    val scale by animateFloatAsState(
+        targetValue = if (isPlaying) 1.02f else 1f,
+        label = "scale"
+    )
+
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .background(MaterialTheme.colorScheme.surface, RoundedCornerShape(8.dp))
+            .scale(scale)
+            .then(
+                if (isPlaying) {
+                    Modifier.background(
+                        MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.3f),
+                        RoundedCornerShape(8.dp)
+                    )
+                } else {
+                    Modifier.background(
+                        MaterialTheme.colorScheme.surface,
+                        RoundedCornerShape(8.dp)
+                    )
+                }
+            )
             .clickable(onClick = onClick)
             .padding(vertical = 8.dp, horizontal = 4.dp),
         verticalAlignment = Alignment.CenterVertically
@@ -264,8 +313,45 @@ private fun QueueItem(
             )
         }
 
+        // 上移按钮
+        if (canMoveUp) {
+            IconButton(
+                onClick = onMoveUp,
+                modifier = Modifier.size(32.dp)
+            ) {
+                Icon(
+                    imageVector = Icons.Default.KeyboardArrowUp,
+                    contentDescription = "上移",
+                    modifier = Modifier.size(20.dp),
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)
+                )
+            }
+        } else {
+            Spacer(modifier = Modifier.width(32.dp))
+        }
+
+        // 下移按钮
+        if (canMoveDown) {
+            IconButton(
+                onClick = onMoveDown,
+                modifier = Modifier.size(32.dp)
+            ) {
+                Icon(
+                    imageVector = Icons.Default.KeyboardArrowDown,
+                    contentDescription = "下移",
+                    modifier = Modifier.size(20.dp),
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)
+                )
+            }
+        } else {
+            Spacer(modifier = Modifier.width(32.dp))
+        }
+
         // 删除按钮
-        IconButton(onClick = onRemove) {
+        IconButton(
+            onClick = onRemove,
+            modifier = Modifier.size(32.dp)
+        ) {
             Icon(
                 imageVector = Icons.Default.Delete,
                 contentDescription = "删除",

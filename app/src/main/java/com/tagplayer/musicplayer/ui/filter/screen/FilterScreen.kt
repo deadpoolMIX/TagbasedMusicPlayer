@@ -83,7 +83,7 @@ fun FilterScreen(
                 title = {
                     Text(
                         text = "筛选",
-                        style = MaterialTheme.typography.titleLarge
+                        style = MaterialTheme.typography.titleMedium
                     )
                 },
                 actions = {
