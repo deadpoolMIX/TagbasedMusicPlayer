@@ -1056,3 +1056,36 @@ ScanFolder (扫描文件夹)
 | MusicScanner.kt | 提取内嵌歌词 |
 
 ---
+
+## UI重构 (2026-03-14)
+
+### 修改内容
+- [x] 删除专辑页面和艺术家独立入口页面
+- [x] 新增歌手作为底部导航Tab（复用ArtistListScreen）
+- [x] 首页和标签页搜索框改为右上角搜索按钮
+- [x] 底部导航栏高度变小(80dp->56dp)，移除文字标签
+- [x] 歌单列表和标签列表项尺寸缩小
+- [x] 五个底部导航页面标题栏高度缩小
+
+### 删除的文件
+| 文件 | 说明 |
+|------|------|
+| AlbumListScreen.kt | 专辑列表页面 |
+| AlbumDetailScreen.kt | 专辑详情页面 |
+
+### 修改的文件
+| 文件 | 修改内容 |
+|------|----------|
+| MainActivity.kt | 更新隐藏底部栏条件 |
+| NavGraph.kt | 删除专辑路由，新增歌手Tab路由 |
+| Screen.kt | 新增 Artist Screen |
+| BottomNavBar.kt | 添加歌手Tab，缩小高度，移除文字 |
+| HomeScreen.kt | 搜索框改为按钮，缩小标题栏，删除导航参数 |
+| TagsScreen.kt | 搜索框改为按钮，缩小列表项和标题栏 |
+| PlaylistScreen.kt | 缩小列表项和标题栏 |
+| FilterScreen.kt | 缩小标题栏 |
+| ArtistListScreen.kt | 作为底部Tab适配，缩小标题栏 |
+
+- **Git**: 3e39016
+
+---
