@@ -112,6 +112,12 @@ ScanFolder (扫描文件夹)
 - [x] 文件夹管理
 - [x] 清除缓存和关于页面
 
+### 阶段十一: 通知栏播放控制
+- [x] 自定义通知布局 (歌曲封面+信息+控制按钮)
+- [x] NotificationHelper通知构建工具
+- [x] NotificationActionReceiver广播接收器
+- [x] PlaybackService集成通知更新
+
 ---
 
 ## 三、核心文件清单
@@ -259,6 +265,7 @@ ScanFolder (扫描文件夹)
 
 | Commit | 说明 |
 |--------|------|
+| 9ac82c1 | feat(notification): 添加自定义通知栏播放控制 |
 | 9f0fb23 | fix(lyrics): 修复歌词页触摸事件穿透问题 |
 | af722b1 | fix(lyrics): 修复歌词居中定位，使用viewportHeight计算 |
 | 7f8c30d | fix(lyrics): 修复歌词功能多项问题 |
