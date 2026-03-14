@@ -18,6 +18,9 @@ object LyricsParser {
 
     private const val METADATA_KEY_LYRICS = 20
 
+    // 时间戳合并阈值：100ms内的歌词行视为同一时间，合并显示
+    private const val MERGE_THRESHOLD_MS = 100L
+
     // 标准 LRC 时间标签: [mm:ss.xx] 或 [mm:ss.xxx]
     private val LRC_TIME_REGEX = Regex("""\[(\d{2}):(\d{2})\.(\d{2,3})\]""")
 
@@ -32,11 +35,8 @@ object LyricsParser {
         try {
             retriever.setDataSource(filePath)
             val lyrics = retriever.extractMetadata(METADATA_KEY_LYRICS)
-            if (!lyrics.isNullOrBlank()) {
-                // 检查是否是有效的歌词格式（包含时间标签或至少有多行文本）
-                if (isValidLyricsContent(lyrics)) {
-                    return@withContext lyrics
-                }
+            if (!lyrics.isNullOrBlank() && isValidLyricsContent(lyrics)) {
+                return@withContext lyrics
             }
             null
         } catch (e: Exception) {
@@ -48,35 +48,19 @@ object LyricsParser {
         }
     }
 
-    /**
-     * 检查歌词内容是否有效
-     */
     private fun isValidLyricsContent(content: String): Boolean {
         if (content.isBlank()) return false
 
-        // 如果是 LRC 格式，检查是否有时间标签
         if (content.contains("[") && content.contains("]")) {
-            // 检查是否有时间标签 [mm:ss.xx]
-            if (LRC_TIME_REGEX.containsMatchIn(content)) {
-                return true
-            }
-            // 检查是否有元数据标签 [ti:] [ar:] [al:] 等
-            if (content.contains("[ti:") || content.contains("[ar:") || content.contains("[al:")) {
-                return true
-            }
+            if (LRC_TIME_REGEX.containsMatchIn(content)) return true
+            if (content.contains("[ti:") || content.contains("[ar:") || content.contains("[al:")) return true
         }
 
-        // 检查是否有多行文本（至少2行非空内容）
         val lines = content.lines().filter { it.isNotBlank() }
-        if (lines.size >= 2) {
-            return true
-        }
+        if (lines.size >= 2) return true
 
-        // 单行内容，检查是否是纯数字（不是有效歌词）
         val singleLine = content.trim()
-        if (singleLine.length <= 6 && singleLine.all { it.isDigit() }) {
-            return false
-        }
+        if (singleLine.length <= 6 && singleLine.all { it.isDigit() }) return false
 
         return false
     }
@@ -133,20 +117,15 @@ object LyricsParser {
     private fun readFileWithEncoding(file: File): String? {
         val bytes = file.readBytes()
 
-        // 尝试 UTF-8
         try {
             val content = String(bytes, Charsets.UTF_8)
-            if (!content.contains("\uFFFD")) {
-                return content
-            }
+            if (!content.contains("\uFFFD")) return content
         } catch (e: Exception) { }
 
-        // 尝试 GBK（常见中文编码）
         try {
             return String(bytes, Charset.forName("GBK"))
         } catch (e: Exception) { }
 
-        // 尝试 UTF-16
         try {
             return String(bytes, Charsets.UTF_16)
         } catch (e: Exception) { }
@@ -163,25 +142,21 @@ object LyricsParser {
     }
 
     suspend fun getLyrics(context: Context, audioFilePath: String): String? = withContext(Dispatchers.IO) {
-        // 优先尝试外部 .lrc 文件
         val externalLyrics = loadLyricsFromExternalFile(audioFilePath)
-        if (!externalLyrics.isNullOrBlank()) {
-            return@withContext externalLyrics
-        }
-        // 其次尝试内嵌歌词
+        if (!externalLyrics.isNullOrBlank()) return@withContext externalLyrics
         extractEmbeddedLyrics(context, audioFilePath)
     }
 
     fun parseLrc(lrcContent: String): List<LyricLine> {
         if (lrcContent.isBlank()) return emptyList()
 
-        val lines = mutableListOf<LyricLine>()
+        val rawLines = mutableListOf<LyricLine>()
 
         lrcContent.lines().forEach { line ->
             val trimmedLine = line.trim()
             if (trimmedLine.isEmpty()) return@forEach
 
-            // 跳过元数据行 [ti:], [ar:], [al:], [by:], [offset:] 等
+            // 跳过元数据行
             if (trimmedLine.startsWith("[") && !trimmedLine.startsWith("[0") && !trimmedLine.startsWith("[1") && !trimmedLine.startsWith("[2")) {
                 val colonIndex = trimmedLine.indexOf(':')
                 if (colonIndex > 0 && colonIndex < trimmedLine.indexOf(']')) {
@@ -189,11 +164,9 @@ object LyricsParser {
                 }
             }
 
-            // 查找时间标签
             val timeMatches = LRC_TIME_REGEX.findAll(trimmedLine).toList()
             if (timeMatches.isEmpty()) return@forEach
 
-            // 提取歌词文本（最后一个 ] 之后的内容）
             val lastBracketIndex = trimmedLine.lastIndexOf(']')
             val text = if (lastBracketIndex >= 0 && lastBracketIndex < trimmedLine.length - 1) {
                 trimmedLine.substring(lastBracketIndex + 1).trim()
@@ -201,23 +174,75 @@ object LyricsParser {
                 ""
             }
 
-            // 为每个时间标签创建歌词行
             timeMatches.forEach { match ->
                 val minutes = match.groupValues[1].toIntOrNull() ?: 0
                 val seconds = match.groupValues[2].toIntOrNull() ?: 0
                 val millisStr = match.groupValues[3]
-                val millis = if (millisStr.length == 2) {
-                    millisStr.toInt() * 10
-                } else {
-                    millisStr.toInt()
-                }
+                val millis = if (millisStr.length == 2) millisStr.toInt() * 10 else millisStr.toInt()
 
                 val totalMillis = (minutes * 60L + seconds) * 1000L + millis
-                lines.add(LyricLine(totalMillis, text))
+                rawLines.add(LyricLine(totalMillis, text))
             }
         }
 
-        return lines.sortedBy { it.timestampMs }
+        // 按时间戳排序
+        rawLines.sortBy { it.timestampMs }
+
+        // 合并时间戳相近的歌词行（处理双语歌词）
+        return mergeBilingualLyrics(rawLines)
+    }
+
+    /**
+     * 合并双语歌词
+     * 将时间戳相近（100ms内）的歌词行合并为一行，用换行符分隔
+     */
+    private fun mergeBilingualLyrics(lines: List<LyricLine>): List<LyricLine> {
+        if (lines.isEmpty()) return emptyList()
+
+        val mergedLines = mutableListOf<LyricLine>()
+        var currentGroup = mutableListOf<LyricLine>()
+
+        for (line in lines) {
+            if (currentGroup.isEmpty()) {
+                currentGroup.add(line)
+            } else {
+                val lastTimestamp = currentGroup.last().timestampMs
+                // 如果时间戳差距在阈值内，合并到当前组
+                if (line.timestampMs - lastTimestamp <= MERGE_THRESHOLD_MS) {
+                    currentGroup.add(line)
+                } else {
+                    // 时间戳差距过大，保存当前组并开始新组
+                    mergedLines.add(mergeGroup(currentGroup))
+                    currentGroup = mutableListOf(line)
+                }
+            }
+        }
+
+        // 处理最后一组
+        if (currentGroup.isNotEmpty()) {
+            mergedLines.add(mergeGroup(currentGroup))
+        }
+
+        return mergedLines
+    }
+
+    /**
+     * 将一组时间戳相近的歌词行合并为一行
+     */
+    private fun mergeGroup(group: List<LyricLine>): LyricLine {
+        if (group.size == 1) return group[0]
+
+        // 使用第一个时间戳
+        val timestamp = group.first().timestampMs
+
+        // 合并所有文本，用换行符分隔
+        // 通常双语歌词是先中文后英文，或者先英文后中文
+        val mergedText = group
+            .map { it.text }
+            .filter { it.isNotEmpty() }
+            .joinToString("\n")
+
+        return LyricLine(timestamp, mergedText)
     }
 
     fun parseLrcFile(file: File): List<LyricLine> {
@@ -264,7 +289,6 @@ object LyricsParser {
         return if (isLrcFormat(content)) {
             parseLrc(content)
         } else {
-            // 纯文本歌词
             content.lines()
                 .filter { it.isNotBlank() }
                 .mapIndexed { index, line ->

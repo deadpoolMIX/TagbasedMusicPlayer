@@ -42,6 +42,8 @@ import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -88,6 +90,14 @@ fun LyricsScreen(
     // 是否正在手动滚动
     var isUserScrolling by remember { mutableStateOf(false) }
 
+    // 获取屏幕高度用于计算居中偏移
+    val configuration = LocalConfiguration.current
+    val screenHeightDp = configuration.screenHeightDp.dp
+    val screenHeightPx = with(LocalDensity.current) { screenHeightDp.toPx() }
+
+    // 歌词项高度（用于居中计算）
+    val itemHeightPx = with(LocalDensity.current) { 48.dp.toPx() }
+
     // 更新当前歌词行并自动滚动
     LaunchedEffect(currentPosition, lyrics, isUserScrolling) {
         if (lyrics.isEmpty() || isUserScrolling) return@LaunchedEffect
@@ -96,10 +106,12 @@ fun LyricsScreen(
         if (newIndex != currentLineIndex && newIndex >= 0) {
             currentLineIndex = newIndex
 
+            // 计算居中偏移：屏幕高度的一半减去歌词项高度的一半
+            // 这样当前歌词会显示在屏幕中央
             scope.launch {
                 listState.animateScrollToItem(
                     index = newIndex,
-                    scrollOffset = -200
+                    scrollOffset = -(screenHeightPx / 2 - itemHeightPx / 2).toInt()
                 )
             }
         }
@@ -155,7 +167,6 @@ fun LyricsScreen(
                             swipeOffset = 0f
                         },
                         onVerticalDrag = { change, dragAmount ->
-                            // 只在列表无法向下滚动时才处理下滑手势
                             if (!listState.canScrollBackward && dragAmount > 0) {
                                 change.consume()
                                 swipeOffset += dragAmount
@@ -239,10 +250,7 @@ private fun LyricsList(
         modifier = modifier.fillMaxSize(),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        item {
-            Spacer(modifier = Modifier.height(200.dp))
-        }
-
+        // 不再需要顶部占位，居中由 scrollOffset 控制
         itemsIndexed(
             items = lyrics,
             key = { index, line -> "${line.timestampMs}_$index" }
@@ -250,11 +258,14 @@ private fun LyricsList(
             val isCurrentLine = index == currentLineIndex
             val distance = kotlin.math.abs(index - currentLineIndex)
 
-            Text(
-                text = line.text,
+            // 支持多行文本（双语歌词用换行符分隔）
+            val displayText = line.text
+            val lineCount = displayText.lines().filter { it.isNotBlank() }.size
+
+            Column(
                 modifier = Modifier
                     .fillMaxWidth(0.85f)
-                    .padding(horizontal = 16.dp, vertical = 12.dp)
+                    .padding(horizontal = 16.dp, vertical = if (lineCount > 1) 8.dp else 12.dp)
                     .alpha(
                         when {
                             isCurrentLine -> 1f
@@ -264,21 +275,30 @@ private fun LyricsList(
                         }
                     )
                     .clickable { onLineClick(line) },
-                style = MaterialTheme.typography.bodyLarge.copy(
-                    fontSize = if (isCurrentLine) 18.sp else 16.sp
-                ),
-                color = if (isCurrentLine) {
-                    MaterialTheme.colorScheme.primary
-                } else {
-                    MaterialTheme.colorScheme.onBackground
-                },
-                textAlign = TextAlign.Center,
-                maxLines = 2
-            )
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                // 按行显示歌词（支持双语）
+                displayText.lines().filter { it.isNotBlank() }.forEach { textLine ->
+                    Text(
+                        text = textLine,
+                        style = MaterialTheme.typography.bodyLarge.copy(
+                            fontSize = if (isCurrentLine) 18.sp else 16.sp
+                        ),
+                        color = if (isCurrentLine) {
+                            MaterialTheme.colorScheme.primary
+                        } else {
+                            MaterialTheme.colorScheme.onBackground
+                        },
+                        textAlign = TextAlign.Center,
+                        maxLines = 1
+                    )
+                }
+            }
         }
 
+        // 底部留白，让最后一行歌词也能滚动到中央
         item {
-            Spacer(modifier = Modifier.height(200.dp))
+            Spacer(modifier = Modifier.height(400.dp))
         }
     }
 }
