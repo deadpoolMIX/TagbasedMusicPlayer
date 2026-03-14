@@ -59,6 +59,10 @@ class PlayerViewModel @Inject constructor(
         musicPlayer.playPauseToggle()
     }
 
+    fun play() {
+        musicPlayer.play()
+    }
+
     fun playNext() {
         musicPlayer.playNext()
     }

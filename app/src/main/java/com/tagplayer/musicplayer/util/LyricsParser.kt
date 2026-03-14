@@ -24,6 +24,9 @@ object LyricsParser {
     // 标准 LRC 时间标签: [mm:ss.xx] 或 [mm:ss.xxx]
     private val LRC_TIME_REGEX = Regex("""\[(\d{2}):(\d{2})\.(\d{2,3})\]""")
 
+    // offset 标签正则: [offset:xxx] 或 [offset:-xxx]
+    private val LRC_OFFSET_REGEX = Regex("""\[offset:(-?\d+)\]""", RegexOption.IGNORE_CASE)
+
     suspend fun extractEmbeddedLyrics(context: Context, filePath: String): String? = withContext(Dispatchers.IO) {
         if (filePath.isEmpty()) return@withContext null
         val file = File(filePath)
@@ -150,13 +153,20 @@ object LyricsParser {
     fun parseLrc(lrcContent: String): List<LyricLine> {
         if (lrcContent.isBlank()) return emptyList()
 
+        // 解析 offset 偏移值
+        var offsetMs = 0L
+        val offsetMatch = LRC_OFFSET_REGEX.find(lrcContent)
+        if (offsetMatch != null) {
+            offsetMs = offsetMatch.groupValues[1].toLongOrNull() ?: 0L
+        }
+
         val rawLines = mutableListOf<LyricLine>()
 
         lrcContent.lines().forEach { line ->
             val trimmedLine = line.trim()
             if (trimmedLine.isEmpty()) return@forEach
 
-            // 跳过元数据行
+            // 跳过元数据行（包括 offset 行）
             if (trimmedLine.startsWith("[") && !trimmedLine.startsWith("[0") && !trimmedLine.startsWith("[1") && !trimmedLine.startsWith("[2")) {
                 val colonIndex = trimmedLine.indexOf(':')
                 if (colonIndex > 0 && colonIndex < trimmedLine.indexOf(']')) {
@@ -180,7 +190,7 @@ object LyricsParser {
                 val millisStr = match.groupValues[3]
                 val millis = if (millisStr.length == 2) millisStr.toInt() * 10 else millisStr.toInt()
 
-                val totalMillis = (minutes * 60L + seconds) * 1000L + millis
+                val totalMillis = (minutes * 60L + seconds) * 1000L + millis + offsetMs
                 rawLines.add(LyricLine(totalMillis, text))
             }
         }

@@ -109,10 +109,12 @@ fun LyricsScreen(
             currentLineIndex = newIndex
 
             // 计算偏移：屏幕中央偏上两行的位置
+            // scrollOffset 正值表示 item 距离可见区域顶部的像素
             scope.launch {
+                val centerOffset = (screenHeightPx / 2 - itemHeightPx / 2 - twoLinesOffsetPx).toInt()
                 listState.animateScrollToItem(
                     index = newIndex,
-                    scrollOffset = -(screenHeightPx / 2 - itemHeightPx / 2 + twoLinesOffsetPx).toInt()
+                    scrollOffset = centerOffset
                 )
             }
         }
@@ -185,6 +187,7 @@ fun LyricsScreen(
                     listState = listState,
                     onLineClick = { line ->
                         viewModel.seekTo(line.timestampMs)
+                        viewModel.play()
                     },
                     onUserScroll = {
                         isUserScrolling = true
@@ -280,10 +283,19 @@ private fun LyricsList(
             ) {
                 // 按行显示歌词（支持双语）
                 displayText.lines().filter { it.isNotBlank() }.forEach { textLine ->
+                    // 根据文本长度自动调整字体大小
+                    val charCount = textLine.length
+                    val fontSize = when {
+                        charCount <= 20 -> if (isCurrentLine) 18.sp else 16.sp
+                        charCount <= 30 -> if (isCurrentLine) 16.sp else 14.sp
+                        charCount <= 40 -> if (isCurrentLine) 14.sp else 12.sp
+                        else -> if (isCurrentLine) 12.sp else 10.sp
+                    }
+
                     Text(
                         text = textLine,
                         style = MaterialTheme.typography.bodyLarge.copy(
-                            fontSize = if (isCurrentLine) 18.sp else 16.sp
+                            fontSize = fontSize
                         ),
                         color = if (isCurrentLine) {
                             MaterialTheme.colorScheme.primary
