@@ -184,7 +184,13 @@ fun NavGraph(
                 onBackClick = { navController.popBackStack() }
             )
         }
-        composable(Routes.LYRICS) {
+        composable(
+            route = Routes.LYRICS,
+            enterTransition = { fadeIn() },
+            exitTransition = { fadeOut() },
+            popEnterTransition = { fadeIn() },
+            popExitTransition = { fadeOut() }
+        ) {
             LyricsScreen(
                 onBackClick = { navController.popBackStack() }
             )

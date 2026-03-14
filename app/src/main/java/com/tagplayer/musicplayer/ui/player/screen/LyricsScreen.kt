@@ -26,6 +26,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -64,6 +65,14 @@ fun LyricsScreen(
     val playbackState by viewModel.playbackState.collectAsState()
     val currentPosition by viewModel.currentPosition.collectAsState()
     val currentSong = playbackState.currentSong
+
+    // 追踪组件是否活跃（用于阻止触摸事件穿透）
+    var isActive by remember { mutableStateOf(true) }
+    DisposableEffect(Unit) {
+        onDispose {
+            isActive = false
+        }
+    }
 
     // 解析歌词
     val lyrics = remember(currentSong?.lyrics) {
@@ -183,6 +192,7 @@ fun LyricsScreen(
                     lyrics = lyrics,
                     currentLineIndex = currentLineIndex,
                     listState = listState,
+                    isActive = isActive,
                     onLineClick = { line ->
                         viewModel.seekTo(line.timestampMs)
                         viewModel.play()
@@ -237,6 +247,7 @@ private fun LyricsList(
     lyrics: List<LyricLine>,
     currentLineIndex: Int,
     listState: LazyListState,
+    isActive: Boolean,
     onLineClick: (LyricLine) -> Unit,
     onUserScroll: () -> Unit,
     modifier: Modifier = Modifier
@@ -276,7 +287,7 @@ private fun LyricsList(
                             else -> 0.35f
                         }
                     )
-                    .clickable { onLineClick(line) },
+                    .clickable(enabled = isActive) { onLineClick(line) },
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
                 // 按行显示歌词（支持双语）
