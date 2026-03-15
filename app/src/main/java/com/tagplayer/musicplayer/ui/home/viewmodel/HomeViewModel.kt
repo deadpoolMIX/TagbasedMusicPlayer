@@ -8,6 +8,7 @@ import androidx.lifecycle.viewModelScope
 import com.tagplayer.musicplayer.data.local.entity.ScanFolder
 import com.tagplayer.musicplayer.data.local.entity.Song
 import com.tagplayer.musicplayer.data.repository.ScanFolderRepository
+import com.tagplayer.musicplayer.data.repository.SettingsRepository
 import com.tagplayer.musicplayer.data.repository.SongRepository
 import com.tagplayer.musicplayer.util.AlphabetIndexUtils
 import com.tagplayer.musicplayer.util.PermissionUtils
@@ -30,7 +31,8 @@ import javax.inject.Inject
 class HomeViewModel @Inject constructor(
     @ApplicationContext private val context: Context,
     private val songRepository: SongRepository,
-    private val scanFolderRepository: ScanFolderRepository
+    private val scanFolderRepository: ScanFolderRepository,
+    private val settingsRepository: SettingsRepository
 ) : ViewModel() {
 
     // 搜索查询
@@ -41,9 +43,20 @@ class HomeViewModel @Inject constructor(
     private val _filterType = MutableStateFlow(FilterType.ALL)
     val filterType: StateFlow<FilterType> = _filterType.asStateFlow()
 
-    // 排序类型
+    // 排序类型（从设置中读取默认值）
     private val _sortType = MutableStateFlow(SortType.DATE_ADDED_DESC)
     val sortType: StateFlow<SortType> = _sortType.asStateFlow()
+
+    init {
+        // 读取默认排序设置
+        viewModelScope.launch {
+            settingsRepository.defaultSort.collect { sortOrdinal ->
+                if (sortOrdinal in SortType.entries.indices) {
+                    _sortType.value = SortType.entries[sortOrdinal]
+                }
+            }
+        }
+    }
 
     // 是否显示排序对话框
     private val _showSortDialog = MutableStateFlow(false)

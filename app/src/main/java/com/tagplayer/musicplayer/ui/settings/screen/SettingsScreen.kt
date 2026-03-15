@@ -74,6 +74,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.tagplayer.musicplayer.data.local.entity.ScanFolder
+import com.tagplayer.musicplayer.ui.home.viewmodel.SortType
 import com.tagplayer.musicplayer.ui.settings.viewmodel.SettingsViewModel
 import com.tagplayer.musicplayer.ui.settings.viewmodel.ThemeMode
 import kotlinx.coroutines.launch
@@ -87,12 +88,14 @@ fun SettingsScreen(
 ) {
     val context = LocalContext.current
     val themeMode by viewModel.themeMode.collectAsState()
+    val defaultSort by viewModel.defaultSort.collectAsState()
     val scanFolders by viewModel.scanFolders.collectAsState()
     val snackbarHostState = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
 
     // 对话框状态
     var showThemeDialog by remember { mutableStateOf(false) }
+    var showSortDialog by remember { mutableStateOf(false) }
     var showClearCacheDialog by remember { mutableStateOf(false) }
     var showImportConfirmDialog by remember { mutableStateOf(false) }
     var showExportUri by remember { mutableStateOf<android.net.Uri?>(null) }
@@ -184,6 +187,15 @@ fun SettingsScreen(
                 )
             }
 
+            // 首页设置
+            item {
+                SettingsSectionTitle("首页设置")
+                SortCard(
+                    currentSort = defaultSort,
+                    onClick = { showSortDialog = true }
+                )
+            }
+
             // 数据备份
             item {
                 SettingsSectionTitle("数据备份")
@@ -237,6 +249,15 @@ fun SettingsScreen(
             currentTheme = themeMode,
             onThemeSelected = { viewModel.setThemeMode(it) },
             onDismiss = { showThemeDialog = false }
+        )
+    }
+
+    // 排序选择对话框
+    if (showSortDialog) {
+        SortSelectionDialog(
+            currentSort = defaultSort,
+            onSortSelected = { viewModel.setDefaultSort(it) },
+            onDismiss = { showSortDialog = false }
         )
     }
 
@@ -468,6 +489,100 @@ private fun ThemeOption(
         )
         RadioButton(selected = selected, onClick = onClick)
     }
+}
+
+@Composable
+private fun SortCard(
+    currentSort: SortType,
+    onClick: () -> Unit
+) {
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable(onClick = onClick),
+        shape = RoundedCornerShape(12.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surface
+        )
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Icon(
+                imageVector = Icons.Default.ChevronRight,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.primary,
+                modifier = Modifier.size(24.dp)
+            )
+            Spacer(modifier = Modifier.width(16.dp))
+            Text(
+                text = "默认排序",
+                style = MaterialTheme.typography.bodyLarge,
+                modifier = Modifier.weight(1f)
+            )
+            Text(
+                text = currentSort.title,
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            Spacer(modifier = Modifier.width(8.dp))
+            Icon(
+                imageVector = Icons.Default.ChevronRight,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
+    }
+}
+
+@Composable
+private fun SortSelectionDialog(
+    currentSort: SortType,
+    onSortSelected: (SortType) -> Unit,
+    onDismiss: () -> Unit
+) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("选择默认排序") },
+        text = {
+            Column {
+                SortType.entries.forEach { sortType ->
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable {
+                                onSortSelected(sortType)
+                                onDismiss()
+                            }
+                            .padding(vertical = 12.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            text = sortType.title,
+                            style = MaterialTheme.typography.bodyLarge,
+                            modifier = Modifier.weight(1f)
+                        )
+                        RadioButton(
+                            selected = sortType == currentSort,
+                            onClick = {
+                                onSortSelected(sortType)
+                                onDismiss()
+                            }
+                        )
+                    }
+                }
+            }
+        },
+        confirmButton = {},
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text("取消")
+            }
+        }
+    )
 }
 
 @Composable

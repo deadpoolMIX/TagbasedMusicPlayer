@@ -7,9 +7,11 @@ import androidx.lifecycle.viewModelScope
 import com.tagplayer.musicplayer.data.local.database.ScanFolderDao
 import com.tagplayer.musicplayer.data.local.entity.ScanFolder
 import com.tagplayer.musicplayer.data.repository.SettingsRepository
+import com.tagplayer.musicplayer.ui.home.viewmodel.SortType
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import javax.inject.Inject
@@ -24,6 +26,17 @@ class SettingsViewModel @Inject constructor(
     val themeMode: StateFlow<ThemeMode> = settingsRepository.themeMode
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), ThemeMode.SYSTEM)
 
+    // 默认排序
+    val defaultSort: StateFlow<SortType> = settingsRepository.defaultSort
+        .map { sortOrdinal ->
+            if (sortOrdinal in SortType.entries.indices) {
+                SortType.entries[sortOrdinal]
+            } else {
+                SortType.DATE_ADDED_DESC
+            }
+        }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), SortType.DATE_ADDED_DESC)
+
     // 扫描文件夹列表
     val scanFolders: StateFlow<List<ScanFolder>> = scanFolderDao.getAllScanFolders()
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
@@ -32,6 +45,13 @@ class SettingsViewModel @Inject constructor(
     fun setThemeMode(mode: ThemeMode) {
         viewModelScope.launch {
             settingsRepository.setThemeMode(mode)
+        }
+    }
+
+    // 设置默认排序
+    fun setDefaultSort(sortType: SortType) {
+        viewModelScope.launch {
+            settingsRepository.setDefaultSort(sortType.ordinal)
         }
     }
 

@@ -34,6 +34,7 @@ class SettingsRepository @Inject constructor(
     private val database: MusicDatabase
 ) {
     private val THEME_MODE_KEY = intPreferencesKey("theme_mode")
+    private val DEFAULT_SORT_KEY = intPreferencesKey("default_sort")
 
     // 主题模式
     val themeMode: Flow<ThemeMode> = dataStore.data
@@ -46,6 +47,19 @@ class SettingsRepository @Inject constructor(
     suspend fun setThemeMode(mode: ThemeMode) {
         dataStore.edit { preferences ->
             preferences[THEME_MODE_KEY] = mode.ordinal
+        }
+    }
+
+    // 默认排序
+    val defaultSort: Flow<Int> = dataStore.data
+        .map { preferences ->
+            preferences[DEFAULT_SORT_KEY] ?: 0 // 默认按添加时间降序
+        }
+
+    // 设置默认排序
+    suspend fun setDefaultSort(sortOrdinal: Int) {
+        dataStore.edit { preferences ->
+            preferences[DEFAULT_SORT_KEY] = sortOrdinal
         }
     }
 
