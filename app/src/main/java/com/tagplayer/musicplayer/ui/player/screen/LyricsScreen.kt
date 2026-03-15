@@ -311,8 +311,7 @@ private fun LyricsList(
                         } else {
                             MaterialTheme.colorScheme.onBackground
                         },
-                        textAlign = TextAlign.Center,
-                        maxLines = 1
+                        textAlign = TextAlign.Center
                     )
                 }
             }
