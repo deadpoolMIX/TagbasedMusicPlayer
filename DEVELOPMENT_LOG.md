@@ -199,6 +199,7 @@ ScanFolder (扫描文件夹)
 ### UI相关
 - **顶部空白问题**: 移除`enableEdgeToEdge()`调用
 - **字母索引拖拽手势失效**: 在`awaitPointerEventScope`内部访问`size.height`
+- **首页字母索引失灵**: Box添加weight(1f)获取正确高度，用协程替代runBlocking避免闪退
 - **FilterScreen滑动问题**: 改为单一LazyColumn统一滑动
 - **专辑封面显示**: 使用`ContentUris.withAppendedId()`正确构建URI
 - **Coil API修正**: 将AsyncImage替换为SubcomposeAsyncImage
@@ -276,6 +277,7 @@ ScanFolder (扫描文件夹)
 
 | Commit | 说明 |
 |--------|------|
+| 695c3c7 | fix(home): 修复字母索引导航拖拽手势失灵和闪退问题 |
 | e075914 | fix(lyrics): 修复长歌词显示不完整问题 |
 | 29d3f92 | docs: 更新开发日志 |
 | 9ac82c1 | feat(notification): 添加自定义通知栏播放控制 |
