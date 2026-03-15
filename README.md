@@ -48,13 +48,9 @@
 
 <div align="center">
 
-| 首页 | 播放页 | 歌词页 |
-|:---:|:---:|:---:|
-| ![首页](screenshot/IMG_20260315_221843.jpg) | ![播放页](screenshot/IMG_20260315_221851.jpg) | ![歌词页](screenshot/IMG_20260315_221858.jpg) |
+![首页](screenshot/IMG_20260315_221843.jpg) ![播放页](screenshot/IMG_20260315_221851.jpg) ![歌词页](screenshot/IMG_20260315_221858.jpg)
 
-| 标签页 | 筛选页 | 歌手页 |
-|:---:|:---:|:---:|
-| ![标签页](screenshot/IMG_20260315_221906.jpg) | ![筛选页](screenshot/IMG_20260315_221913.jpg) | ![歌手页](screenshot/IMG_20260315_221921.jpg) |
+![标签页](screenshot/IMG_20260315_221906.jpg) ![筛选页](screenshot/IMG_20260315_221913.jpg) ![歌手页](screenshot/IMG_20260315_221921.jpg)
 
 </div>
 
