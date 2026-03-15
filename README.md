@@ -2,7 +2,7 @@
 
 <img src="screenshot/icon.svg" width="80" alt="App Icon" />
 
-# 标签化音乐播放器
+# 标签化管理本地音乐播放器
 
 ![Platform](https://img.shields.io/badge/Platform-Android-3DDC84?logo=android)
 ![Language](https://img.shields.io/badge/Language-Kotlin-7F52FF?logo=kotlin)
