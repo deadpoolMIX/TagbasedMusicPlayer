@@ -9,6 +9,7 @@ import com.tagplayer.musicplayer.data.local.entity.ScanFolder
 import com.tagplayer.musicplayer.data.local.entity.Song
 import com.tagplayer.musicplayer.data.repository.ScanFolderRepository
 import com.tagplayer.musicplayer.data.repository.SongRepository
+import com.tagplayer.musicplayer.util.AlphabetIndexUtils
 import com.tagplayer.musicplayer.util.PermissionUtils
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
@@ -104,6 +105,39 @@ class HomeViewModel @Inject constructor(
         initialValue = emptyList()
     )
 
+    // 分组后的歌曲数据（用于标题排序时的字母分组显示）
+    @OptIn(ExperimentalCoroutinesApi::class)
+    val groupedSongs: StateFlow<Map<Char, List<Song>>> = combine(
+        songs,
+        sortType
+    ) { songList, sort ->
+        Pair(songList, sort)
+    }.map { (songList, sort) ->
+        // 仅在标题排序时进行分组
+        if (sort == SortType.TITLE_ASC || sort == SortType.TITLE_DESC) {
+            AlphabetIndexUtils.groupByFirstLetter(songList) { it.title }
+        } else {
+            emptyMap()
+        }
+    }.stateIn(
+        scope = viewModelScope,
+        started = SharingStarted.WhileSubscribed(5000),
+        initialValue = emptyMap()
+    )
+
+    // 字母到列表索引的映射（用于滚动定位）
+    val letterToIndexMap: StateFlow<Map<Char, Int>> = groupedSongs.map { grouped ->
+        if (grouped.isNotEmpty()) {
+            AlphabetIndexUtils.calculateLetterToIndexMap(grouped)
+        } else {
+            emptyMap()
+        }
+    }.stateIn(
+        scope = viewModelScope,
+        started = SharingStarted.WhileSubscribed(5000),
+        initialValue = emptyMap()
+    )
+
     private fun getSongsFlow(query: String, filter: FilterType, sort: SortType): Flow<List<Song>> {
         return when {
             query.isNotBlank() -> {
@@ -120,10 +154,10 @@ class HomeViewModel @Inject constructor(
             when (sort) {
                 SortType.DATE_ADDED_DESC -> songs.sortedByDescending { it.dateAdded }
                 SortType.DATE_ADDED_ASC -> songs.sortedBy { it.dateAdded }
-                SortType.TITLE_ASC -> songs.sortedBy { it.title.lowercase() }
-                SortType.TITLE_DESC -> songs.sortedByDescending { it.title.lowercase() }
-                SortType.ARTIST_ASC -> songs.sortedBy { it.artist.lowercase() }
-                SortType.ARTIST_DESC -> songs.sortedByDescending { it.artist.lowercase() }
+                SortType.TITLE_ASC -> songs.sortedWith(compareBy({ AlphabetIndexUtils.getFirstLetter(it.title) }, { it.title.lowercase() }))
+                SortType.TITLE_DESC -> songs.sortedWith(compareByDescending<Song> { AlphabetIndexUtils.getFirstLetter(it.title) }.thenByDescending { it.title.lowercase() })
+                SortType.ARTIST_ASC -> songs.sortedWith(compareBy({ AlphabetIndexUtils.getFirstLetter(it.artist) }, { it.artist.lowercase() }))
+                SortType.ARTIST_DESC -> songs.sortedWith(compareByDescending<Song> { AlphabetIndexUtils.getFirstLetter(it.artist) }.thenByDescending { it.artist.lowercase() })
             }
         }
     }

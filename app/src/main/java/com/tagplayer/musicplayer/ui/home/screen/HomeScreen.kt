@@ -7,6 +7,9 @@ import android.os.Build
 import android.provider.Settings
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -15,6 +18,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -23,6 +27,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
@@ -58,8 +63,11 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.input.pointer.PointerEventPass
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.tagplayer.musicplayer.data.local.entity.ScanFolder
 import com.tagplayer.musicplayer.data.local.entity.Song
@@ -71,6 +79,7 @@ import com.tagplayer.musicplayer.ui.home.viewmodel.SortType
 import com.tagplayer.musicplayer.ui.player.viewmodel.PlayerViewModel
 import com.tagplayer.musicplayer.ui.playlist.viewmodel.PlaylistViewModel
 import com.tagplayer.musicplayer.ui.tags.viewmodel.TagViewModel
+import com.tagplayer.musicplayer.util.AlphabetIndexUtils
 import com.tagplayer.musicplayer.util.PermissionUtils
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -84,6 +93,8 @@ fun HomeScreen(
     tagViewModel: TagViewModel = hiltViewModel()
 ) {
     val songs by viewModel.songs.collectAsState()
+    val groupedSongs by viewModel.groupedSongs.collectAsState()
+    val letterToIndexMap by viewModel.letterToIndexMap.collectAsState()
     val searchQuery by viewModel.searchQuery.collectAsState()
     val isScanning by viewModel.isScanning.collectAsState()
     val selectedSong by viewModel.selectedSong.collectAsState()
@@ -97,6 +108,24 @@ fun HomeScreen(
 
     // 搜索对话框状态
     var showSearchDialog by remember { mutableStateOf(false) }
+
+    // 判断是否为标题排序模式（显示分组和索引栏）
+    val isTitleSortMode = sortType == SortType.TITLE_ASC || sortType == SortType.TITLE_DESC
+
+    // 字母索引列表
+    val alphabetIndex = remember { AlphabetIndexUtils.getAlphabetIndex() }
+
+    // 可用的字母（根据实际数据过滤）
+    val availableLetters = remember(groupedSongs) {
+        groupedSongs.keys
+    }
+
+    // 列表状态
+    val listState = rememberLazyListState()
+
+    // 当前选中的字母（用于气泡提示）
+    var selectedLetter by remember { mutableStateOf<Char?>(null) }
+    var isDragging by remember { mutableStateOf(false) }
 
     // 权限申请启动器
     val permissionLauncher = rememberLauncherForActivityResult(
@@ -238,7 +267,73 @@ fun HomeScreen(
                     onGrantPermission = { viewModel.showPermissionDialog() },
                     modifier = Modifier.fillMaxSize()
                 )
+            } else if (isTitleSortMode && groupedSongs.isNotEmpty()) {
+                // 标题排序模式：分组显示 + 字母索引栏
+                Box(modifier = Modifier.fillMaxSize()) {
+                    LazyColumn(
+                        state = listState,
+                        modifier = Modifier.fillMaxSize(),
+                        contentPadding = PaddingValues(vertical = 8.dp)
+                    ) {
+                        groupedSongs.forEach { (letter, songList) ->
+                            // 分组标题
+                            item(key = "header_$letter") {
+                                LetterHeader(letter = letter)
+                            }
+
+                            // 该字母下的歌曲
+                            items(
+                                items = songList,
+                                key = { it.id }
+                            ) { song ->
+                                SongItem(
+                                    song = song,
+                                    onClick = {
+                                        playerViewModel.setQueue(songs, songs.indexOf(song))
+                                    },
+                                    onMoreClick = {
+                                        viewModel.onSongMoreClick(song)
+                                    }
+                                )
+                            }
+                        }
+                    }
+
+                    // 右侧字母索引栏
+                    AlphabetIndexBar(
+                        letters = alphabetIndex,
+                        enabledLetters = availableLetters,
+                        currentSelectedLetter = selectedLetter,
+                        onLetterSelected = { letter ->
+                            selectedLetter = letter
+                            letterToIndexMap[letter]?.let { index ->
+                                kotlinx.coroutines.runBlocking {
+                                    listState.scrollToItem(index)
+                                }
+                            }
+                        },
+                        onDragStart = { isDragging = true },
+                        onDragEnd = {
+                            isDragging = false
+                            selectedLetter = null
+                        },
+                        modifier = Modifier.align(Alignment.CenterEnd)
+                    )
+
+                    // 中央气泡提示
+                    androidx.compose.animation.AnimatedVisibility(
+                        visible = selectedLetter != null && isDragging,
+                        enter = fadeIn(),
+                        exit = fadeOut(),
+                        modifier = Modifier.align(Alignment.Center)
+                    ) {
+                        selectedLetter?.let { letter ->
+                            LetterBubble(letter = letter)
+                        }
+                    }
+                }
             } else {
+                // 非标题排序模式：普通列表
                 LazyColumn(
                     modifier = Modifier.fillMaxSize(),
                     contentPadding = PaddingValues(vertical = 8.dp)
@@ -645,5 +740,167 @@ private fun FolderItem(
                 )
             }
         }
+    }
+}
+
+/**
+ * 分组标题组件
+ */
+@Composable
+private fun LetterHeader(
+    letter: Char,
+    modifier: Modifier = Modifier
+) {
+    Surface(
+        modifier = modifier
+            .fillMaxWidth()
+            .padding(vertical = 6.dp),
+        color = MaterialTheme.colorScheme.surface
+    ) {
+        Text(
+            text = letter.toString(),
+            style = MaterialTheme.typography.titleSmall,
+            color = MaterialTheme.colorScheme.primary,
+            modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp)
+        )
+    }
+}
+
+/**
+ * 字母索引栏组件
+ */
+@Composable
+private fun AlphabetIndexBar(
+    letters: List<Char>,
+    enabledLetters: Set<Char>,
+    currentSelectedLetter: Char?,
+    onLetterSelected: (Char) -> Unit,
+    onDragStart: () -> Unit,
+    onDragEnd: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    Box(
+        modifier = modifier
+            .fillMaxHeight()
+            .padding(vertical = 16.dp, horizontal = 4.dp)
+            .pointerInput(Unit) {
+                awaitPointerEventScope {
+                    while (true) {
+                        val downEvent = awaitPointerEvent(PointerEventPass.Main)
+                        val downChange = downEvent.changes.firstOrNull { it.pressed }
+                            ?: continue
+
+                        val currentHeight = size.height
+                        if (currentHeight <= 0) continue
+
+                        onDragStart()
+
+                        val initialY = downChange.position.y
+                        val initialIndex = calculateLetterIndex(
+                            initialY,
+                            letters.size,
+                            currentHeight.toFloat()
+                        )
+                        if (initialIndex in letters.indices) {
+                            val letter = letters[initialIndex]
+                            if (letter in enabledLetters) {
+                                onLetterSelected(letter)
+                            }
+                        }
+
+                        var isPressed = true
+                        while (isPressed) {
+                            val moveEvent = awaitPointerEvent(PointerEventPass.Main)
+
+                            val height = size.height
+                            if (height <= 0) continue
+
+                            for (change in moveEvent.changes) {
+                                if (change.pressed) {
+                                    val y = change.position.y
+                                    val index = calculateLetterIndex(
+                                        y,
+                                        letters.size,
+                                        height.toFloat()
+                                    )
+                                    if (index in letters.indices) {
+                                        val letter = letters[index]
+                                        if (letter in enabledLetters) {
+                                            onLetterSelected(letter)
+                                        }
+                                    }
+                                } else {
+                                    isPressed = false
+                                }
+                            }
+                        }
+
+                        onDragEnd()
+                    }
+                }
+            }
+    ) {
+        Column(
+            modifier = Modifier.fillMaxHeight(),
+            verticalArrangement = Arrangement.SpaceEvenly,
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            letters.forEach { letter ->
+                val isSelected = letter == currentSelectedLetter
+                val isEnabled = letter in enabledLetters
+                Text(
+                    text = letter.toString(),
+                    style = MaterialTheme.typography.labelSmall,
+                    fontSize = if (isSelected) 14.sp else 10.sp,
+                    color = when {
+                        isSelected -> MaterialTheme.colorScheme.primary
+                        isEnabled -> MaterialTheme.colorScheme.onSurfaceVariant
+                        else -> MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.3f)
+                    },
+                    modifier = Modifier
+                        .padding(vertical = 2.dp)
+                        .then(
+                            if (isEnabled) {
+                                Modifier.clickable { onLetterSelected(letter) }
+                            } else {
+                                Modifier
+                            }
+                        )
+                )
+            }
+        }
+    }
+}
+
+/**
+ * 计算触摸位置对应的字母索引
+ */
+private fun calculateLetterIndex(y: Float, letterCount: Int, totalHeight: Float): Int {
+    if (totalHeight <= 0 || letterCount <= 0) return 0
+    val itemHeight = totalHeight / letterCount
+    val index = (y / itemHeight).toInt().coerceIn(0, letterCount - 1)
+    return index
+}
+
+/**
+ * 中央气泡提示组件
+ */
+@Composable
+private fun LetterBubble(
+    letter: Char,
+    modifier: Modifier = Modifier
+) {
+    Box(
+        modifier = modifier
+            .size(80.dp)
+            .clip(RoundedCornerShape(40.dp))
+            .background(MaterialTheme.colorScheme.surfaceVariant),
+        contentAlignment = Alignment.Center
+    ) {
+        Text(
+            text = letter.toString(),
+            style = MaterialTheme.typography.headlineLarge,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
     }
 }
