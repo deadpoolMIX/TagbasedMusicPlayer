@@ -59,6 +59,7 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -81,6 +82,7 @@ import com.tagplayer.musicplayer.ui.playlist.viewmodel.PlaylistViewModel
 import com.tagplayer.musicplayer.ui.tags.viewmodel.TagViewModel
 import com.tagplayer.musicplayer.util.AlphabetIndexUtils
 import com.tagplayer.musicplayer.util.PermissionUtils
+import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -122,6 +124,7 @@ fun HomeScreen(
 
     // 列表状态
     val listState = rememberLazyListState()
+    val scope = rememberCoroutineScope()
 
     // 当前选中的字母（用于气泡提示）
     var selectedLetter by remember { mutableStateOf<Char?>(null) }
@@ -269,7 +272,7 @@ fun HomeScreen(
                 )
             } else if (isTitleSortMode && groupedSongs.isNotEmpty()) {
                 // 标题排序模式：分组显示 + 字母索引栏
-                Box(modifier = Modifier.fillMaxSize()) {
+                Box(modifier = Modifier.weight(1f).fillMaxWidth()) {
                     LazyColumn(
                         state = listState,
                         modifier = Modifier.fillMaxSize(),
@@ -307,7 +310,7 @@ fun HomeScreen(
                         onLetterSelected = { letter ->
                             selectedLetter = letter
                             letterToIndexMap[letter]?.let { index ->
-                                kotlinx.coroutines.runBlocking {
+                                scope.launch {
                                     listState.scrollToItem(index)
                                 }
                             }
