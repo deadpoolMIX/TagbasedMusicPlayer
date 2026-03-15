@@ -34,6 +34,11 @@ class TagViewModel @Inject constructor(
             initialValue = emptyList()
         )
 
+    // 获取标签的歌曲数量
+    fun getTagSongCount(tagId: Long): Flow<Int> {
+        return tagRepository.getTagSongCount(tagId)
+    }
+
     // 所有歌曲
     val allSongs: StateFlow<List<Song>> = songRepository.getAllSongs()
         .stateIn(

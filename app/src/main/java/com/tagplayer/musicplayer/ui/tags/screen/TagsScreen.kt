@@ -151,6 +151,7 @@ fun TagsScreen(
                     ) { tag ->
                         TagItem(
                             tag = tag,
+                            viewModel = viewModel,
                             onClick = {
                                 // 先清除焦点，再触发点击事件
                                 focusManager.clearFocus()
@@ -266,10 +267,13 @@ private fun SearchDialog(
 @Composable
 private fun TagItem(
     tag: Tag,
+    viewModel: TagViewModel,
     onClick: () -> Unit,
     onEdit: () -> Unit,
     onDelete: () -> Unit
 ) {
+    val songCount by viewModel.getTagSongCount(tag.id).collectAsState(initial = 0)
+
     Surface(
         modifier = Modifier
             .fillMaxWidth()
@@ -288,7 +292,7 @@ private fun TagItem(
                 .padding(AppDimensions.ListItemPadding),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            // 左侧图标+名称
+            // 左侧图标+名称+数量
             Row(
                 modifier = Modifier.weight(1f),
                 verticalAlignment = Alignment.CenterVertically
@@ -321,6 +325,15 @@ private fun TagItem(
                     style = MaterialTheme.typography.titleSmall,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis
+                )
+
+                Spacer(modifier = Modifier.width(8.dp))
+
+                // 歌曲数量
+                Text(
+                    text = "$songCount 首",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
 

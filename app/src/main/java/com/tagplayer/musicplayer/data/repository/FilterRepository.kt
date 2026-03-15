@@ -17,10 +17,13 @@ class FilterRepository @Inject constructor(
     /**
      * Filter songs using boolean logic: (A AND B AND ...) OR (B AND ...) - C
      *
+     * Special case: When both A and B are empty but C is not empty,
+     * the result is "all songs minus songs with C tags"
+     *
      * @param boxATags Tags that songs in box A must have (AND logic within box)
      * @param boxBTags Tags that songs in box B must have (AND logic within box)
      * @param boxCTags Tags that songs must NOT have
-     * @return Filtered songs matching: (A-songs ∪ B-songs) - C-songs
+     * @return Filtered songs matching: (A-songs ∪ B-songs) - C-songs, or (all-songs - C-songs) when A and B are empty
      */
     fun filterSongs(
         boxATags: List<Long> = emptyList(),
@@ -65,9 +68,6 @@ class FilterRepository @Inject constructor(
             }
         }
 
-        // Union of box A and box B
-        val unionSongs = boxASongs.union(boxBSongs)
-
         // Get songs to exclude (have ANY tag in box C)
         val excludeSongs = if (boxCTags.isEmpty()) {
             emptySet()
@@ -77,8 +77,18 @@ class FilterRepository @Inject constructor(
             }.toSet()
         }
 
-        // Final result: (A ∪ B) - C
-        val resultIds = unionSongs.minus(excludeSongs)
+        // Calculate result based on the logic
+        val resultIds = when {
+            // A and B are both empty, but C is not empty: all songs - C
+            boxATags.isEmpty() && boxBTags.isEmpty() && boxCTags.isNotEmpty() -> {
+                songDao.getAllSongs().first().map { it.id }.toSet().minus(excludeSongs)
+            }
+            // Normal case: (A ∪ B) - C
+            else -> {
+                val unionSongs = boxASongs.union(boxBSongs)
+                unionSongs.minus(excludeSongs)
+            }
+        }
 
         // Fetch full song objects
         if (resultIds.isEmpty()) {
