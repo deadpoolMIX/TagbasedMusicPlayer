@@ -1,5 +1,7 @@
 <div align="center">
 
+<img src="screenshot/icon.webp" width="80" />
+
 # 标签化音乐播放器
 
 ![Platform](https://img.shields.io/badge/Platform-Android-3DDC84?logo=android)
@@ -46,11 +48,14 @@
 
 ## 📱 截图
 
-<div align="center">
+<div align="center" style="overflow-x: auto; white-space: nowrap;">
 
-![首页](screenshot/IMG_20260315_221843.jpg) ![播放页](screenshot/IMG_20260315_221851.jpg) ![歌词页](screenshot/IMG_20260315_221858.jpg)
-
-![标签页](screenshot/IMG_20260315_221906.jpg) ![筛选页](screenshot/IMG_20260315_221913.jpg) ![歌手页](screenshot/IMG_20260315_221921.jpg)
+<img src="screenshot/IMG_20260315_221843.jpg" width="200" />
+<img src="screenshot/IMG_20260315_221851.jpg" width="200" />
+<img src="screenshot/IMG_20260315_221858.jpg" width="200" />
+<img src="screenshot/IMG_20260315_221906.jpg" width="200" />
+<img src="screenshot/IMG_20260315_221913.jpg" width="200" />
+<img src="screenshot/IMG_20260315_221921.jpg" width="200" />
 
 </div>
 
