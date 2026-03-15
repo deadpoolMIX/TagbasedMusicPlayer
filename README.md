@@ -1,6 +1,17 @@
-# 标签化音乐播放器 (Tag-based Music Player)
+<div align="center">
 
-一款基于**标签管理**的 Android 本地音乐播放器，支持灵活的布尔运算筛选。
+# 标签化音乐播放器
+
+![Platform](https://img.shields.io/badge/Platform-Android-3DDC84?logo=android)
+![Language](https://img.shields.io/badge/Language-Kotlin-7F52FF?logo=kotlin)
+![UI](https://img.shields.io/badge/UI-Jetpack%20Compose-4285F4?logo=jetpackcompose)
+![License](https://img.shields.io/badge/License-MIT-yellow)
+
+**一款基于标签管理的 Android 本地音乐播放器，支持灵活的布尔运算筛选**
+
+</div>
+
+---
 
 ## ✨ 项目初衷
 
@@ -22,7 +33,7 @@
 - **歌手浏览**：按首字母分组，右侧字母索引导航
 
 ### 播放功能
-- 后台播放、通知栏控制
+- 后台播放
 - 播放队列管理、拖拽排序
 - 随机播放、单曲循环
 - LRC 歌词显示（支持内嵌歌词、双语歌词）
@@ -39,14 +50,11 @@
 
 ## 🛠️ 技术栈
 
-| 技术 | 说明 |
-|------|------|
-| Kotlin | 主要开发语言 |
-| Jetpack Compose | UI 框架 |
-| Hilt | 依赖注入 |
-| Room | 本地数据库 |
-| Media3 (ExoPlayer) | 音频播放 |
-| DataStore | 设置存储 |
+![Kotlin](https://img.shields.io/badge/Kotlin-1.9.22-7F52FF?logo=kotlin)
+![Jetpack Compose](https://img.shields.io/badge/Jetpack%20Compose-2024.02.00-4285F4)
+![Hilt](https://img.shields.io/badge/Hilt-2.50-2C2C2C)
+![Room](https://img.shields.io/badge/Room-2.6.1-6DB33F)
+![Media3](https://img.shields.io/badge/Media3-1.2.1-FF6B35)
 
 ## 🤖 开发工具
 
@@ -59,9 +67,8 @@
 
 由于开发者编程基础有限，部分功能实现不够完善：
 
-- 通知栏播放器：基本功能可用，但体验有待优化
-- 歌词页面：长歌词换行、同步精度等问题
-- 专辑页面：已移除（功能合并到其他页面）
+- 🎤 歌词页面：长歌词换行、同步精度等问题
+- 📀 专辑页面：已移除（功能合并到其他页面）
 
 后续有精力的话会慢慢修改完善。
 
@@ -85,19 +92,6 @@ app/src/main/java/com/tagplayer/musicplayer/
 │   └── settings/            # 设置
 └── util/                    # 工具类
 ```
-
-## 🚀 编译运行
-
-1. 克隆项目
-```bash
-git clone https://github.com/你的用户名/TagbasedMusicPlayer.git
-```
-
-2. 用 Android Studio 打开项目
-
-3. 等待 Gradle 同步完成
-
-4. 连接设备或模拟器，点击运行
 
 ## 📄 开源协议
 
