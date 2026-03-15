@@ -1,6 +1,6 @@
 <div align="center">
 
-<img src="screenshot/icon.webp" width="80" />
+<img src="screenshot/icon.svg" width="80" alt="App Icon" />
 
 # 标签化音乐播放器
 
