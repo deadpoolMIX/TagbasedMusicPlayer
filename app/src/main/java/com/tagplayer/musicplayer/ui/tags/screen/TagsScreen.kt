@@ -49,11 +49,15 @@ import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.input.pointer.PointerEventType
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -61,6 +65,7 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import com.tagplayer.musicplayer.data.local.entity.Tag
 import com.tagplayer.musicplayer.ui.tags.viewmodel.TagViewModel
 import com.tagplayer.musicplayer.ui.theme.AppDimensions
+import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -192,7 +197,8 @@ fun TagsScreen(
                     // 快速滚动条
                     VerticalScrollbar(
                         listState = listState,
-                        itemCount = tags.size
+                        itemCount = tags.size,
+                        modifier = Modifier.align(Alignment.CenterEnd)
                     )
                 }
             }
@@ -462,7 +468,7 @@ private fun TagDialog(
 }
 
 /**
- * 垂直滚动条组件
+ * 垂直滚动条组件（支持拖拽）
  */
 @Composable
 private fun VerticalScrollbar(
@@ -471,6 +477,10 @@ private fun VerticalScrollbar(
     modifier: Modifier = Modifier
 ) {
     if (itemCount == 0) return
+
+    val coroutineScope = rememberCoroutineScope()
+    val density = LocalDensity.current
+    var isDragging by remember { mutableStateOf(false) }
 
     // 计算滚动进度
     val scrollProgress by remember {
@@ -514,18 +524,79 @@ private fun VerticalScrollbar(
         }
     }
 
+    // 用于存储累积拖拽偏移
+    var dragAccumulator by remember { mutableStateOf(0f) }
+
     Box(
         modifier = modifier
             .fillMaxHeight()
-            .width(16.dp)
+            .width(20.dp)
             .padding(vertical = 8.dp, horizontal = 4.dp)
+            .pointerInput(itemCount) {
+                // 拖拽手势处理
+                var lastY = 0f
+
+                awaitPointerEventScope {
+                    while (true) {
+                        val event = awaitPointerEvent()
+
+                        when (event.type) {
+                            PointerEventType.Press -> {
+                                isDragging = true
+                                lastY = event.changes.first().position.y
+                                dragAccumulator = scrollProgress // 从当前位置开始
+                                event.changes.forEach { it.consume() }
+                            }
+                            PointerEventType.Release -> {
+                                isDragging = false
+                                event.changes.forEach { it.consume() }
+                            }
+                            PointerEventType.Move -> {
+                                if (isDragging && itemCount > 0) {
+                                    val change = event.changes.first()
+                                    val currentY = change.position.y
+                                    val deltaY = currentY - lastY
+                                    lastY = currentY
+
+                                    // 计算滚动目标
+                                    val layoutInfo = listState.layoutInfo
+                                    val viewportHeight = layoutInfo.viewportSize.height.toFloat()
+                                    val trackHeight = viewportHeight - with(density) { 16.dp.toPx() } * 2
+
+                                    if (trackHeight > 0) {
+                                        val totalItems = itemCount
+                                        val itemsPerPage = layoutInfo.visibleItemsInfo.size
+                                        val maxScrollIndex = (totalItems - itemsPerPage).coerceAtLeast(0)
+
+                                        // 累积拖拽距离并转换为索引
+                                        dragAccumulator += deltaY / trackHeight
+                                        val targetIndex = (dragAccumulator * maxScrollIndex).toInt()
+                                            .coerceIn(0, maxScrollIndex)
+
+                                        coroutineScope.launch {
+                                            listState.scrollToItem(targetIndex)
+                                        }
+                                    }
+
+                                    change.consume()
+                                }
+                            }
+                        }
+                    }
+                }
+            }
     ) {
         // 滚动条背景轨道
         Box(
             modifier = Modifier
                 .fillMaxSize()
                 .clip(RoundedCornerShape(4.dp))
-                .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f))
+                .background(
+                    if (isDragging)
+                        MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
+                    else
+                        MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f)
+                )
         )
 
         // 滚动条滑块
@@ -535,7 +606,12 @@ private fun VerticalScrollbar(
                 .fillMaxHeight(scrollbarHeightPercent)
                 .graphicsLayer { translationY = size.height * thumbOffsetY }
                 .clip(RoundedCornerShape(4.dp))
-                .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.5f))
+                .background(
+                    if (isDragging)
+                        MaterialTheme.colorScheme.primary.copy(alpha = 0.8f)
+                    else
+                        MaterialTheme.colorScheme.primary.copy(alpha = 0.5f)
+                )
         )
     }
 }
