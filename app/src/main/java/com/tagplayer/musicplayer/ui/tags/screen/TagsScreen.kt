@@ -482,22 +482,46 @@ private fun VerticalScrollbar(
     val density = LocalDensity.current
     var isDragging by remember { mutableStateOf(false) }
 
-    // 计算滚动进度
+    // 计算滚动进度（基于像素距离）
     val scrollProgress by remember {
         derivedStateOf {
             val layoutInfo = listState.layoutInfo
-            if (layoutInfo.totalItemsCount == 0) return@derivedStateOf 0f
+            if (layoutInfo.totalItemsCount == 0 || itemCount == 0) return@derivedStateOf 0f
 
-            val firstVisibleItem = listState.firstVisibleItemIndex
-            val firstVisibleOffset = listState.firstVisibleItemScrollOffset
+            val viewportHeight = layoutInfo.viewportSize.height.toFloat()
+            val visibleItems = layoutInfo.visibleItemsInfo
 
-            val totalItems = itemCount
-            val itemsPerPage = layoutInfo.visibleItemsInfo.size
+            if (visibleItems.isEmpty()) return@derivedStateOf 0f
 
-            if (totalItems <= itemsPerPage) return@derivedStateOf 0f
+            // 计算总内容高度估算
+            // 使用第一个可见项目的位置 + 当前滚动偏移来估算
+            val firstItem = visibleItems.first()
+            val lastItem = visibleItems.last()
 
-            (firstVisibleItem.toFloat() + firstVisibleOffset.toFloat() / 1000f) /
-                    (totalItems - itemsPerPage).toFloat().coerceAtLeast(1f)
+            // 可见区域的高度（像素）
+            val visibleContentHeight = lastItem.offset + lastItem.size - firstItem.offset
+
+            // 平均每个项目的高度
+            val avgItemHeight = if (visibleItems.size > 1) {
+                visibleContentHeight.toFloat() / visibleItems.size
+            } else {
+                firstItem.size.toFloat()
+            }
+
+            // 估算总内容高度
+            val estimatedTotalHeight = avgItemHeight * itemCount
+
+            // 最大可滚动距离
+            val maxScrollDistance = estimatedTotalHeight - viewportHeight
+
+            if (maxScrollDistance <= 0f) return@derivedStateOf 0f
+
+            // 当前滚动位置
+            val currentScrollOffset = firstItem.offset.toFloat() - listState.firstVisibleItemScrollOffset
+
+            // 计算进度（0到1）
+            val progress = (-currentScrollOffset / maxScrollDistance).coerceIn(0f, 1f)
+            progress
         }
     }
 
@@ -507,8 +531,26 @@ private fun VerticalScrollbar(
             val layoutInfo = listState.layoutInfo
             if (layoutInfo.totalItemsCount == 0 || itemCount == 0) return@derivedStateOf 0.1f
 
-            val visibleItems = layoutInfo.visibleItemsInfo.size
-            (visibleItems.toFloat() / itemCount.toFloat()).coerceIn(0.1f, 1f)
+            val viewportHeight = layoutInfo.viewportSize.height.toFloat()
+            val visibleItems = layoutInfo.visibleItemsInfo
+
+            if (visibleItems.isEmpty()) return@derivedStateOf 0.1f
+
+            // 计算平均项目高度
+            val firstItem = visibleItems.first()
+            val lastItem = visibleItems.last()
+            val visibleContentHeight = lastItem.offset + lastItem.size - firstItem.offset
+            val avgItemHeight = if (visibleItems.size > 1) {
+                visibleContentHeight.toFloat() / visibleItems.size
+            } else {
+                firstItem.size.toFloat()
+            }
+
+            // 估算总内容高度
+            val estimatedTotalHeight = avgItemHeight * itemCount
+
+            // 滚动条高度比例 = 视口高度 / 总内容高度
+            (viewportHeight / estimatedTotalHeight).coerceIn(0.1f, 1f)
         }
     }
 
@@ -523,9 +565,6 @@ private fun VerticalScrollbar(
             scrollProgress * (1f - scrollbarHeightPercent)
         }
     }
-
-    // 用于存储累积拖拽偏移
-    var dragAccumulator by remember { mutableStateOf(0f) }
 
     Box(
         modifier = modifier
@@ -544,7 +583,6 @@ private fun VerticalScrollbar(
                             PointerEventType.Press -> {
                                 isDragging = true
                                 lastY = event.changes.first().position.y
-                                dragAccumulator = scrollProgress // 从当前位置开始
                                 event.changes.forEach { it.consume() }
                             }
                             PointerEventType.Release -> {
@@ -558,23 +596,35 @@ private fun VerticalScrollbar(
                                     val deltaY = currentY - lastY
                                     lastY = currentY
 
-                                    // 计算滚动目标
+                                    // 获取滚动条轨道高度
                                     val layoutInfo = listState.layoutInfo
                                     val viewportHeight = layoutInfo.viewportSize.height.toFloat()
                                     val trackHeight = viewportHeight - with(density) { 16.dp.toPx() } * 2
 
-                                    if (trackHeight > 0) {
-                                        val totalItems = itemCount
-                                        val itemsPerPage = layoutInfo.visibleItemsInfo.size
-                                        val maxScrollIndex = (totalItems - itemsPerPage).coerceAtLeast(0)
+                                    if (trackHeight > 0 && scrollbarHeightPercent < 1f) {
+                                        // 计算总可滚动距离（像素）
+                                        val visibleItems = layoutInfo.visibleItemsInfo
+                                        if (visibleItems.isNotEmpty()) {
+                                            val firstItem = visibleItems.first()
+                                            val lastItem = visibleItems.last()
+                                            val visibleContentHeight = lastItem.offset + lastItem.size - firstItem.offset
+                                            val avgItemHeight = if (visibleItems.size > 1) {
+                                                visibleContentHeight.toFloat() / visibleItems.size
+                                            } else {
+                                                firstItem.size.toFloat()
+                                            }
+                                            val estimatedTotalHeight = avgItemHeight * itemCount
+                                            val maxScrollDistance = estimatedTotalHeight - viewportHeight
 
-                                        // 累积拖拽距离并转换为索引
-                                        dragAccumulator += deltaY / trackHeight
-                                        val targetIndex = (dragAccumulator * maxScrollIndex).toInt()
-                                            .coerceIn(0, maxScrollIndex)
+                                            // 将拖拽距离转换为列表滚动距离
+                                            val scrollRatio = maxScrollDistance / trackHeight
+                                            val scrollDelta = -deltaY * scrollRatio
 
-                                        coroutineScope.launch {
-                                            listState.scrollToItem(targetIndex)
+                                            coroutineScope.launch {
+                                                listState.scroll {
+                                                    scrollBy(scrollDelta)
+                                                }
+                                            }
                                         }
                                     }
 
