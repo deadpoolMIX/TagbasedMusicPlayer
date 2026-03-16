@@ -1,9 +1,12 @@
 package com.tagplayer.musicplayer
 
 import android.Manifest
+import android.content.Intent
 import android.content.pm.PackageManager
+import android.net.Uri
 import android.os.Build
 import android.os.Bundle
+import android.provider.Settings
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.result.contract.ActivityResultContracts
@@ -33,11 +36,38 @@ import dagger.hilt.android.AndroidEntryPoint
 @AndroidEntryPoint
 class MainActivity : ComponentActivity() {
 
+    // 通知权限状态（用于 UI 显示）
+    private var onNotificationPermissionResult: ((Boolean) -> Unit)? = null
+
     private val notificationPermissionLauncher = registerForActivityResult(
         ActivityResultContracts.RequestPermission()
-    ) { /* 权限结果处理，Media3 会自动处理通知 */ }
+    ) { isGranted ->
+        onNotificationPermissionResult?.invoke(isGranted)
+        if (!isGranted) {
+            // 权限被拒，可选择引导用户到设置页面
+            // 这里不自动跳转，让用户在设置页面手动开启
+        }
+    }
 
-    private fun requestNotificationPermission() {
+    /**
+     * 检查通知权限是否已授予
+     */
+    fun hasNotificationPermission(): Boolean {
+        return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            ContextCompat.checkSelfPermission(
+                this,
+                Manifest.permission.POST_NOTIFICATIONS
+            ) == PackageManager.PERMISSION_GRANTED
+        } else {
+            true // Android 13 以下不需要动态申请
+        }
+    }
+
+    /**
+     * 请求通知权限
+     */
+    fun requestNotificationPermission(callback: ((Boolean) -> Unit)? = null) {
+        onNotificationPermissionResult = callback
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
             if (ContextCompat.checkSelfPermission(
                     this,
@@ -45,18 +75,47 @@ class MainActivity : ComponentActivity() {
                 ) != PackageManager.PERMISSION_GRANTED
             ) {
                 notificationPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+            } else {
+                callback?.invoke(true)
+            }
+        } else {
+            callback?.invoke(true)
+        }
+    }
+
+    /**
+     * 跳转到系统通知设置页面
+     */
+    fun openNotificationSettings() {
+        val intent = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            Intent(Settings.ACTION_APP_NOTIFICATION_SETTINGS).apply {
+                putExtra(Settings.EXTRA_APP_PACKAGE, packageName)
+            }
+        } else {
+            Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS).apply {
+                data = Uri.parse("package:$packageName")
             }
         }
+        startActivity(intent)
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        // Android 13+ 请求通知权限
-        requestNotificationPermission()
+        // Android 13+ 请求通知权限（启动时静默请求）
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            if (ContextCompat.checkSelfPermission(
+                    this,
+                    Manifest.permission.POST_NOTIFICATIONS
+                ) != PackageManager.PERMISSION_GRANTED
+            ) {
+                // 延迟请求，避免启动时立即弹窗
+                android.os.Handler(mainLooper).postDelayed({
+                    notificationPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+                }, 1500)
+            }
+        }
 
-        // 移除 enableEdgeToEdge 以避免顶部空白问题
-        // enableEdgeToEdge()
         setContent {
             val settingsViewModel: SettingsViewModel = hiltViewModel()
             val themeMode by settingsViewModel.themeMode.collectAsState()
@@ -72,21 +131,18 @@ class MainActivity : ComponentActivity() {
                 val navController = rememberNavController()
                 val navBackStackEntry by navController.currentBackStackEntryAsState()
 
-                // 使用 derivedStateOf 确保导航状态变化时正确重组
                 val currentRoute by remember(navBackStackEntry) {
                     derivedStateOf {
                         navBackStackEntry?.destination?.route
                     }
                 }
 
-                // 判断是否显示播放器（用于控制 MiniPlayer 和底部导航栏）
                 val showPlayer by remember(currentRoute) {
                     derivedStateOf {
                         currentRoute?.startsWith(Routes.PLAYER) == true
                     }
                 }
 
-                // 判断是否隐藏底部导航栏的页面
                 val hideBottomBar by remember(currentRoute) {
                     derivedStateOf {
                         currentRoute?.let { route ->
@@ -102,7 +158,6 @@ class MainActivity : ComponentActivity() {
                 Scaffold(
                     modifier = Modifier.fillMaxSize(),
                     bottomBar = {
-                        // 只在非播放器页面且非隐藏底部栏页面显示底部栏和 MiniPlayer
                         if (!showPlayer && !hideBottomBar) {
                             Column {
                                 MiniPlayer(

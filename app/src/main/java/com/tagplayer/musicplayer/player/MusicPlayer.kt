@@ -1,39 +1,61 @@
 package com.tagplayer.musicplayer.player
 
+import android.content.ComponentName
 import android.content.Context
+import androidx.core.content.ContextCompat
 import androidx.media3.common.AudioAttributes
 import androidx.media3.common.C
 import androidx.media3.common.MediaItem
 import androidx.media3.common.Player
 import androidx.media3.common.util.UnstableApi
 import androidx.media3.exoplayer.ExoPlayer
+import androidx.media3.session.MediaController
+import androidx.media3.session.SessionToken
+import com.google.common.util.concurrent.ListenableFuture
+import com.tagplayer.musicplayer.PlaybackService
+import com.tagplayer.musicplayer.data.local.entity.Song
+import com.tagplayer.musicplayer.data.repository.SongRepository
 import dagger.hilt.android.qualifiers.ApplicationContext
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.channels.Channel
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.receiveAsFlow
-import javax.inject.Inject
-import javax.inject.Singleton
-import com.tagplayer.musicplayer.data.repository.SongRepository
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.Job
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import javax.inject.Inject
+import javax.inject.Singleton
 
+@UnstableApi
 @Singleton
 class MusicPlayer @Inject constructor(
     @ApplicationContext private val context: Context,
     private val songRepository: SongRepository
 ) {
-    private var exoPlayer: ExoPlayer? = null
     private val scope = CoroutineScope(Dispatchers.Main)
+
+    // MediaController 连接 Future
+    private var controllerFuture: ListenableFuture<MediaController>? = null
+    private var mediaController: MediaController? = null
+
+    // 后备本地播放器（在 Service 连接前使用）
+    private var localPlayer: ExoPlayer? = null
+
+    // 当前使用的播放器（优先使用 MediaController）
+    private val player: Player?
+        get() = mediaController ?: localPlayer
 
     // 位置更新任务
     private var positionUpdateJob: Job? = null
+
+    // 连接状态
+    private val _isConnected = MutableStateFlow(false)
+    val isConnected: StateFlow<Boolean> = _isConnected.asStateFlow()
 
     private val _playbackState = MutableStateFlow(PlaybackState())
     val playbackState: StateFlow<PlaybackState> = _playbackState.asStateFlow()
@@ -47,8 +69,8 @@ class MusicPlayer @Inject constructor(
     private val _duration = MutableStateFlow(0L)
     val duration: StateFlow<Long> = _duration.asStateFlow()
 
-    private val _queue = MutableStateFlow<List<com.tagplayer.musicplayer.data.local.entity.Song>>(emptyList())
-    val queue: StateFlow<List<com.tagplayer.musicplayer.data.local.entity.Song>> = _queue.asStateFlow()
+    private val _queue = MutableStateFlow<List<Song>>(emptyList())
+    val queue: StateFlow<List<Song>> = _queue.asStateFlow()
 
     private val _currentIndex = MutableStateFlow(0)
     val currentIndex: StateFlow<Int> = _currentIndex.asStateFlow()
@@ -72,7 +94,7 @@ class MusicPlayer @Inject constructor(
                     handleTrackEnded()
                 }
                 Player.STATE_READY -> {
-                    _duration.value = exoPlayer?.duration ?: 0L
+                    _duration.value = player?.duration ?: 0L
                 }
                 else -> {}
             }
@@ -91,43 +113,80 @@ class MusicPlayer @Inject constructor(
         }
     }
 
-    @androidx.annotation.OptIn(UnstableApi::class)
-    fun initializePlayer(): ExoPlayer {
-        if (exoPlayer != null) return exoPlayer!!
+    init {
+        // 初始化本地播放器作为后备
+        initializeLocalPlayer()
+        // 连接到 PlaybackService
+        connectToService()
+    }
 
+    private fun initializeLocalPlayer() {
         val audioAttributes = AudioAttributes.Builder()
             .setContentType(C.AUDIO_CONTENT_TYPE_MUSIC)
             .setUsage(C.USAGE_MEDIA)
             .build()
 
-        exoPlayer = ExoPlayer.Builder(context)
+        localPlayer = ExoPlayer.Builder(context)
             .setAudioAttributes(audioAttributes, true)
             .setHandleAudioBecomingNoisy(true)
             .build()
             .apply {
                 addListener(playerListener)
             }
+    }
 
-        return exoPlayer!!
+    /**
+     * 连接到 PlaybackService
+     * 使用 MediaController 异步连接，连接成功后系统自动生成通知栏播放器
+     */
+    private fun connectToService() {
+        val sessionToken = SessionToken(context, ComponentName(context, PlaybackService::class.java))
+
+        controllerFuture = MediaController.Builder(context, sessionToken)
+            .buildAsync()
+
+        controllerFuture?.addListener({
+            try {
+                mediaController = controllerFuture?.get()
+                mediaController?.addListener(playerListener)
+                _isConnected.value = true
+            } catch (e: Exception) {
+                e.printStackTrace()
+                // 连接失败，继续使用本地播放器
+                _isConnected.value = false
+            }
+        }, ContextCompat.getMainExecutor(context))
     }
 
     fun releasePlayer() {
         stopPositionUpdates()
-        exoPlayer?.removeListener(playerListener)
-        exoPlayer?.release()
-        exoPlayer = null
+        mediaController?.removeListener(playerListener)
+        localPlayer?.removeListener(playerListener)
+        localPlayer?.release()
+        localPlayer = null
+
+        // 释放 MediaController
+        controllerFuture?.let {
+            if (!it.isCancelled && !it.isDone) {
+                it.cancel(true)
+            }
+        }
+        mediaController?.release()
+        mediaController = null
+        controllerFuture = null
+        _isConnected.value = false
     }
 
     fun play() {
-        exoPlayer?.play()
+        player?.play()
     }
 
     fun pause() {
-        exoPlayer?.pause()
+        player?.pause()
     }
 
     fun playPauseToggle() {
-        exoPlayer?.let {
+        player?.let {
             if (it.isPlaying) {
                 it.pause()
             } else {
@@ -137,18 +196,18 @@ class MusicPlayer @Inject constructor(
     }
 
     fun seekTo(position: Long) {
-        exoPlayer?.seekTo(position)
+        player?.seekTo(position)
     }
 
     fun seekForward(milliseconds: Long = 10000) {
-        exoPlayer?.let {
+        player?.let {
             val newPosition = (it.currentPosition + milliseconds).coerceAtMost(it.duration)
             it.seekTo(newPosition)
         }
     }
 
     fun seekBackward(milliseconds: Long = 10000) {
-        exoPlayer?.let {
+        player?.let {
             val newPosition = (it.currentPosition - milliseconds).coerceAtLeast(0)
             it.seekTo(newPosition)
         }
@@ -168,16 +227,12 @@ class MusicPlayer @Inject constructor(
         }
     }
 
-    fun setQueue(songs: List<com.tagplayer.musicplayer.data.local.entity.Song>, startIndex: Int = 0) {
-        // 确保播放器已初始化
-        initializePlayer()
-
+    fun setQueue(songs: List<Song>, startIndex: Int = 0) {
         playbackQueue.setQueue(songs, startIndex)
         _queue.value = playbackQueue.getQueue()
         _currentIndex.value = playbackQueue.getCurrentIndex()
         val currentSong = playbackQueue.getCurrentSong()
         if (currentSong != null) {
-            // 立即更新状态，让 MiniPlayer 显示
             _playbackState.value = _playbackState.value.copy(
                 currentSong = currentSong,
                 currentSongId = currentSong.id
@@ -199,13 +254,13 @@ class MusicPlayer @Inject constructor(
         }
     }
 
-    fun addToQueue(song: com.tagplayer.musicplayer.data.local.entity.Song) {
+    fun addToQueue(song: Song) {
         playbackQueue.addToQueue(song)
         _queue.value = playbackQueue.getQueue()
         _playerEvents.trySend(PlayerEvent.QueueUpdated)
     }
 
-    fun addToQueueNext(song: com.tagplayer.musicplayer.data.local.entity.Song) {
+    fun addToQueueNext(song: Song) {
         playbackQueue.addToQueueNext(song)
         _queue.value = playbackQueue.getQueue()
         _playerEvents.trySend(PlayerEvent.QueueUpdated)
@@ -227,7 +282,7 @@ class MusicPlayer @Inject constructor(
         _playerEvents.trySend(PlayerEvent.QueueUpdated)
     }
 
-    fun getQueue(): List<com.tagplayer.musicplayer.data.local.entity.Song> {
+    fun getQueue(): List<Song> {
         return playbackQueue.getQueue()
     }
 
@@ -244,17 +299,17 @@ class MusicPlayer @Inject constructor(
     fun setRepeatMode(mode: RepeatMode) {
         playbackQueue.setRepeatMode(mode)
         _playbackState.value = _playbackState.value.copy(repeatMode = mode)
-        updateExoPlayerRepeatMode(mode)
+        updatePlayerRepeatMode(mode)
     }
 
     fun setShuffleEnabled(enabled: Boolean) {
         playbackQueue.setShuffleEnabled(enabled)
         _playbackState.value = _playbackState.value.copy(isShuffling = enabled)
-        exoPlayer?.shuffleModeEnabled = enabled
+        player?.shuffleModeEnabled = enabled
     }
 
     fun updatePosition() {
-        exoPlayer?.let {
+        player?.let {
             _currentPosition.value = it.currentPosition
         }
     }
@@ -274,10 +329,9 @@ class MusicPlayer @Inject constructor(
         positionUpdateJob = null
     }
 
-    private fun playSong(song: com.tagplayer.musicplayer.data.local.entity.Song) {
+    private fun playSong(song: Song) {
         _currentIndex.value = playbackQueue.getCurrentIndex()
 
-        // 构建专辑封面 URI
         val albumArtUri = if (song.albumId > 0) {
             android.net.Uri.parse("content://media/external/audio/albumart/${song.albumId}")
         } else null
@@ -295,13 +349,12 @@ class MusicPlayer @Inject constructor(
             )
             .build()
 
-        exoPlayer?.let {
+        player?.let {
             it.setMediaItem(mediaItem)
             it.prepare()
             it.play()
         }
 
-        // 更新播放记录
         scope.launch {
             withContext(Dispatchers.IO) {
                 songRepository.incrementPlayCount(song.id)
@@ -312,8 +365,8 @@ class MusicPlayer @Inject constructor(
     private fun handleTrackEnded() {
         when (playbackState.value.repeatMode) {
             RepeatMode.ONE -> {
-                exoPlayer?.seekTo(0)
-                exoPlayer?.play()
+                player?.seekTo(0)
+                player?.play()
             }
             RepeatMode.ALL, RepeatMode.OFF -> {
                 playNext()
@@ -321,8 +374,8 @@ class MusicPlayer @Inject constructor(
         }
     }
 
-    private fun updateExoPlayerRepeatMode(mode: RepeatMode) {
-        exoPlayer?.let {
+    private fun updatePlayerRepeatMode(mode: RepeatMode) {
+        player?.let {
             when (mode) {
                 RepeatMode.OFF -> {
                     it.repeatMode = Player.REPEAT_MODE_OFF
