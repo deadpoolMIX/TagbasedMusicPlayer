@@ -69,11 +69,11 @@ object AlphabetIndexUtils {
     }
 
     /**
-     * 获取完整的字母索引列表（A-Z + #）
-     * 按 A-Z 到 # 的顺序排列
+     * 获取完整的字母索引列表（# + A-Z）
+     * 按 # 到 A-Z 的顺序排列
      */
     fun getAlphabetIndex(): List<Char> {
-        return ('A'..'Z').toList() + '#'
+        return listOf('#') + ('A'..'Z').toList()
     }
 
     /**

@@ -146,7 +146,13 @@ class MusicScanner @Inject constructor(
 
     private suspend fun cursorToSong(cursor: Cursor, columnMap: Map<String, Int>, filePath: String): Song {
         // 优先提取内嵌歌词，其次从外部 .lrc 文件读取
-        val lyrics = LyricsParser.getLyrics(context, filePath)
+        // LyricsParser 内部有 try-catch，不会抛出异常
+        val lyrics = try {
+            LyricsParser.getLyrics(context, filePath)
+        } catch (e: Exception) {
+            e.printStackTrace()
+            null
+        }
 
         return Song(
             id = cursor.getLong(columnMap[Media._ID]!!),

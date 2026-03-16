@@ -1,6 +1,10 @@
 package com.tagplayer.musicplayer.player
 
+import android.app.NotificationChannel
+import android.app.NotificationManager
+import android.content.Context
 import android.content.Intent
+import android.os.Build
 import androidx.media3.common.util.UnstableApi
 import androidx.media3.session.MediaSession
 import androidx.media3.session.MediaSessionService
@@ -17,6 +21,11 @@ import javax.inject.Inject
 @AndroidEntryPoint
 class PlaybackService : MediaSessionService() {
 
+    companion object {
+        const val NOTIFICATION_CHANNEL_ID = "music_playback_channel"
+        const val NOTIFICATION_CHANNEL_NAME = "音乐播放"
+    }
+
     private var mediaSession: MediaSession? = null
     private var positionUpdateJob: Job? = null
     private val serviceScope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
@@ -28,12 +37,36 @@ class PlaybackService : MediaSessionService() {
     override fun onCreate() {
         super.onCreate()
 
+        // 创建通知通道（Android 8.0+ 必须）
+        createNotificationChannel()
+
         val player = musicPlayer.initializePlayer()
 
         mediaSession = MediaSession.Builder(this, player)
             .build()
 
         startPositionUpdates()
+    }
+
+    /**
+     * 创建通知通道
+     * Media3 MediaSessionService 依赖此通道来显示通知栏播放器
+     */
+    private fun createNotificationChannel() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            val channel = NotificationChannel(
+                NOTIFICATION_CHANNEL_ID,
+                NOTIFICATION_CHANNEL_NAME,
+                NotificationManager.IMPORTANCE_LOW
+            ).apply {
+                description = "音乐播放控制"
+                setShowBadge(false)
+                lockscreenVisibility = android.app.Notification.VISIBILITY_PUBLIC
+            }
+
+            val notificationManager = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+            notificationManager.createNotificationChannel(channel)
+        }
     }
 
     override fun onGetSession(controllerInfo: MediaSession.ControllerInfo): MediaSession? {
