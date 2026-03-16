@@ -1,8 +1,6 @@
 package com.tagplayer.musicplayer.player
 
 import android.content.Intent
-import android.os.Build
-import androidx.core.app.ServiceCompat
 import androidx.media3.common.util.UnstableApi
 import androidx.media3.session.MediaSession
 import androidx.media3.session.MediaSessionService
@@ -12,7 +10,6 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.delay
-import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import javax.inject.Inject
@@ -22,14 +19,10 @@ class PlaybackService : MediaSessionService() {
 
     private var mediaSession: MediaSession? = null
     private var positionUpdateJob: Job? = null
-    private var notificationJob: Job? = null
     private val serviceScope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
 
     @Inject
     lateinit var musicPlayer: MusicPlayer
-
-    @Inject
-    lateinit var notificationHelper: NotificationHelper
 
     @UnstableApi
     override fun onCreate() {
@@ -41,16 +34,10 @@ class PlaybackService : MediaSessionService() {
             .build()
 
         startPositionUpdates()
-        startNotificationUpdates()
     }
 
     override fun onGetSession(controllerInfo: MediaSession.ControllerInfo): MediaSession? {
         return mediaSession
-    }
-
-    @UnstableApi
-    override fun onUpdateNotification(session: MediaSession) {
-        // 让 MediaSessionService 自动管理通知
     }
 
     override fun onTaskRemoved(rootIntent: Intent?) {
@@ -62,8 +49,6 @@ class PlaybackService : MediaSessionService() {
 
     override fun onDestroy() {
         positionUpdateJob?.cancel()
-        notificationJob?.cancel()
-        notificationHelper.hideNotification()
         mediaSession?.run {
             player.release()
             release()
@@ -77,40 +62,6 @@ class PlaybackService : MediaSessionService() {
             while (isActive) {
                 musicPlayer.updatePosition()
                 delay(1000)
-            }
-        }
-    }
-
-    @UnstableApi
-    private fun startNotificationUpdates() {
-        notificationJob = serviceScope.launch {
-            musicPlayer.playbackState.collectLatest { state ->
-                val song = state.currentSong
-                if (song != null) {
-                    try {
-                        val notification = notificationHelper.createNotification(
-                            title = song.title,
-                            artist = song.artist,
-                            albumId = song.albumId,
-                            isPlaying = state.isPlaying
-                        )
-                        notificationHelper.showNotification(notification)
-
-                        // 设置为前台服务
-                        ServiceCompat.startForeground(
-                            this@PlaybackService,
-                            NotificationHelper.NOTIFICATION_ID,
-                            notification,
-                            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-                                android.content.pm.ServiceInfo.FOREGROUND_SERVICE_TYPE_MEDIA_PLAYBACK
-                            } else 0
-                        )
-                    } catch (e: Exception) {
-                        e.printStackTrace()
-                    }
-                } else {
-                    notificationHelper.hideNotification()
-                }
             }
         }
     }
