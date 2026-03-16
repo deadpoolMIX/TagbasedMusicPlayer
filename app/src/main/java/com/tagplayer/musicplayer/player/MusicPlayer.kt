@@ -276,6 +276,12 @@ class MusicPlayer @Inject constructor(
 
     private fun playSong(song: com.tagplayer.musicplayer.data.local.entity.Song) {
         _currentIndex.value = playbackQueue.getCurrentIndex()
+
+        // 构建专辑封面 URI
+        val albumArtUri = if (song.albumId > 0) {
+            android.net.Uri.parse("content://media/external/audio/albumart/${song.albumId}")
+        } else null
+
         val mediaItem = MediaItem.Builder()
             .setMediaId(song.id.toString())
             .setUri(song.filePath)
@@ -284,6 +290,7 @@ class MusicPlayer @Inject constructor(
                     .setTitle(song.title)
                     .setArtist(song.artist)
                     .setAlbumTitle(song.album)
+                    .setArtworkUri(albumArtUri)
                     .build()
             )
             .build()

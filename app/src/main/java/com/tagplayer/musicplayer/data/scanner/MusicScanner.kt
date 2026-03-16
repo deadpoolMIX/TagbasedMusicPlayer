@@ -21,6 +21,9 @@ class MusicScanner @Inject constructor(
 ) {
     private val contentResolver: ContentResolver = context.contentResolver
 
+    // 支持的音频格式
+    private val supportedExtensions = setOf("mp3", "flac", "wav", "m4a", "aac", "ogg", "wma")
+
     // MediaStore projection
     private val projection = arrayOf(
         Media._ID,
@@ -33,10 +36,13 @@ class MusicScanner @Inject constructor(
         Media.DISPLAY_NAME,
         Media.DATE_ADDED,
         Media.DATE_MODIFIED,
-        Media.SIZE
+        Media.SIZE,
+        Media.MIME_TYPE
     )
 
-    private val selection = "${Media.IS_MUSIC} != 0 AND ${Media.DURATION} > 10000" // > 10 seconds
+    // 放宽筛选条件：只过滤时长大于 1 秒的音频（避免铃声等短音频）
+    // 不依赖 IS_MUSIC 标志，因为部分文件可能未正确标记
+    private val selection = "${Media.DURATION} > 1000"
 
     private val sortOrder = "${Media.DATE_ADDED} DESC"
 
@@ -56,7 +62,15 @@ class MusicScanner @Inject constructor(
 
             while (it.moveToNext()) {
                 try {
-                    val song = cursorToSong(it, columnIndexMap)
+                    val filePath = it.getString(columnIndexMap[Media.DATA]!!) ?: ""
+
+                    // 检查文件扩展名是否支持
+                    val extension = filePath.substringAfterLast('.', "").lowercase()
+                    if (extension !in supportedExtensions) {
+                        continue
+                    }
+
+                    val song = cursorToSong(it, columnIndexMap, filePath)
                     songs.add(song)
                 } catch (e: Exception) {
                     e.printStackTrace()
@@ -87,7 +101,15 @@ class MusicScanner @Inject constructor(
 
             while (it.moveToNext()) {
                 try {
-                    val song = cursorToSong(it, columnIndexMap)
+                    val filePath = it.getString(columnIndexMap[Media.DATA]!!) ?: ""
+
+                    // 检查文件扩展名是否支持
+                    val extension = filePath.substringAfterLast('.', "").lowercase()
+                    if (extension !in supportedExtensions) {
+                        continue
+                    }
+
+                    val song = cursorToSong(it, columnIndexMap, filePath)
                     songs.add(song)
                 } catch (e: Exception) {
                     e.printStackTrace()
@@ -110,7 +132,8 @@ class MusicScanner @Inject constructor(
         cursor?.use {
             if (it.moveToFirst()) {
                 val columnIndexMap = createColumnIndexMap(it)
-                return@withContext cursorToSong(it, columnIndexMap)
+                val filePath = it.getString(columnIndexMap[Media.DATA]!!) ?: ""
+                return@withContext cursorToSong(it, columnIndexMap, filePath)
             }
         }
 
@@ -121,9 +144,7 @@ class MusicScanner @Inject constructor(
         return projection.associateWith { cursor.getColumnIndexOrThrow(it) }
     }
 
-    private suspend fun cursorToSong(cursor: Cursor, columnMap: Map<String, Int>): Song {
-        val filePath = cursor.getString(columnMap[Media.DATA]!!) ?: ""
-
+    private suspend fun cursorToSong(cursor: Cursor, columnMap: Map<String, Int>, filePath: String): Song {
         // 优先提取内嵌歌词，其次从外部 .lrc 文件读取
         val lyrics = LyricsParser.getLyrics(context, filePath)
 
