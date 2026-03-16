@@ -103,6 +103,9 @@ dependencies {
     // JSON Serialization
     implementation(libs.kotlinx.serialization.json)
 
+    // DocumentFile (for SAF file operations)
+    implementation("androidx.documentfile:documentfile:1.0.1")
+
     // Testing
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.test.ext.junit)

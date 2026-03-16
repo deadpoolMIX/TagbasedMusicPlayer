@@ -342,10 +342,10 @@ class HomeViewModel @Inject constructor(
     fun addScanFolderByUri(uri: Uri) {
         viewModelScope.launch {
             try {
-                // 尝试持久化 URI 权限（某些设备可能不支持）
+                // 持久化 URI 读写权限（用于后续删除文件）
                 try {
                     val takeFlags = Intent.FLAG_GRANT_READ_URI_PERMISSION or
-                            Intent.FLAG_GRANT_PERSISTABLE_URI_PERMISSION
+                            Intent.FLAG_GRANT_WRITE_URI_PERMISSION
                     context.contentResolver.takePersistableUriPermission(uri, takeFlags)
                 } catch (e: Exception) {
                     // 忽略权限持久化错误
@@ -355,8 +355,15 @@ class HomeViewModel @Inject constructor(
                 // 获取文件夹名称作为显示名
                 val folderName = getFolderNameFromUri(uri) ?: uri.toString()
 
-                // 保存到数据库
-                scanFolderRepository.addScanFolder(uri.toString(), folderName)
+                // 获取真实路径用于扫描
+                val realPath = getRealPathFromUri(uri)
+
+                // 保存到数据库（同时存储 URI 和真实路径）
+                scanFolderRepository.addScanFolder(
+                    path = uri.toString(),
+                    name = folderName,
+                    realPath = realPath
+                )
 
                 // 扫描该文件夹
                 scanFolder(uri.toString())

@@ -2,6 +2,7 @@ package com.tagplayer.musicplayer.ui.components
 
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -220,23 +221,31 @@ private fun DeleteConfirmDialog(
             Text(text = "删除歌曲")
         },
         text = {
-            Text(text = "「$songTitle」\n\n请选择删除方式：")
+            Column {
+                Text(text = "「$songTitle」")
+                Spacer(modifier = Modifier.height(16.dp))
+                Text(
+                    text = "请选择删除方式：",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
         },
         confirmButton = {
             TextButton(onClick = onDeleteWithFile) {
                 Text(
-                    text = "同时删除本地文件",
+                    text = "删除文件",
                     color = MaterialTheme.colorScheme.error
                 )
             }
         },
         dismissButton = {
-            Column {
-                TextButton(onClick = onDeleteFromListOnly) {
-                    Text("仅从列表移除")
-                }
+            Row {
                 TextButton(onClick = onDismiss) {
                     Text("取消")
+                }
+                TextButton(onClick = onDeleteFromListOnly) {
+                    Text("仅移除")
                 }
             }
         }

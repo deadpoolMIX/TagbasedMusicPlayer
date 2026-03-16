@@ -1,6 +1,5 @@
 package com.tagplayer.musicplayer.data.repository
 
-import android.app.Activity
 import android.content.ContentResolver
 import android.content.ContentUris
 import android.content.Context
@@ -8,8 +7,9 @@ import android.content.Intent
 import android.content.IntentSender
 import android.net.Uri
 import android.os.Build
+import android.provider.DocumentsContract
 import android.provider.MediaStore
-import androidx.activity.result.ActivityResultLauncher
+import androidx.documentfile.provider.DocumentFile
 import com.tagplayer.musicplayer.data.local.database.SongDao
 import com.tagplayer.musicplayer.data.local.entity.Song
 import com.tagplayer.musicplayer.data.scanner.MusicScanner
@@ -34,7 +34,8 @@ sealed class DeleteFileResult {
 class SongRepository @Inject constructor(
     @ApplicationContext private val context: Context,
     private val songDao: SongDao,
-    private val musicScanner: MusicScanner
+    private val musicScanner: MusicScanner,
+    private val scanFolderRepository: ScanFolderRepository
 ) {
     private val contentResolver: ContentResolver = context.contentResolver
     fun getAllSongs(): Flow<List<Song>> = songDao.getAllSongs()
@@ -93,7 +94,7 @@ class SongRepository @Inject constructor(
 
     /**
      * 删除歌曲的本地文件
-     * 使用 MediaStore API 删除音频文件，同时删除同名 .lrc 歌词文件
+     * 优先检查文件是否在已授权的文件夹内，如果是则直接删除
      *
      * @param song 要删除的歌曲
      * @return DeleteFileResult - 成功、需要权限或错误
@@ -105,35 +106,35 @@ class SongRepository @Inject constructor(
                 song.id
             )
 
-            // Android 11+ 需要用户授权才能删除非应用创建的文件
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
-                // 先尝试直接删除
-                try {
-                    val deletedRows = contentResolver.delete(audioUri, null, null)
-                    if (deletedRows > 0) {
-                        deleteLrcFile(song.filePath)
-                        return@withContext DeleteFileResult.Success(true)
-                    }
-                } catch (e: SecurityException) {
-                    // 需要用户授权，创建权限请求 PendingIntent
-                    val urisToModify = listOf(audioUri)
-                    val pendingIntent = MediaStore.createWriteRequest(contentResolver, urisToModify)
-                    return@withContext DeleteFileResult.NeedPermission(pendingIntent.intentSender, song)
-                }
-            } else {
-                // Android 10 及以下
+            // 先尝试直接通过 MediaStore 删除
+            try {
                 val deletedRows = contentResolver.delete(audioUri, null, null)
                 if (deletedRows > 0) {
                     deleteLrcFile(song.filePath)
-
-                    // 通知 MediaStore 扫描更新
-                    if (Build.VERSION.SDK_INT < Build.VERSION_CODES.Q) {
-                        @Suppress("DEPRECATION")
-                        context.sendBroadcast(
-                            Intent(Intent.ACTION_MEDIA_SCANNER_SCAN_FILE, audioUri)
-                        )
-                    }
                     return@withContext DeleteFileResult.Success(true)
+                }
+            } catch (e: SecurityException) {
+                // Android 11+ 需要权限，尝试通过已授权文件夹删除
+                val folders = scanFolderRepository.getAllScanFoldersOnce()
+                val matchingFolder = folders.find { folder ->
+                    folder.realPath != null && song.filePath.startsWith(folder.realPath)
+                }
+
+                if (matchingFolder != null && matchingFolder.realPath != null) {
+                    // 文件在已授权文件夹内，尝试通过 DocumentFile 删除
+                    val deleted = deleteViaDocumentFile(song, matchingFolder.path, matchingFolder.realPath)
+                    if (deleted) {
+                        deleteLrcFile(song.filePath)
+                        return@withContext DeleteFileResult.Success(true)
+                    }
+                }
+
+                // 需要用户授权
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+                    val pendingIntent = MediaStore.createWriteRequest(contentResolver, listOf(audioUri))
+                    return@withContext DeleteFileResult.NeedPermission(pendingIntent.intentSender, song)
+                } else {
+                    return@withContext DeleteFileResult.Error("删除失败：权限不足")
                 }
             }
 
@@ -141,6 +142,52 @@ class SongRepository @Inject constructor(
         } catch (e: Exception) {
             e.printStackTrace()
             DeleteFileResult.Error(e.message ?: "删除失败")
+        }
+    }
+
+    /**
+     * 通过 DocumentFile 删除文件（使用已授权的文件夹权限）
+     * @param song 要删除的歌曲
+     * @param folderUriString 文件夹的 URI 字符串
+     * @param realPath 文件夹的真实路径
+     */
+    private fun deleteViaDocumentFile(song: Song, folderUriString: String, realPath: String): Boolean {
+        return try {
+            val folderUri = Uri.parse(folderUriString)
+            val folderDoc = DocumentFile.fromTreeUri(context, folderUri) ?: return false
+
+            // 计算相对路径
+            val relativePath = song.filePath.removePrefix(realPath).removePrefix("/")
+
+            // 遍历路径找到文件
+            val pathParts = relativePath.split("/")
+            var currentDoc = folderDoc
+
+            for (i in pathParts.indices) {
+                val part = pathParts[i]
+                if (part.isBlank()) continue
+
+                if (i == pathParts.lastIndex) {
+                    // 最后一个部分是文件名
+                    val fileDoc = currentDoc.findFile(part)
+                    if (fileDoc != null && fileDoc.delete()) {
+                        return true
+                    }
+                } else {
+                    // 中间部分是文件夹
+                    val subDir = currentDoc.findFile(part)
+                    if (subDir != null && subDir.isDirectory) {
+                        currentDoc = subDir
+                    } else {
+                        return false
+                    }
+                }
+            }
+
+            false
+        } catch (e: Exception) {
+            e.printStackTrace()
+            false
         }
     }
 

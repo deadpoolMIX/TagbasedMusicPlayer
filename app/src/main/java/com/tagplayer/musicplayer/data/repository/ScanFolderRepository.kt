@@ -18,11 +18,17 @@ class ScanFolderRepository @Inject constructor(
     suspend fun getScanFolderByPath(path: String): ScanFolder? =
         scanFolderDao.getScanFolderByPath(path)
 
-    suspend fun addScanFolder(path: String, name: String? = null, isIncluded: Boolean = true) {
+    suspend fun addScanFolder(
+        path: String,
+        name: String? = null,
+        realPath: String? = null,
+        isIncluded: Boolean = true
+    ) {
         val displayName = name ?: path.substringAfterLast('/')
         val scanFolder = ScanFolder(
             path = path,
             name = displayName,
+            realPath = realPath,
             isIncluded = isIncluded,
             addedAt = System.currentTimeMillis()
         )
