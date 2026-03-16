@@ -379,8 +379,13 @@ class HomeViewModel @Inject constructor(
         }
     }
 
-    fun deleteSong(song: Song) {
+    fun deleteSong(song: Song, deleteFile: Boolean = false) {
         viewModelScope.launch {
+            if (deleteFile) {
+                // 先删除本地文件
+                songRepository.deleteSongFile(song)
+            }
+            // 从数据库删除
             songRepository.deleteSong(song)
             dismissActionSheet()
         }

@@ -18,6 +18,7 @@ import androidx.compose.material.icons.filled.Label
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.PlaylistAdd
 import androidx.compose.material.icons.filled.SkipNext
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
@@ -31,6 +32,10 @@ import androidx.compose.material3.TextButton
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.tagplayer.musicplayer.data.local.entity.Song
@@ -45,16 +50,35 @@ fun SongActionSheet(
     onAddTag: () -> Unit,
     onViewArtist: () -> Unit,
     onViewAlbum: () -> Unit,
-    onDelete: () -> Unit
+    onDelete: (deleteFile: Boolean) -> Unit
 ) {
     val sheetState = rememberModalBottomSheetState(
         skipPartiallyExpanded = true,
         confirmValueChange = { true }
     )
 
+    // 删除确认对话框状态
+    var showDeleteDialog by remember { mutableStateOf(false) }
+
     // 确保弹窗展开到完整高度
     LaunchedEffect(Unit) {
         sheetState.expand()
+    }
+
+    // 删除确认对话框
+    if (showDeleteDialog) {
+        DeleteConfirmDialog(
+            songTitle = song.title,
+            onDismiss = { showDeleteDialog = false },
+            onDeleteFromListOnly = {
+                showDeleteDialog = false
+                onDelete(false)
+            },
+            onDeleteWithFile = {
+                showDeleteDialog = false
+                onDelete(true)
+            }
+        )
     }
 
     ModalBottomSheet(
@@ -141,7 +165,7 @@ fun SongActionSheet(
                         tint = MaterialTheme.colorScheme.error
                     )
                 },
-                modifier = Modifier.clickable(onClick = onDelete),
+                modifier = Modifier.clickable(onClick = { showDeleteDialog = true }),
                 colors = ListItemDefaults.colors(
                     containerColor = MaterialTheme.colorScheme.surface
                 )
@@ -177,5 +201,44 @@ private fun ActionItem(
         colors = ListItemDefaults.colors(
             containerColor = MaterialTheme.colorScheme.surface
         )
+    )
+}
+
+/**
+ * 删除确认对话框
+ */
+@Composable
+private fun DeleteConfirmDialog(
+    songTitle: String,
+    onDismiss: () -> Unit,
+    onDeleteFromListOnly: () -> Unit,
+    onDeleteWithFile: () -> Unit
+) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = {
+            Text(text = "删除歌曲")
+        },
+        text = {
+            Text(text = "「$songTitle」\n\n请选择删除方式：")
+        },
+        confirmButton = {
+            TextButton(onClick = onDeleteWithFile) {
+                Text(
+                    text = "同时删除本地文件",
+                    color = MaterialTheme.colorScheme.error
+                )
+            }
+        },
+        dismissButton = {
+            Column {
+                TextButton(onClick = onDeleteFromListOnly) {
+                    Text("仅从列表移除")
+                }
+                TextButton(onClick = onDismiss) {
+                    Text("取消")
+                }
+            }
+        }
     )
 }

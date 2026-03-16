@@ -430,8 +430,8 @@ fun HomeScreen(
                 // TODO: 导航到专辑详情
                 viewModel.dismissActionSheet()
             },
-            onDelete = {
-                viewModel.deleteSong(selectedSong!!)
+            onDelete = { deleteFile ->
+                viewModel.deleteSong(selectedSong!!, deleteFile)
             }
         )
     }
