@@ -77,6 +77,9 @@ class MusicPlayer @Inject constructor(
 
     private val playbackQueue = PlaybackQueue()
 
+    // 标记是否已同步队列到 Player
+    private var isQueueSynced = false
+
     private val playerListener = object : Player.Listener {
         override fun onIsPlayingChanged(isPlaying: Boolean) {
             _playbackState.value = _playbackState.value.copy(isPlaying = isPlaying)
@@ -91,6 +94,7 @@ class MusicPlayer @Inject constructor(
             when (playbackState) {
                 Player.STATE_ENDED -> {
                     _playerEvents.trySend(PlayerEvent.TrackEnded)
+                    // Media3 会自动处理下一首，我们只需要更新内部状态
                     handleTrackEnded()
                 }
                 Player.STATE_READY -> {
@@ -103,20 +107,31 @@ class MusicPlayer @Inject constructor(
         override fun onMediaItemTransition(mediaItem: MediaItem?, reason: Int) {
             mediaItem?.let {
                 val songId = it.mediaId.toLongOrNull() ?: return
+                // 从 Player 获取当前索引，更新内部状态
+                val playerIndex = player?.currentMediaItemIndex ?: 0
+                _currentIndex.value = playerIndex
+                playbackQueue.jumpToSong(playerIndex)
+
                 val song = playbackQueue.getCurrentSong()
                 _playbackState.value = _playbackState.value.copy(
                     currentSong = song,
-                    currentSongId = songId
+                    currentSongId = songId,
+                    currentIndex = playerIndex
                 )
                 _playerEvents.trySend(PlayerEvent.TrackChanged(songId))
+
+                // 记录播放
+                scope.launch {
+                    withContext(Dispatchers.IO) {
+                        songRepository.incrementPlayCount(songId)
+                    }
+                }
             }
         }
     }
 
     init {
-        // 初始化本地播放器作为后备
         initializeLocalPlayer()
-        // 连接到 PlaybackService
         connectToService()
     }
 
@@ -135,10 +150,6 @@ class MusicPlayer @Inject constructor(
             }
     }
 
-    /**
-     * 连接到 PlaybackService
-     * 使用 MediaController 异步连接，连接成功后系统自动生成通知栏播放器
-     */
     private fun connectToService() {
         val sessionToken = SessionToken(context, ComponentName(context, PlaybackService::class.java))
 
@@ -150,9 +161,13 @@ class MusicPlayer @Inject constructor(
                 mediaController = controllerFuture?.get()
                 mediaController?.addListener(playerListener)
                 _isConnected.value = true
+
+                // 如果已有队列，同步到新的 MediaController
+                if (isQueueSynced && playbackQueue.getQueue().isNotEmpty()) {
+                    syncQueueToPlayer(playbackQueue.getCurrentIndex())
+                }
             } catch (e: Exception) {
                 e.printStackTrace()
-                // 连接失败，继续使用本地播放器
                 _isConnected.value = false
             }
         }, ContextCompat.getMainExecutor(context))
@@ -165,7 +180,6 @@ class MusicPlayer @Inject constructor(
         localPlayer?.release()
         localPlayer = null
 
-        // 释放 MediaController
         controllerFuture?.let {
             if (!it.isCancelled && !it.isDone) {
                 it.cancel(true)
@@ -175,6 +189,7 @@ class MusicPlayer @Inject constructor(
         mediaController = null
         controllerFuture = null
         _isConnected.value = false
+        isQueueSynced = false
     }
 
     fun play() {
@@ -214,71 +229,138 @@ class MusicPlayer @Inject constructor(
     }
 
     fun playNext() {
-        val nextSong = playbackQueue.getNextSong()
-        if (nextSong != null) {
-            playSong(nextSong)
-        }
+        player?.seekToNextMediaItem()
     }
 
     fun playPrevious() {
-        val prevSong = playbackQueue.getPreviousSong()
-        if (prevSong != null) {
-            playSong(prevSong)
+        player?.let {
+            // 如果播放超过 3 秒，则重新播放当前歌曲
+            if (it.currentPosition > 3000) {
+                it.seekTo(0)
+            } else {
+                it.seekToPreviousMediaItem()
+            }
         }
     }
 
+    /**
+     * 设置播放队列并开始播放
+     * 关键：将整个队列一次性注入 Player，让 Media3 获得播放列表上下文
+     */
     fun setQueue(songs: List<Song>, startIndex: Int = 0) {
+        if (songs.isEmpty()) return
+
+        // 1. 更新内部队列
         playbackQueue.setQueue(songs, startIndex)
         _queue.value = playbackQueue.getQueue()
         _currentIndex.value = playbackQueue.getCurrentIndex()
+
         val currentSong = playbackQueue.getCurrentSong()
         if (currentSong != null) {
             _playbackState.value = _playbackState.value.copy(
                 currentSong = currentSong,
-                currentSongId = currentSong.id
+                currentSongId = currentSong.id,
+                currentIndex = startIndex
             )
-            playSong(currentSong)
+
+            // 2. 将整个队列转换为 MediaItem 列表
+            val mediaItems = songs.map { song -> createMediaItem(song) }
+
+            // 3. 一次性注入完整队列到 Player
+            player?.let { p ->
+                p.setMediaItems(mediaItems, startIndex, 0L)
+                p.prepare()
+                p.play()
+            }
+
+            isQueueSynced = true
+
+            // 记录播放
+            scope.launch {
+                withContext(Dispatchers.IO) {
+                    songRepository.incrementPlayCount(currentSong.id)
+                }
+            }
         }
     }
 
+    /**
+     * 播放指定索引的歌曲
+     * 使用 seekToDefaultPosition 跳转，无需重新设置队列
+     */
     fun playAtIndex(index: Int) {
-        val song = playbackQueue.playAtIndex(index)
+        if (index < 0 || index >= playbackQueue.getQueue().size) return
+
+        playbackQueue.jumpToSong(index)
         _currentIndex.value = index
+
+        val song = playbackQueue.getCurrentSong()
         if (song != null) {
             _playbackState.value = _playbackState.value.copy(
                 currentSong = song,
                 currentSongId = song.id,
                 currentIndex = index
             )
-            playSong(song)
+
+            // 使用 Player 的跳转功能
+            player?.seekToDefaultPosition(index)
+            player?.play()
         }
     }
 
     fun addToQueue(song: Song) {
         playbackQueue.addToQueue(song)
         _queue.value = playbackQueue.getQueue()
+
+        // 同步到 Player
+        player?.addMediaItem(createMediaItem(song))
         _playerEvents.trySend(PlayerEvent.QueueUpdated)
     }
 
     fun addToQueueNext(song: Song) {
+        val insertIndex = playbackQueue.getCurrentIndex() + 1
         playbackQueue.addToQueueNext(song)
         _queue.value = playbackQueue.getQueue()
+
+        // 同步到 Player
+        player?.addMediaItem(insertIndex, createMediaItem(song))
         _playerEvents.trySend(PlayerEvent.QueueUpdated)
     }
 
     fun removeFromQueue(index: Int) {
+        if (index < 0 || index >= playbackQueue.getQueue().size) return
+
+        val wasCurrentIndex = index == playbackQueue.getCurrentIndex()
+
         playbackQueue.removeFromQueue(index)
         _queue.value = playbackQueue.getQueue()
         _currentIndex.value = playbackQueue.getCurrentIndex()
         _playbackState.value = _playbackState.value.copy(
             currentIndex = playbackQueue.getCurrentIndex()
         )
+
+        // 同步到 Player
+        player?.removeMediaItem(index)
+
+        // 如果删除的是当前播放的歌曲，播放器会自动跳到下一首
+        if (wasCurrentIndex) {
+            val newSong = playbackQueue.getCurrentSong()
+            if (newSong != null) {
+                _playbackState.value = _playbackState.value.copy(
+                    currentSong = newSong,
+                    currentSongId = newSong.id
+                )
+            }
+        }
+
         _playerEvents.trySend(PlayerEvent.QueueUpdated)
     }
 
     fun clearQueue() {
         playbackQueue.clear()
         _queue.value = emptyList()
+        player?.clearMediaItems()
+        isQueueSynced = false
         _playerEvents.trySend(PlayerEvent.QueueUpdated)
     }
 
@@ -287,12 +369,18 @@ class MusicPlayer @Inject constructor(
     }
 
     fun moveSong(fromIndex: Int, toIndex: Int) {
+        if (fromIndex < 0 || fromIndex >= playbackQueue.getQueue().size) return
+        if (toIndex < 0 || toIndex >= playbackQueue.getQueue().size) return
+
         playbackQueue.moveSong(fromIndex, toIndex)
         _queue.value = playbackQueue.getQueue()
         _currentIndex.value = playbackQueue.getCurrentIndex()
         _playbackState.value = _playbackState.value.copy(
             currentIndex = playbackQueue.getCurrentIndex()
         )
+
+        // 同步到 Player
+        player?.moveMediaItem(fromIndex, toIndex)
         _playerEvents.trySend(PlayerEvent.QueueUpdated)
     }
 
@@ -303,8 +391,13 @@ class MusicPlayer @Inject constructor(
     }
 
     fun setShuffleEnabled(enabled: Boolean) {
+        if (playbackQueue.isShuffleEnabled() == enabled) return
+
         playbackQueue.setShuffleEnabled(enabled)
         _playbackState.value = _playbackState.value.copy(isShuffling = enabled)
+        _queue.value = playbackQueue.getQueue()
+
+        // Media3 的 shuffle 模式
         player?.shuffleModeEnabled = enabled
     }
 
@@ -329,14 +422,15 @@ class MusicPlayer @Inject constructor(
         positionUpdateJob = null
     }
 
-    private fun playSong(song: Song) {
-        _currentIndex.value = playbackQueue.getCurrentIndex()
-
+    /**
+     * 创建 MediaItem
+     */
+    private fun createMediaItem(song: Song): MediaItem {
         val albumArtUri = if (song.albumId > 0) {
             android.net.Uri.parse("content://media/external/audio/albumart/${song.albumId}")
         } else null
 
-        val mediaItem = MediaItem.Builder()
+        return MediaItem.Builder()
             .setMediaId(song.id.toString())
             .setUri(song.filePath)
             .setMediaMetadata(
@@ -348,29 +442,29 @@ class MusicPlayer @Inject constructor(
                     .build()
             )
             .build()
-
-        player?.let {
-            it.setMediaItem(mediaItem)
-            it.prepare()
-            it.play()
-        }
-
-        scope.launch {
-            withContext(Dispatchers.IO) {
-                songRepository.incrementPlayCount(song.id)
-            }
-        }
     }
 
+    /**
+     * 同步队列到 Player（用于 MediaController 重连时）
+     */
+    private fun syncQueueToPlayer(startIndex: Int) {
+        val songs = playbackQueue.getQueue()
+        if (songs.isEmpty()) return
+
+        val mediaItems = songs.map { createMediaItem(it) }
+        player?.setMediaItems(mediaItems, startIndex, 0L)
+    }
+
+    /**
+     * 处理曲目结束
+     * Media3 会自动播放下一首，这里只处理边界情况
+     */
     private fun handleTrackEnded() {
-        when (playbackState.value.repeatMode) {
-            RepeatMode.ONE -> {
-                player?.seekTo(0)
-                player?.play()
-            }
-            RepeatMode.ALL, RepeatMode.OFF -> {
-                playNext()
-            }
+        // Media3 已自动处理下一首，更新内部状态
+        val playerIndex = player?.currentMediaItemIndex ?: -1
+        if (playerIndex >= 0) {
+            _currentIndex.value = playerIndex
+            playbackQueue.jumpToSong(playerIndex)
         }
     }
 
