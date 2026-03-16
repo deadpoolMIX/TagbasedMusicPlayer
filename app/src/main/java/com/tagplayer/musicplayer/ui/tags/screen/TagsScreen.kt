@@ -58,7 +58,6 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.input.pointer.PointerEventType
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.onSizeChanged
-import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.IntOffset
@@ -471,6 +470,11 @@ private fun TagDialog(
 
 /**
  * 垂直滚动条组件（支持拖拽）
+ *
+ * 关键设计：
+ * 1. 基于索引的精确进度计算（含小数部分）
+ * 2. 状态分离：拖拽时滑块位置由手势驱动，否则由列表状态驱动
+ * 3. 切断死循环：拖拽期间忽略列表滚动带来的状态回传
  */
 @Composable
 private fun VerticalScrollbar(
@@ -481,7 +485,12 @@ private fun VerticalScrollbar(
     if (itemCount == 0) return
 
     val coroutineScope = rememberCoroutineScope()
+
+    // 状态分离：拖拽状态
     var isDragging by remember { mutableStateOf(false) }
+    // 拖拽时的进度值（由手势驱动）
+    var dragProgress by remember { mutableStateOf(0f) }
+    // 轨道高度（像素）
     var trackHeightPx by remember { mutableStateOf(0) }
 
     // 计算可见项目数量
@@ -490,22 +499,35 @@ private fun VerticalScrollbar(
     // 不需要滚动条的情况
     if (visibleItemCount >= itemCount) return
 
-    // 最大可滚动到的索引
-    val maxScrollIndex = (itemCount - visibleItemCount).coerceAtLeast(0)
-
-    // 滚动进度 (0-1)
-    val scrollProgress by remember {
+    // ========== 1. 精确的进度计算（基于 Index 含小数） ==========
+    val listProgress by remember {
         derivedStateOf {
-            if (maxScrollIndex == 0) 0f
-            else listState.firstVisibleItemIndex.toFloat() / maxScrollIndex.toFloat()
+            if (itemCount == 0) return@derivedStateOf 0f
+
+            val firstVisibleIndex = listState.firstVisibleItemIndex
+            val firstVisibleOffset = listState.firstVisibleItemScrollOffset
+
+            // 获取可见项目的高度（假设高度大致相同）
+            val itemHeight = listState.layoutInfo.visibleItemsInfo.firstOrNull()?.size ?: 1
+
+            // 精确索引 = 整数部分 + 小数部分（偏移量/项目高度）
+            val exactIndex = firstVisibleIndex + (firstVisibleOffset.toFloat() / itemHeight.toFloat())
+
+            // 进度 = 精确索引 / 总项目数
+            (exactIndex / itemCount.toFloat()).coerceIn(0f, 1f)
         }
     }
 
-    // 滚动条高度比例
+    // 滑块高度比例
     val thumbHeightPercent = visibleItemCount.toFloat() / itemCount.toFloat()
 
-    // 滑块偏移量（像素）
-    val thumbOffsetY = (trackHeightPx * (1f - thumbHeightPercent) * scrollProgress).toInt()
+    // ========== 2. 状态分离：选择数据源 ==========
+    // 拖拽时用手势驱动的进度，否则用列表状态驱动的进度
+    val displayProgress = if (isDragging) dragProgress else listProgress
+
+    // ========== 3. 滑块位置计算 ==========
+    // 滑块Y坐标 = 进度 * (轨道高度 - 滑块高度)
+    val thumbOffsetY = (trackHeightPx * (1f - thumbHeightPercent) * displayProgress).toInt()
 
     Box(
         modifier = modifier
@@ -513,43 +535,46 @@ private fun VerticalScrollbar(
             .width(20.dp)
             .padding(vertical = 8.dp, horizontal = 4.dp)
             .onSizeChanged { trackHeightPx = it.height }
-            .pointerInput(itemCount, maxScrollIndex) {
-                var lastY = 0f
-
+            .pointerInput(itemCount, trackHeightPx) {
                 awaitPointerEventScope {
                     while (true) {
                         val event = awaitPointerEvent()
 
                         when (event.type) {
                             PointerEventType.Press -> {
+                                // 开始拖拽：记录初始进度
                                 isDragging = true
-                                lastY = event.changes.first().position.y
+                                dragProgress = displayProgress
                                 event.changes.forEach { it.consume() }
                             }
                             PointerEventType.Release -> {
+                                // 结束拖拽
                                 isDragging = false
                                 event.changes.forEach { it.consume() }
                             }
                             PointerEventType.Move -> {
-                                if (isDragging && maxScrollIndex > 0) {
+                                if (isDragging && trackHeightPx > 0) {
                                     val change = event.changes.first()
-                                    val currentY = change.position.y
-                                    val deltaY = currentY - lastY
-                                    lastY = currentY
 
-                                    // 轨道高度（像素）
-                                    val trackHeight = trackHeightPx
+                                    // 手指在轨道上的Y坐标
+                                    val touchY = change.position.y
 
-                                    if (trackHeight > 0) {
-                                        // 计算目标索引
-                                        val scrollableTrackHeight = trackHeight * (1f - thumbHeightPercent)
-                                        val indexDelta = (deltaY / scrollableTrackHeight) * maxScrollIndex
-                                        val targetIndex = (listState.firstVisibleItemIndex + indexDelta.toInt())
-                                            .coerceIn(0, maxScrollIndex)
+                                    // 可滚动的轨道高度 = 总轨道高度 - 滑块高度
+                                    val scrollableTrackHeight = trackHeightPx * (1f - thumbHeightPercent)
 
-                                        coroutineScope.launch {
-                                            listState.scrollToItem(targetIndex)
-                                        }
+                                    // 计算新进度（0-1）
+                                    val newProgress = (touchY / scrollableTrackHeight).coerceIn(0f, 1f)
+
+                                    // 更新拖拽进度（由手势驱动）
+                                    dragProgress = newProgress
+
+                                    // 反向计算目标索引
+                                    val targetIndex = (newProgress * itemCount).toInt()
+                                        .coerceIn(0, itemCount - 1)
+
+                                    // 驱动列表滚动
+                                    coroutineScope.launch {
+                                        listState.scrollToItem(targetIndex)
                                     }
 
                                     change.consume()
