@@ -11,13 +11,16 @@ import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
@@ -42,6 +45,7 @@ import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -49,6 +53,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -132,45 +137,63 @@ fun TagsScreen(
             if (tags.isEmpty()) {
                 EmptyTagsState()
             } else {
-                LazyColumn(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        // 点击列表空白区域时清除焦点
-                        .clickable(
-                            interactionSource = remember { MutableInteractionSource() },
-                            indication = null,
-                            onClickLabel = null,
-                            onClick = { focusManager.clearFocus() }
-                        ),
-                    verticalArrangement = Arrangement.spacedBy(6.dp),
-                    contentPadding = PaddingValues(16.dp)
+                Box(
+                    modifier = Modifier.fillMaxSize()
                 ) {
-                    items(
-                        items = tags,
-                        key = { it.id }
-                    ) { tag ->
-                        TagItem(
-                            tag = tag,
-                            viewModel = viewModel,
-                            onClick = {
-                                // 先清除焦点，再触发点击事件
-                                focusManager.clearFocus()
-                                // 如果有搜索词，清除搜索词
-                                if (searchQuery.isNotBlank()) {
-                                    viewModel.onSearchQueryChange("")
-                                }
-                                onTagClick(tag)
-                            },
-                            onEdit = {
-                                focusManager.clearFocus()
-                                viewModel.showEditDialog(tag)
-                            },
-                            onDelete = {
-                                focusManager.clearFocus()
-                                viewModel.showDeleteDialog(tag)
-                            }
+                    val listState = rememberLazyListState()
+
+                    LazyColumn(
+                        state = listState,
+                        modifier = Modifier
+                            .fillMaxSize()
+                            // 点击列表空白区域时清除焦点
+                            .clickable(
+                                interactionSource = remember { MutableInteractionSource() },
+                                indication = null,
+                                onClickLabel = null,
+                                onClick = { focusManager.clearFocus() }
+                            ),
+                        verticalArrangement = Arrangement.spacedBy(6.dp),
+                        contentPadding = PaddingValues(
+                            start = 16.dp,
+                            end = 32.dp, // 为滚动条留出空间
+                            top = 16.dp,
+                            bottom = 16.dp
                         )
+                    ) {
+                        items(
+                            items = tags,
+                            key = { it.id }
+                        ) { tag ->
+                            TagItem(
+                                tag = tag,
+                                viewModel = viewModel,
+                                onClick = {
+                                    // 先清除焦点，再触发点击事件
+                                    focusManager.clearFocus()
+                                    // 如果有搜索词，清除搜索词
+                                    if (searchQuery.isNotBlank()) {
+                                        viewModel.onSearchQueryChange("")
+                                    }
+                                    onTagClick(tag)
+                                },
+                                onEdit = {
+                                    focusManager.clearFocus()
+                                    viewModel.showEditDialog(tag)
+                                },
+                                onDelete = {
+                                    focusManager.clearFocus()
+                                    viewModel.showDeleteDialog(tag)
+                                }
+                            )
+                        }
                     }
+
+                    // 快速滚动条
+                    VerticalScrollbar(
+                        listState = listState,
+                        itemCount = tags.size
+                    )
                 }
             }
         }
@@ -436,4 +459,83 @@ private fun TagDialog(
             }
         }
     )
+}
+
+/**
+ * 垂直滚动条组件
+ */
+@Composable
+private fun VerticalScrollbar(
+    listState: LazyListState,
+    itemCount: Int,
+    modifier: Modifier = Modifier
+) {
+    if (itemCount == 0) return
+
+    // 计算滚动进度
+    val scrollProgress by remember {
+        derivedStateOf {
+            val layoutInfo = listState.layoutInfo
+            if (layoutInfo.totalItemsCount == 0) return@derivedStateOf 0f
+
+            val firstVisibleItem = listState.firstVisibleItemIndex
+            val firstVisibleOffset = listState.firstVisibleItemScrollOffset
+
+            val totalItems = itemCount
+            val itemsPerPage = layoutInfo.visibleItemsInfo.size
+
+            if (totalItems <= itemsPerPage) return@derivedStateOf 0f
+
+            (firstVisibleItem.toFloat() + firstVisibleOffset.toFloat() / 1000f) /
+                    (totalItems - itemsPerPage).toFloat().coerceAtLeast(1f)
+        }
+    }
+
+    // 滚动条高度（相对于可用高度的百分比）
+    val scrollbarHeightPercent by remember {
+        derivedStateOf {
+            val layoutInfo = listState.layoutInfo
+            if (layoutInfo.totalItemsCount == 0 || itemCount == 0) return@derivedStateOf 0.1f
+
+            val visibleItems = layoutInfo.visibleItemsInfo.size
+            (visibleItems.toFloat() / itemCount.toFloat()).coerceIn(0.1f, 1f)
+        }
+    }
+
+    // 是否需要显示滚动条
+    val showScrollbar = scrollbarHeightPercent < 0.95f
+
+    if (!showScrollbar) return
+
+    // 计算滑块偏移量
+    val thumbOffsetY by remember(scrollProgress, scrollbarHeightPercent) {
+        derivedStateOf {
+            scrollProgress * (1f - scrollbarHeightPercent)
+        }
+    }
+
+    Box(
+        modifier = modifier
+            .fillMaxHeight()
+            .width(16.dp)
+            .padding(vertical = 8.dp, horizontal = 4.dp)
+    ) {
+        // 滚动条背景轨道
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .clip(RoundedCornerShape(4.dp))
+                .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f))
+        )
+
+        // 滚动条滑块
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .fillMaxHeight(scrollbarHeightPercent)
+                .graphicsLayer { translationY = size.height * thumbOffsetY }
+                .clip(RoundedCornerShape(4.dp))
+                .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.5f))
+        )
+    }
 }
