@@ -2,6 +2,7 @@ package com.tagplayer.musicplayer.data.repository
 
 import android.content.Context
 import android.net.Uri
+import android.util.Log
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.edit
@@ -89,39 +90,203 @@ class SettingsRepository @Inject constructor(
 
     // 创建备份数据
     private suspend fun createBackupData(): BackupData {
+        val songDao = database.songDao()
+        val tagDao = database.tagDao()
+        val playlistDao = database.playlistDao()
+
+        // 获取所有歌曲用于转换 songId -> 稳定标识
+        val allSongs = songDao.getAllSongsList()
+        val songMap = allSongs.associateBy { it.id }
+
+        // 获取原始关联数据
+        val originalSongTags = tagDao.getAllSongTagsList()
+        val originalPlaylistSongs = playlistDao.getAllPlaylistSongsList()
+
+        // 转换为跨设备兼容格式
+        val songTagBackups = originalSongTags.mapNotNull { songTag ->
+            val song = songMap[songTag.songId]
+            if (song != null) {
+                SongTagBackup(
+                    songPath = song.filePath,
+                    songTitle = song.title,
+                    songArtist = song.artist,
+                    tagName = tagDao.getTagById(songTag.tagId)?.name ?: return@mapNotNull null,
+                    addedAt = songTag.addedAt
+                )
+            } else null
+        }
+
+        val playlistSongBackups = originalPlaylistSongs.mapNotNull { playlistSong ->
+            val song = songMap[playlistSong.songId]
+            val playlist = playlistDao.getPlaylistById(playlistSong.playlistId)
+            if (song != null && playlist != null) {
+                PlaylistSongBackup(
+                    songPath = song.filePath,
+                    songTitle = song.title,
+                    songArtist = song.artist,
+                    playlistName = playlist.name,
+                    sortOrder = playlistSong.sortOrder,
+                    addedAt = playlistSong.addedAt
+                )
+            } else null
+        }
+
         return BackupData(
-            version = 1,
+            version = 2, // 新版本号
             exportTime = System.currentTimeMillis(),
-            tags = database.tagDao().getAllTagsList(),
-            songTags = database.tagDao().getAllSongTagsList(),
-            playlists = database.playlistDao().getAllPlaylistsList(),
-            playlistSongs = database.playlistDao().getAllPlaylistSongsList(),
-            scanFolders = database.scanFolderDao().getAllFoldersList()
+            tags = tagDao.getAllTagsList(),
+            songTagBackups = songTagBackups,
+            playlists = playlistDao.getAllPlaylistsList(),
+            playlistSongBackups = playlistSongBackups,
+            scanFolders = database.scanFolderDao().getAllFoldersList(),
+            // 保留旧格式用于向后兼容
+            songTags = originalSongTags,
+            playlistSongs = originalPlaylistSongs
         )
     }
 
     // 恢复备份数据
     private suspend fun restoreBackupData(data: BackupData) {
+        val songDao = database.songDao()
+        val tagDao = database.tagDao()
+        val playlistDao = database.playlistDao()
+
+        // 获取当前设备的所有歌曲
+        val allSongs = songDao.getAllSongsList()
+
         // 先清空现有数据（保留歌曲数据，因为它是从MediaStore扫描的）
         database.withTransaction {
-            // 清空标签关联
-            database.tagDao().deleteAllSongTags()
-            // 清空歌单歌曲关联
-            database.playlistDao().deleteAllPlaylistSongs()
-            // 清空歌单
-            database.playlistDao().deleteAllPlaylists()
-            // 清空标签
-            database.tagDao().deleteAllTags()
-            // 清空扫描文件夹
+            tagDao.deleteAllSongTags()
+            playlistDao.deleteAllPlaylistSongs()
+            playlistDao.deleteAllPlaylists()
+            tagDao.deleteAllTags()
             database.scanFolderDao().deleteAllFolders()
         }
 
-        // 恢复数据
-        data.tags.forEach { database.tagDao().insertTag(it) }
-        data.songTags.forEach { database.tagDao().insertSongTag(it) }
-        data.playlists.forEach { database.playlistDao().insertPlaylist(it) }
-        data.playlistSongs.forEach { database.playlistDao().insertPlaylistSong(it) }
+        // 恢复标签
+        data.tags.forEach { tagDao.insertTag(it) }
+        // 建立标签名称到ID的映射
+        val tagNameToId = tagDao.getAllTagsList().associate { it.name to it.id }
+
+        // 恢复歌单
+        data.playlists.forEach { playlistDao.insertPlaylist(it) }
+        // 建立歌单名称到ID的映射
+        val playlistNameToId = playlistDao.getAllPlaylistsList().associate { it.name to it.id }
+
+        // 恢复扫描文件夹
         data.scanFolders.forEach { database.scanFolderDao().insertFolder(it) }
+
+        // 根据备份版本选择恢复策略
+        if (data.version >= 2 && data.songTagBackups != null && data.playlistSongBackups != null) {
+            // 新版本：使用跨设备兼容格式
+            restoreSongTagsWithMatching(data.songTagBackups, allSongs, tagNameToId)
+            restorePlaylistSongsWithMatching(data.playlistSongBackups, allSongs, playlistNameToId)
+            Log.d("SettingsRepository", "使用新版本备份恢复（跨设备兼容）")
+        } else {
+            // 旧版本：尝试直接恢复，但可能失败
+            var matchedCount = 0
+            data.songTags.forEach { songTag ->
+                val songExists = allSongs.any { it.id == songTag.songId }
+                if (songExists) {
+                    tagDao.insertSongTag(songTag)
+                    matchedCount++
+                }
+            }
+            data.playlistSongs.forEach { playlistSong ->
+                val songExists = allSongs.any { it.id == playlistSong.songId }
+                if (songExists) {
+                    playlistDao.insertPlaylistSong(playlistSong)
+                    matchedCount++
+                }
+            }
+            Log.d("SettingsRepository", "使用旧版本备份恢复，匹配成功 $matchedCount 条")
+        }
+    }
+
+    // 使用混合匹配恢复歌曲标签
+    private suspend fun restoreSongTagsWithMatching(
+        songTagBackups: List<SongTagBackup>,
+        allSongs: List<Song>,
+        tagNameToId: Map<String, Long>
+    ) {
+        val songDao = database.songDao()
+        var pathMatched = 0
+        var titleMatched = 0
+        var failed = 0
+
+        songTagBackups.forEach { backup ->
+            val song = findMatchingSong(backup.songPath, backup.songTitle, backup.songArtist, allSongs, songDao)
+            val tagId = tagNameToId[backup.tagName]
+
+            if (song != null && tagId != null) {
+                val songTag = SongTag(
+                    songId = song.id,
+                    tagId = tagId,
+                    addedAt = backup.addedAt
+                )
+                database.tagDao().insertSongTag(songTag)
+                // 统计匹配方式
+                if (song.filePath == backup.songPath) pathMatched++ else titleMatched++
+            } else {
+                failed++
+            }
+        }
+
+        Log.d("SettingsRepository", "标签恢复: 路径匹配=$pathMatched, 标题匹配=$titleMatched, 失败=$failed")
+    }
+
+    // 使用混合匹配恢复歌单歌曲
+    private suspend fun restorePlaylistSongsWithMatching(
+        playlistSongBackups: List<PlaylistSongBackup>,
+        allSongs: List<Song>,
+        playlistNameToId: Map<String, Long>
+    ) {
+        val songDao = database.songDao()
+        var pathMatched = 0
+        var titleMatched = 0
+        var failed = 0
+
+        playlistSongBackups.forEach { backup ->
+            val song = findMatchingSong(backup.songPath, backup.songTitle, backup.songArtist, allSongs, songDao)
+            val playlistId = playlistNameToId[backup.playlistName]
+
+            if (song != null && playlistId != null) {
+                val playlistSong = PlaylistSong(
+                    playlistId = playlistId,
+                    songId = song.id,
+                    sortOrder = backup.sortOrder,
+                    addedAt = backup.addedAt
+                )
+                database.playlistDao().insertPlaylistSong(playlistSong)
+                if (song.filePath == backup.songPath) pathMatched++ else titleMatched++
+            } else {
+                failed++
+            }
+        }
+
+        Log.d("SettingsRepository", "歌单恢复: 路径匹配=$pathMatched, 标题匹配=$titleMatched, 失败=$failed")
+    }
+
+    // 混合匹配歌曲：优先路径精确匹配，其次标题+歌手匹配
+    private suspend fun findMatchingSong(
+        songPath: String,
+        songTitle: String,
+        songArtist: String,
+        allSongs: List<Song>,
+        songDao: com.tagplayer.musicplayer.data.local.database.SongDao
+    ): Song? {
+        // 1. 优先使用路径精确匹配
+        val pathMatched = allSongs.find { it.filePath == songPath }
+        if (pathMatched != null) return pathMatched
+
+        // 2. 其次使用标题+歌手精确匹配
+        val titleMatched = allSongs.find {
+            it.title == songTitle && it.artist == songArtist
+        }
+        if (titleMatched != null) return titleMatched
+
+        // 3. 最后尝试模糊匹配（标题相同即可）
+        return allSongs.find { it.title == songTitle }
     }
 }
 
@@ -130,8 +295,36 @@ data class BackupData(
     val version: Int,
     val exportTime: Long,
     val tags: List<Tag>,
-    val songTags: List<SongTag>,
+    val songTags: List<SongTag>, // 保留用于向后兼容
     val playlists: List<Playlist>,
-    val playlistSongs: List<PlaylistSong>,
-    val scanFolders: List<ScanFolder>
+    val playlistSongs: List<PlaylistSong>, // 保留用于向后兼容
+    val scanFolders: List<ScanFolder>,
+    // 新版本跨设备兼容格式
+    val songTagBackups: List<SongTagBackup>? = null,
+    val playlistSongBackups: List<PlaylistSongBackup>? = null
+)
+
+/**
+ * 歌曲标签备份（跨设备兼容）
+ */
+@Serializable
+data class SongTagBackup(
+    val songPath: String,      // 文件路径作为主要标识
+    val songTitle: String,     // 标题作为备用标识
+    val songArtist: String,    // 歌手作为备用标识
+    val tagName: String,       // 使用标签名称而非ID
+    val addedAt: Long
+)
+
+/**
+ * 歌单歌曲备份（跨设备兼容）
+ */
+@Serializable
+data class PlaylistSongBackup(
+    val songPath: String,
+    val songTitle: String,
+    val songArtist: String,
+    val playlistName: String,  // 使用歌单名称而非ID
+    val sortOrder: Int,
+    val addedAt: Long
 )

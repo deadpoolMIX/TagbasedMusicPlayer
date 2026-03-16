@@ -52,4 +52,14 @@ interface SongDao {
 
     @Query("SELECT * FROM songs WHERE lastPlayed IS NOT NULL ORDER BY lastPlayed DESC")
     fun getRecentlyPlayedSongs(): Flow<List<Song>>
+
+    // 备份恢复相关查询
+    @Query("SELECT * FROM songs")
+    suspend fun getAllSongsList(): List<Song>
+
+    @Query("SELECT * FROM songs WHERE filePath = :filePath LIMIT 1")
+    suspend fun getSongByFilePath(filePath: String): Song?
+
+    @Query("SELECT * FROM songs WHERE title = :title AND artist = :artist LIMIT 1")
+    suspend fun getSongByTitleAndArtist(title: String, artist: String): Song?
 }
