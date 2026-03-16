@@ -282,11 +282,22 @@ class TagViewModel @Inject constructor(
     }
 
     // 创建新标签并添加到多首歌曲（批量模式）
-    fun createTagAndAddToSongs(songIds: List<Long>, name: String) {
+    fun createTagAndAddToSongs(songIds: List<Long>, name: String, onCreated: (Tag) -> Unit = {}) {
         viewModelScope.launch {
             val tagId = tagRepository.createTag(name)
             songIds.forEach { songId ->
                 tagRepository.addTagToSong(songId, tagId)
+            }
+            // 回调新创建的标签
+            tagRepository.getTagById(tagId)?.let { onCreated(it) }
+        }
+    }
+
+    // 从多首歌曲移除标签（批量模式）
+    fun removeTagFromSongs(tagId: Long, songIds: List<Long>) {
+        viewModelScope.launch {
+            songIds.forEach { songId ->
+                tagRepository.removeTagFromSong(songId, tagId)
             }
         }
     }

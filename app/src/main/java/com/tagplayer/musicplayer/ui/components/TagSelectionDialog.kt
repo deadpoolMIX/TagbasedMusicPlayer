@@ -38,7 +38,10 @@ import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateListOf
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -79,14 +82,22 @@ fun TagSelectionDialog(
     val allTags by viewModel.allTags.collectAsState()
     val searchQuery by viewModel.searchQuery.collectAsState()
     val filteredTags by viewModel.filteredTags.collectAsState()
+
+    // 单首歌曲模式：从数据库读取当前歌曲的标签
     val songTags by if (isBatchMode) {
-        // 批量模式不显示当前标签
-        remember { androidx.compose.runtime.mutableStateOf(emptyList<Tag>()) }
+        remember { mutableStateOf(emptyList<Tag>()) }
     } else if (song != null) {
         viewModel.getSongTagsFlow(song.id).collectAsState(initial = emptyList())
     } else {
-        remember { androidx.compose.runtime.mutableStateOf(emptyList<Tag>()) }
+        remember { mutableStateOf(emptyList<Tag>()) }
     }
+
+    // 批量模式：维护本次会话已添加的标签列表
+    val addedTags = remember { mutableStateListOf<Tag>() }
+
+    // 用于显示的"已选标签"（批量模式用 addedTags，单首模式用 songTags）
+    val displayedTags = if (isBatchMode) addedTags.toList() else songTags
+
     val focusManager = LocalFocusManager.current
 
     Dialog(onDismissRequest = onDismiss) {
@@ -133,10 +144,10 @@ fun TagSelectionDialog(
                     color = MaterialTheme.colorScheme.outline.copy(alpha = 0.2f)
                 )
 
-                // 当前标签（仅单首歌曲时显示）
-                if (!isBatchMode && songTags.isNotEmpty()) {
+                // 当前标签 / 已添加标签
+                if (displayedTags.isNotEmpty()) {
                     Text(
-                        text = "当前标签",
+                        text = if (isBatchMode) "已添加标签" else "当前标签",
                         style = MaterialTheme.typography.labelMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         modifier = Modifier.padding(bottom = 8.dp)
@@ -145,11 +156,18 @@ fun TagSelectionDialog(
                         horizontalArrangement = Arrangement.spacedBy(8.dp),
                         verticalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
-                        songTags.forEach { tag ->
+                        displayedTags.forEach { tag ->
                             SelectedTagChip(
                                 tag = tag,
                                 onRemove = {
-                                    song?.let { viewModel.removeTagFromSong(it.id, tag.id) }
+                                    if (isBatchMode) {
+                                        // 批量模式：从所有歌曲移除标签，并从 addedTags 中移除
+                                        viewModel.removeTagFromSongs(tag.id, songs.map { it.id })
+                                        addedTags.remove(tag)
+                                    } else {
+                                        // 单首歌曲模式
+                                        song?.let { viewModel.removeTagFromSong(it.id, tag.id) }
+                                    }
                                 }
                             )
                         }
@@ -185,7 +203,10 @@ fun TagSelectionDialog(
                         onClick = {
                             if (isBatchMode) {
                                 // 批量模式：创建标签并添加到所有歌曲
-                                viewModel.createTagAndAddToSongs(songs.map { it.id }, trimmedQuery)
+                                viewModel.createTagAndAddToSongs(songs.map { it.id }, trimmedQuery) { newTag ->
+                                    // 回调：将新标签加入 addedTags
+                                    addedTags.add(newTag)
+                                }
                             } else {
                                 // 单首歌曲模式
                                 song?.let { viewModel.createTagAndAddToSong(it.id, trimmedQuery) }
@@ -198,11 +219,11 @@ fun TagSelectionDialog(
                     Spacer(modifier = Modifier.height(8.dp))
                 }
 
-                // 标签列表
+                // 标签列表（过滤掉已显示的标签）
                 val availableTags = if (searchQuery.isBlank()) {
-                    allTags.filter { tag -> songTags.none { it.id == tag.id } }
+                    allTags.filter { tag -> displayedTags.none { it.id == tag.id } }
                 } else {
-                    filteredTags.filter { tag -> songTags.none { it.id == tag.id } }
+                    filteredTags.filter { tag -> displayedTags.none { it.id == tag.id } }
                 }
 
                 if (availableTags.isNotEmpty()) {
@@ -233,8 +254,9 @@ fun TagSelectionDialog(
                                 tag = tag,
                                 onClick = {
                                     if (isBatchMode) {
-                                        // 批量模式：添加标签到所有歌曲
+                                        // 批量模式：添加标签到所有歌曲，并记录到 addedTags
                                         viewModel.addTagToSongs(tag.id, songs.map { it.id })
+                                        addedTags.add(tag)
                                     } else {
                                         // 单首歌曲模式
                                         song?.let { viewModel.addTagToSong(it.id, tag.id) }
