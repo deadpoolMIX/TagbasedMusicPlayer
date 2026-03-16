@@ -293,6 +293,10 @@ fun HomeScreen(
                                     song = song,
                                     onClick = {
                                         playerViewModel.setQueue(songs, songs.indexOf(song))
+                                        // 如果有搜索词，清除搜索词
+                                        if (searchQuery.isNotBlank()) {
+                                            viewModel.onSearchQueryChange("")
+                                        }
                                     },
                                     onMoreClick = {
                                         viewModel.onSongMoreClick(song)
@@ -350,6 +354,10 @@ fun HomeScreen(
                             onClick = {
                                 // 播放选中的歌曲
                                 playerViewModel.setQueue(songs, songs.indexOf(song))
+                                // 如果有搜索词，清除搜索词
+                                if (searchQuery.isNotBlank()) {
+                                    viewModel.onSearchQueryChange("")
+                                }
                             },
                             onMoreClick = {
                                 viewModel.onSongMoreClick(song)

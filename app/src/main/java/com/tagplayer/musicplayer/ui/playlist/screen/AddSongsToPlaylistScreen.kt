@@ -47,6 +47,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.platform.LocalFocusManager
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.tagplayer.musicplayer.data.local.entity.Song
 import com.tagplayer.musicplayer.ui.playlist.viewmodel.PlaylistViewModel
@@ -63,6 +64,7 @@ fun AddSongsToPlaylistScreen(
     val playlistSongs by viewModel.playlistSongs.collectAsState()
     var selectedSongs by remember { mutableStateOf<Set<Long>>(emptySet()) }
     var searchQuery by remember { mutableStateOf("") }
+    val focusManager = LocalFocusManager.current
 
     // 过滤掉已在歌单中的歌曲
     val playlistSongIds = playlistSongs.map { it.id }.toSet()
@@ -103,6 +105,9 @@ fun AddSongsToPlaylistScreen(
                         TextButton(
                             onClick = {
                                 viewModel.addSongsToPlaylist(playlistId, selectedSongs.toList())
+                                // 清除搜索词并关闭键盘
+                                searchQuery = ""
+                                focusManager.clearFocus()
                                 onBackClick()
                             }
                         ) {
@@ -218,6 +223,9 @@ fun AddSongsToPlaylistScreen(
                     Button(
                         onClick = {
                             viewModel.addSongsToPlaylist(playlistId, selectedSongs.toList())
+                            // 清除搜索词并关闭键盘
+                            searchQuery = ""
+                            focusManager.clearFocus()
                             onBackClick()
                         },
                         enabled = selectedSongs.isNotEmpty(),

@@ -46,6 +46,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
+import androidx.compose.ui.platform.LocalFocusManager
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.tagplayer.musicplayer.data.local.entity.Song
 import com.tagplayer.musicplayer.data.local.entity.Tag
@@ -62,6 +63,7 @@ fun TagSelectionDialog(
     val searchQuery by viewModel.searchQuery.collectAsState()
     val filteredTags by viewModel.filteredTags.collectAsState()
     val songTags by viewModel.getSongTagsFlow(song.id).collectAsState(initial = emptyList())
+    val focusManager = LocalFocusManager.current
 
     Dialog(onDismissRequest = onDismiss) {
         Card(
@@ -156,6 +158,9 @@ fun TagSelectionDialog(
                         name = trimmedQuery,
                         onClick = {
                             viewModel.createTagAndAddToSong(song.id, trimmedQuery)
+                            // 清除搜索词并关闭键盘
+                            viewModel.onSearchQueryChange("")
+                            focusManager.clearFocus()
                         }
                     )
                     Spacer(modifier = Modifier.height(8.dp))
@@ -194,7 +199,12 @@ fun TagSelectionDialog(
                         items(availableTags, key = { it.id }) { tag ->
                             TagListItem(
                                 tag = tag,
-                                onClick = { viewModel.addTagToSong(song.id, tag.id) }
+                                onClick = {
+                                    viewModel.addTagToSong(song.id, tag.id)
+                                    // 清除搜索词并关闭键盘
+                                    viewModel.onSearchQueryChange("")
+                                    focusManager.clearFocus()
+                                }
                             )
                         }
                     }

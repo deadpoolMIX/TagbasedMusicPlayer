@@ -244,9 +244,9 @@ fun PlayerScreen(
                 TagChipsRow(
                     tags = songTags.value,
                     onAddTagClick = { showTagDialog = true },
-                    onTagClick = { tag ->
-                        // 点击标签可以移除
-                        tagViewModel.removeTagFromSong(currentSong.id, tag.id)
+                    onTagClick = {
+                        // 点击标签打开标签管理弹窗
+                        showTagDialog = true
                     }
                 )
 

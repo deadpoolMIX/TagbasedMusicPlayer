@@ -155,6 +155,10 @@ fun TagsScreen(
                             onClick = {
                                 // 先清除焦点，再触发点击事件
                                 focusManager.clearFocus()
+                                // 如果有搜索词，清除搜索词
+                                if (searchQuery.isNotBlank()) {
+                                    viewModel.onSearchQueryChange("")
+                                }
                                 onTagClick(tag)
                             },
                             onEdit = {
