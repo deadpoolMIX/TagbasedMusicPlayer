@@ -22,6 +22,8 @@ import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.imePadding
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -32,7 +34,10 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Done
 import androidx.compose.material.icons.filled.Folder
+import androidx.compose.material.icons.filled.Label
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Sort
@@ -108,6 +113,10 @@ fun HomeScreen(
     val sortType by viewModel.sortType.collectAsState()
     val scanFolders by viewModel.scanFolders.collectAsState()
 
+    // 多选模式状态
+    val isMultiSelectMode by viewModel.isMultiSelectMode.collectAsState()
+    val selectedSongs by viewModel.selectedSongs.collectAsState()
+
     // 搜索对话框状态
     var showSearchDialog by remember { mutableStateOf(false) }
 
@@ -154,6 +163,12 @@ fun HomeScreen(
     // 标签选择对话框状态
     var showTagSelection by remember { mutableStateOf(false) }
 
+    // 批量添加标签对话框状态
+    var showBatchTagSelection by remember { mutableStateOf(false) }
+
+    // 批量删除确认对话框状态
+    var showBatchDeleteConfirm by remember { mutableStateOf(false) }
+
     // 首次启动检查权限（只更新状态，不自动申请）
     LaunchedEffect(Unit) {
         viewModel.updatePermissionState()
@@ -164,47 +179,65 @@ fun HomeScreen(
             TopAppBar(
                 title = {
                     Text(
-                        text = "我的音乐",
+                        text = if (isMultiSelectMode) "已选择 ${selectedSongs.size} 首"
+                               else "我的音乐",
                         style = MaterialTheme.typography.titleMedium
                     )
                 },
                 actions = {
-                    // 搜索按钮
-                    IconButton(onClick = { showSearchDialog = true }) {
-                        Icon(
-                            imageVector = Icons.Default.Search,
-                            contentDescription = "搜索"
-                        )
-                    }
-                    // 设置按钮
-                    IconButton(onClick = onNavigateToSettings) {
-                        Icon(
-                            imageVector = Icons.Default.Settings,
-                            contentDescription = "设置"
-                        )
-                    }
-                    // 文件夹管理按钮
-                    IconButton(onClick = { viewModel.showFolderManager() }) {
-                        Icon(
-                            imageVector = Icons.Default.Folder,
-                            contentDescription = "文件夹管理"
-                        )
-                    }
-                    // 扫描按钮
-                    IconButton(
-                        onClick = { viewModel.checkPermissionAndScan() },
-                        enabled = !isScanning
-                    ) {
-                        if (isScanning) {
-                            CircularProgressIndicator(
-                                modifier = Modifier.size(24.dp),
-                                strokeWidth = 2.dp
-                            )
-                        } else {
+                    if (isMultiSelectMode) {
+                        // 全选按钮
+                        IconButton(onClick = { viewModel.selectAllSongs(songs) }) {
                             Icon(
-                                imageVector = Icons.Default.Refresh,
-                                contentDescription = "扫描歌曲"
+                                imageVector = Icons.Default.Done,
+                                contentDescription = "全选"
                             )
+                        }
+                        // 退出多选模式按钮
+                        IconButton(onClick = { viewModel.exitMultiSelectMode() }) {
+                            Icon(
+                                imageVector = Icons.Default.Close,
+                                contentDescription = "取消"
+                            )
+                        }
+                    } else {
+                        // 搜索按钮
+                        IconButton(onClick = { showSearchDialog = true }) {
+                            Icon(
+                                imageVector = Icons.Default.Search,
+                                contentDescription = "搜索"
+                            )
+                        }
+                        // 设置按钮
+                        IconButton(onClick = onNavigateToSettings) {
+                            Icon(
+                                imageVector = Icons.Default.Settings,
+                                contentDescription = "设置"
+                            )
+                        }
+                        // 文件夹管理按钮
+                        IconButton(onClick = { viewModel.showFolderManager() }) {
+                            Icon(
+                                imageVector = Icons.Default.Folder,
+                                contentDescription = "文件夹管理"
+                            )
+                        }
+                        // 扫描按钮
+                        IconButton(
+                            onClick = { viewModel.checkPermissionAndScan() },
+                            enabled = !isScanning
+                        ) {
+                            if (isScanning) {
+                                CircularProgressIndicator(
+                                    modifier = Modifier.size(24.dp),
+                                    strokeWidth = 2.dp
+                                )
+                            } else {
+                                Icon(
+                                    imageVector = Icons.Default.Refresh,
+                                    contentDescription = "扫描歌曲"
+                                )
+                            }
                         }
                     }
                 },
@@ -212,6 +245,16 @@ fun HomeScreen(
                     containerColor = MaterialTheme.colorScheme.background
                 )
             )
+        },
+        bottomBar = {
+            if (isMultiSelectMode) {
+                MultiSelectBottomBar(
+                    selectedCount = selectedSongs.size,
+                    onAddTags = { showBatchTagSelection = true },
+                    onDelete = { showBatchDeleteConfirm = true },
+                    onCancel = { viewModel.exitMultiSelectMode() }
+                )
+            }
         },
         modifier = modifier
     ) { paddingValues ->
@@ -289,13 +332,25 @@ fun HomeScreen(
                                 items = songList,
                                 key = { it.id }
                             ) { song ->
+                                val isSelected = song in selectedSongs
                                 SongItem(
                                     song = song,
+                                    isSelected = isSelected,
+                                    isMultiSelectMode = isMultiSelectMode,
                                     onClick = {
-                                        playerViewModel.setQueue(songs, songs.indexOf(song))
-                                        // 如果有搜索词，清除搜索词
-                                        if (searchQuery.isNotBlank()) {
-                                            viewModel.onSearchQueryChange("")
+                                        if (isMultiSelectMode) {
+                                            viewModel.toggleSongSelection(song)
+                                        } else {
+                                            playerViewModel.setQueue(songs, songs.indexOf(song))
+                                            // 如果有搜索词，清除搜索词
+                                            if (searchQuery.isNotBlank()) {
+                                                viewModel.onSearchQueryChange("")
+                                            }
+                                        }
+                                    },
+                                    onLongClick = {
+                                        if (!isMultiSelectMode) {
+                                            viewModel.enterMultiSelectMode(song)
                                         }
                                     },
                                     onMoreClick = {
@@ -349,14 +404,26 @@ fun HomeScreen(
                         items = songs,
                         key = { it.id }
                     ) { song ->
+                        val isSelected = song in selectedSongs
                         SongItem(
                             song = song,
+                            isSelected = isSelected,
+                            isMultiSelectMode = isMultiSelectMode,
                             onClick = {
-                                // 播放选中的歌曲
-                                playerViewModel.setQueue(songs, songs.indexOf(song))
-                                // 如果有搜索词，清除搜索词
-                                if (searchQuery.isNotBlank()) {
-                                    viewModel.onSearchQueryChange("")
+                                if (isMultiSelectMode) {
+                                    viewModel.toggleSongSelection(song)
+                                } else {
+                                    // 播放选中的歌曲
+                                    playerViewModel.setQueue(songs, songs.indexOf(song))
+                                    // 如果有搜索词，清除搜索词
+                                    if (searchQuery.isNotBlank()) {
+                                        viewModel.onSearchQueryChange("")
+                                    }
+                                }
+                            },
+                            onLongClick = {
+                                if (!isMultiSelectMode) {
+                                    viewModel.enterMultiSelectMode(song)
                                 }
                             },
                             onMoreClick = {
@@ -466,6 +533,27 @@ fun HomeScreen(
             currentSortType = sortType,
             onDismiss = { viewModel.dismissSortDialog() },
             onSortSelected = { viewModel.onSortTypeChange(it) }
+        )
+    }
+
+    // 批量添加标签对话框
+    if (showBatchTagSelection && selectedSongs.isNotEmpty()) {
+        BatchTagSelectionDialog(
+            songs = selectedSongs.toList(),
+            onDismiss = { showBatchTagSelection = false },
+            tagViewModel = tagViewModel
+        )
+    }
+
+    // 批量删除确认对话框
+    if (showBatchDeleteConfirm) {
+        BatchDeleteConfirmDialog(
+            count = selectedSongs.size,
+            onDismiss = { showBatchDeleteConfirm = false },
+            onConfirm = { deleteFiles ->
+                viewModel.deleteSelectedSongs(deleteFiles)
+                showBatchDeleteConfirm = false
+            }
         )
     }
 }
@@ -914,4 +1002,209 @@ private fun LetterBubble(
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )
     }
+}
+
+/**
+ * 多选模式底部操作栏
+ */
+@Composable
+private fun MultiSelectBottomBar(
+    selectedCount: Int,
+    onAddTags: () -> Unit,
+    onDelete: () -> Unit,
+    onCancel: () -> Unit = {}
+) {
+    Surface(
+        modifier = Modifier.fillMaxWidth(),
+        color = MaterialTheme.colorScheme.surface,
+        shadowElevation = 8.dp
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp, vertical = 12.dp)
+                .navigationBarsPadding(),
+            horizontalArrangement = Arrangement.SpaceEvenly,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            // 添加标签按钮
+            androidx.compose.material3.OutlinedButton(
+                onClick = onAddTags,
+                enabled = selectedCount > 0,
+                modifier = Modifier.weight(1f)
+            ) {
+                Icon(
+                    imageVector = Icons.Default.Label,
+                    contentDescription = null,
+                    modifier = Modifier.size(18.dp)
+                )
+                Spacer(modifier = Modifier.width(4.dp))
+                Text("添加标签")
+            }
+
+            Spacer(modifier = Modifier.width(8.dp))
+
+            // 删除按钮
+            androidx.compose.material3.Button(
+                onClick = onDelete,
+                enabled = selectedCount > 0,
+                modifier = Modifier.weight(1f)
+            ) {
+                Icon(
+                    imageVector = Icons.Default.Delete,
+                    contentDescription = null,
+                    modifier = Modifier.size(18.dp)
+                )
+                Spacer(modifier = Modifier.width(4.dp))
+                Text("删除")
+            }
+        }
+    }
+}
+
+/**
+ * 批量标签选择对话框
+ */
+@Composable
+private fun BatchTagSelectionDialog(
+    songs: List<Song>,
+    onDismiss: () -> Unit,
+    tagViewModel: TagViewModel
+) {
+    val allTags by tagViewModel.allTags.collectAsState()
+    var selectedTags by remember { mutableStateOf<Set<Long>>(emptySet()) }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("批量添加标签") },
+        text = {
+            Column {
+                Text(
+                    text = "为 ${songs.size} 首歌曲添加标签",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                Spacer(modifier = Modifier.height(16.dp))
+                if (allTags.isEmpty()) {
+                    Text(
+                        text = "暂无标签，请先创建标签",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                } else {
+                    Column(
+                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        allTags.forEach { tag ->
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .clickable {
+                                        selectedTags = if (tag.id in selectedTags) {
+                                            selectedTags - tag.id
+                                        } else {
+                                            selectedTags + tag.id
+                                        }
+                                    }
+                                    .padding(vertical = 8.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                androidx.compose.material3.Checkbox(
+                                    checked = tag.id in selectedTags,
+                                    onCheckedChange = { checked ->
+                                        selectedTags = if (checked) {
+                                            selectedTags + tag.id
+                                        } else {
+                                            selectedTags - tag.id
+                                        }
+                                    }
+                                )
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Text(text = tag.name)
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        confirmButton = {
+            TextButton(
+                onClick = {
+                    // 为所有选中的歌曲添加选中的标签
+                    songs.forEach { song ->
+                        selectedTags.forEach { tagId ->
+                            tagViewModel.addTagToSong(song.id, tagId)
+                        }
+                    }
+                    onDismiss()
+                },
+                enabled = selectedTags.isNotEmpty()
+            ) {
+                Text("添加")
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text("取消")
+            }
+        }
+    )
+}
+
+/**
+ * 批量删除确认对话框
+ */
+@Composable
+private fun BatchDeleteConfirmDialog(
+    count: Int,
+    onDismiss: () -> Unit,
+    onConfirm: (Boolean) -> Unit
+) {
+    var deleteFiles by remember { mutableStateOf(false) }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("删除歌曲") },
+        text = {
+            Column {
+                Text(
+                    text = "确定要删除选中的 $count 首歌曲吗？",
+                    style = MaterialTheme.typography.bodyMedium
+                )
+                Spacer(modifier = Modifier.height(16.dp))
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clickable { deleteFiles = !deleteFiles }
+                        .padding(vertical = 8.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    androidx.compose.material3.Checkbox(
+                        checked = deleteFiles,
+                        onCheckedChange = { deleteFiles = it }
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text(
+                        text = "同时删除本地文件",
+                        style = MaterialTheme.typography.bodyMedium
+                    )
+                }
+            }
+        },
+        confirmButton = {
+            TextButton(
+                onClick = { onConfirm(deleteFiles) }
+            ) {
+                Text(
+                    text = "删除",
+                    color = MaterialTheme.colorScheme.error
+                )
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text("取消")
+            }
+        }
+    )
 }

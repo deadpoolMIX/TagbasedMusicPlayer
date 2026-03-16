@@ -8,6 +8,7 @@ import android.provider.MediaStore
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -16,13 +17,16 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.MusicNote
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.produceState
@@ -38,7 +42,9 @@ import androidx.compose.ui.unit.dp
 import com.tagplayer.musicplayer.data.local.entity.Song
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import androidx.compose.foundation.ExperimentalFoundationApi
 
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun SongItem(
     song: Song,
@@ -46,18 +52,83 @@ fun SongItem(
     onMoreClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
+    SongItem(
+        song = song,
+        isSelected = false,
+        isMultiSelectMode = false,
+        onClick = onClick,
+        onLongClick = {},
+        onMoreClick = onMoreClick,
+        modifier = modifier
+    )
+}
+
+@OptIn(ExperimentalFoundationApi::class)
+@Composable
+fun SongItem(
+    song: Song,
+    isSelected: Boolean,
+    isMultiSelectMode: Boolean,
+    onClick: () -> Unit,
+    onLongClick: () -> Unit,
+    onMoreClick: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    val backgroundColor = if (isSelected) {
+        MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.5f)
+    } else {
+        MaterialTheme.colorScheme.background
+    }
+
     Row(
         modifier = modifier
             .fillMaxWidth()
-            .clickable(onClick = onClick)
+            .background(backgroundColor)
+            .combinedClickable(
+                onClick = onClick,
+                onLongClick = onLongClick
+            )
             .padding(horizontal = 16.dp, vertical = 8.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        // Album Art
-        AlbumArt(
-            albumId = song.albumId,
-            modifier = Modifier.size(48.dp)
-        )
+        // 选中指示器或多选模式下的复选框区域
+        if (isMultiSelectMode) {
+            Box(
+                modifier = Modifier.size(48.dp),
+                contentAlignment = Alignment.Center
+            ) {
+                if (isSelected) {
+                    Surface(
+                        modifier = Modifier.size(24.dp),
+                        shape = CircleShape,
+                        color = MaterialTheme.colorScheme.primary
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Check,
+                            contentDescription = "已选中",
+                            tint = MaterialTheme.colorScheme.onPrimary,
+                            modifier = Modifier
+                                .padding(4.dp)
+                                .size(16.dp)
+                        )
+                    }
+                } else {
+                    Surface(
+                        modifier = Modifier.size(24.dp),
+                        shape = CircleShape,
+                        color = MaterialTheme.colorScheme.surfaceVariant
+                    ) {
+                        // 空的圆形边框，表示未选中
+                    }
+                }
+            }
+        } else {
+            // 非多选模式，显示专辑封面
+            AlbumArt(
+                albumId = song.albumId,
+                modifier = Modifier.size(48.dp)
+            )
+        }
 
         Spacer(modifier = Modifier.width(12.dp))
 
@@ -69,24 +140,28 @@ fun SongItem(
                 text = song.title,
                 style = MaterialTheme.typography.bodyMedium,
                 maxLines = 1,
-                overflow = TextOverflow.Ellipsis
+                overflow = TextOverflow.Ellipsis,
+                color = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onBackground
             )
             Text(
                 text = song.artist,
                 style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                color = if (isSelected) MaterialTheme.colorScheme.primary.copy(alpha = 0.7f)
+                        else MaterialTheme.colorScheme.onSurfaceVariant,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis
             )
         }
 
-        // More Button
-        IconButton(onClick = onMoreClick) {
-            Icon(
-                imageVector = Icons.Default.MoreVert,
-                contentDescription = "更多",
-                tint = MaterialTheme.colorScheme.onSurfaceVariant
-            )
+        // More Button - 仅在非多选模式下显示
+        if (!isMultiSelectMode) {
+            IconButton(onClick = onMoreClick) {
+                Icon(
+                    imageVector = Icons.Default.MoreVert,
+                    contentDescription = "更多",
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
         }
     }
 }
