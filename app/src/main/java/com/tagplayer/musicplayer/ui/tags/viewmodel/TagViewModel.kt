@@ -26,8 +26,8 @@ class TagViewModel @Inject constructor(
     private val songRepository: SongRepository
 ) : ViewModel() {
 
-    // 所有标签
-    val allTags: StateFlow<List<Tag>> = tagRepository.getAllTags()
+    // 所有标签（按歌曲数量排序）
+    val allTags: StateFlow<List<Tag>> = tagRepository.getAllTagsOrderBySongCount()
         .stateIn(
             scope = viewModelScope,
             started = SharingStarted.WhileSubscribed(5000),

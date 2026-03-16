@@ -16,6 +16,15 @@ interface TagDao {
     @Query("SELECT * FROM tags ORDER BY sortOrder ASC, name ASC")
     fun getAllTags(): Flow<List<Tag>>
 
+    // 按歌曲数量排序（从多到少）
+    @Query("""
+        SELECT t.* FROM tags t
+        LEFT JOIN song_tags st ON t.id = st.tagId
+        GROUP BY t.id
+        ORDER BY COUNT(st.songId) DESC, t.name ASC
+    """)
+    fun getAllTagsOrderBySongCount(): Flow<List<Tag>>
+
     @Query("SELECT * FROM tags WHERE id = :tagId")
     suspend fun getTagById(tagId: Long): Tag?
 

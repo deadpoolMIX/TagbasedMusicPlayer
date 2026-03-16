@@ -14,6 +14,9 @@ class TagRepository @Inject constructor(
 ) {
     fun getAllTags(): Flow<List<Tag>> = tagDao.getAllTags()
 
+    // 按歌曲数量排序（从多到少）
+    fun getAllTagsOrderBySongCount(): Flow<List<Tag>> = tagDao.getAllTagsOrderBySongCount()
+
     suspend fun getTagById(tagId: Long): Tag? = tagDao.getTagById(tagId)
 
     suspend fun getTagByName(name: String): Tag? = tagDao.getTagByName(name)
