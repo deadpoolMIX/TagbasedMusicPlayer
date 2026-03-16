@@ -538,10 +538,13 @@ fun HomeScreen(
 
     // 批量添加标签对话框
     if (showBatchTagSelection && selectedSongs.isNotEmpty()) {
-        BatchTagSelectionDialog(
+        TagSelectionDialog(
             songs = selectedSongs.toList(),
-            onDismiss = { showBatchTagSelection = false },
-            tagViewModel = tagViewModel
+            onDismiss = {
+                showBatchTagSelection = false
+                viewModel.exitMultiSelectMode()
+            },
+            viewModel = tagViewModel
         )
     }
 
@@ -1060,95 +1063,6 @@ private fun MultiSelectBottomBar(
             }
         }
     }
-}
-
-/**
- * 批量标签选择对话框
- */
-@Composable
-private fun BatchTagSelectionDialog(
-    songs: List<Song>,
-    onDismiss: () -> Unit,
-    tagViewModel: TagViewModel
-) {
-    val allTags by tagViewModel.allTags.collectAsState()
-    var selectedTags by remember { mutableStateOf<Set<Long>>(emptySet()) }
-
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        title = { Text("批量添加标签") },
-        text = {
-            Column {
-                Text(
-                    text = "为 ${songs.size} 首歌曲添加标签",
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-                Spacer(modifier = Modifier.height(16.dp))
-                if (allTags.isEmpty()) {
-                    Text(
-                        text = "暂无标签，请先创建标签",
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                } else {
-                    Column(
-                        verticalArrangement = Arrangement.spacedBy(8.dp)
-                    ) {
-                        allTags.forEach { tag ->
-                            Row(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .clickable {
-                                        selectedTags = if (tag.id in selectedTags) {
-                                            selectedTags - tag.id
-                                        } else {
-                                            selectedTags + tag.id
-                                        }
-                                    }
-                                    .padding(vertical = 8.dp),
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                androidx.compose.material3.Checkbox(
-                                    checked = tag.id in selectedTags,
-                                    onCheckedChange = { checked ->
-                                        selectedTags = if (checked) {
-                                            selectedTags + tag.id
-                                        } else {
-                                            selectedTags - tag.id
-                                        }
-                                    }
-                                )
-                                Spacer(modifier = Modifier.width(8.dp))
-                                Text(text = tag.name)
-                            }
-                        }
-                    }
-                }
-            }
-        },
-        confirmButton = {
-            TextButton(
-                onClick = {
-                    // 为所有选中的歌曲添加选中的标签
-                    songs.forEach { song ->
-                        selectedTags.forEach { tagId ->
-                            tagViewModel.addTagToSong(song.id, tagId)
-                        }
-                    }
-                    onDismiss()
-                },
-                enabled = selectedTags.isNotEmpty()
-            ) {
-                Text("添加")
-            }
-        },
-        dismissButton = {
-            TextButton(onClick = onDismiss) {
-                Text("取消")
-            }
-        }
-    )
 }
 
 /**

@@ -280,4 +280,14 @@ class TagViewModel @Inject constructor(
             tagRepository.addTagToSong(songId, tagId)
         }
     }
+
+    // 创建新标签并添加到多首歌曲（批量模式）
+    fun createTagAndAddToSongs(songIds: List<Long>, name: String) {
+        viewModelScope.launch {
+            val tagId = tagRepository.createTag(name)
+            songIds.forEach { songId ->
+                tagRepository.addTagToSong(songId, tagId)
+            }
+        }
+    }
 }

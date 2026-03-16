@@ -59,10 +59,34 @@ fun TagSelectionDialog(
     onDismiss: () -> Unit,
     viewModel: TagViewModel = hiltViewModel()
 ) {
+    TagSelectionDialog(
+        songs = listOf(song),
+        onDismiss = onDismiss,
+        viewModel = viewModel
+    )
+}
+
+@OptIn(ExperimentalLayoutApi::class)
+@Composable
+fun TagSelectionDialog(
+    songs: List<Song>,
+    onDismiss: () -> Unit,
+    viewModel: TagViewModel = hiltViewModel()
+) {
+    val isBatchMode = songs.size > 1
+    val song = songs.firstOrNull()
+
     val allTags by viewModel.allTags.collectAsState()
     val searchQuery by viewModel.searchQuery.collectAsState()
     val filteredTags by viewModel.filteredTags.collectAsState()
-    val songTags by viewModel.getSongTagsFlow(song.id).collectAsState(initial = emptyList())
+    val songTags by if (isBatchMode) {
+        // 批量模式不显示当前标签
+        remember { androidx.compose.runtime.mutableStateOf(emptyList<Tag>()) }
+    } else if (song != null) {
+        viewModel.getSongTagsFlow(song.id).collectAsState(initial = emptyList())
+    } else {
+        remember { androidx.compose.runtime.mutableStateOf(emptyList<Tag>()) }
+    }
     val focusManager = LocalFocusManager.current
 
     Dialog(onDismissRequest = onDismiss) {
@@ -88,7 +112,7 @@ fun TagSelectionDialog(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Text(
-                        text = "管理标签",
+                        text = if (isBatchMode) "批量添加标签 (${songs.size}首)" else "管理标签",
                         style = MaterialTheme.typography.titleLarge,
                         fontWeight = FontWeight.Bold
                     )
@@ -109,8 +133,8 @@ fun TagSelectionDialog(
                     color = MaterialTheme.colorScheme.outline.copy(alpha = 0.2f)
                 )
 
-                // 当前标签
-                if (songTags.isNotEmpty()) {
+                // 当前标签（仅单首歌曲时显示）
+                if (!isBatchMode && songTags.isNotEmpty()) {
                     Text(
                         text = "当前标签",
                         style = MaterialTheme.typography.labelMedium,
@@ -124,7 +148,9 @@ fun TagSelectionDialog(
                         songTags.forEach { tag ->
                             SelectedTagChip(
                                 tag = tag,
-                                onRemove = { viewModel.removeTagFromSong(song.id, tag.id) }
+                                onRemove = {
+                                    song?.let { viewModel.removeTagFromSong(it.id, tag.id) }
+                                }
                             )
                         }
                     }
@@ -157,7 +183,13 @@ fun TagSelectionDialog(
                     CreateTagRow(
                         name = trimmedQuery,
                         onClick = {
-                            viewModel.createTagAndAddToSong(song.id, trimmedQuery)
+                            if (isBatchMode) {
+                                // 批量模式：创建标签并添加到所有歌曲
+                                viewModel.createTagAndAddToSongs(songs.map { it.id }, trimmedQuery)
+                            } else {
+                                // 单首歌曲模式
+                                song?.let { viewModel.createTagAndAddToSong(it.id, trimmedQuery) }
+                            }
                             // 清除搜索词并关闭键盘
                             viewModel.onSearchQueryChange("")
                             focusManager.clearFocus()
@@ -200,7 +232,13 @@ fun TagSelectionDialog(
                             TagListItem(
                                 tag = tag,
                                 onClick = {
-                                    viewModel.addTagToSong(song.id, tag.id)
+                                    if (isBatchMode) {
+                                        // 批量模式：添加标签到所有歌曲
+                                        viewModel.addTagToSongs(tag.id, songs.map { it.id })
+                                    } else {
+                                        // 单首歌曲模式
+                                        song?.let { viewModel.addTagToSong(it.id, tag.id) }
+                                    }
                                     // 清除搜索词并关闭键盘
                                     viewModel.onSearchQueryChange("")
                                     focusManager.clearFocus()
