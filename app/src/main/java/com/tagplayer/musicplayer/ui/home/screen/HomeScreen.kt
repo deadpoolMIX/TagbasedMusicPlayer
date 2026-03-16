@@ -1,11 +1,15 @@
 package com.tagplayer.musicplayer.ui.home.screen
 
 import android.Manifest
+import android.app.Activity
 import android.content.Intent
+import android.content.IntentSender
 import android.net.Uri
 import android.os.Build
 import android.provider.Settings
+import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.IntentSenderRequest
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
@@ -120,6 +124,11 @@ fun HomeScreen(
     // 搜索对话框状态
     var showSearchDialog by remember { mutableStateOf(false) }
 
+    // 拦截返回键：搜索状态下按返回键清除搜索而非关闭应用
+    BackHandler(enabled = searchQuery.isNotBlank()) {
+        viewModel.onSearchQueryChange("")
+    }
+
     // 判断是否为标题排序模式（显示分组和索引栏）
     val isTitleSortMode = sortType == SortType.TITLE_ASC || sortType == SortType.TITLE_DESC
 
@@ -157,6 +166,37 @@ fun HomeScreen(
     ) { uri: Uri? ->
         uri?.let {
             viewModel.addScanFolderByUri(it)
+        }
+    }
+
+    // 删除文件权限请求启动器 (Android 11+)
+    val deletePermissionLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.StartIntentSenderForResult()
+    ) { result ->
+        if (result.resultCode == Activity.RESULT_OK) {
+            // 用户授权，继续删除
+            viewModel.onDeletePermissionGranted()
+        } else {
+            // 用户拒绝，取消删除
+            viewModel.cancelDeletePermissionRequest()
+        }
+    }
+
+    // 删除文件权限请求状态
+    val deletePermissionIntentSender by viewModel.deletePermissionIntentSender.collectAsState()
+    val songPendingDelete by viewModel.songPendingDelete.collectAsState()
+
+    // 当有删除权限请求时，启动它
+    LaunchedEffect(deletePermissionIntentSender) {
+        deletePermissionIntentSender?.let { intentSender ->
+            try {
+                val request = IntentSenderRequest.Builder(intentSender).build()
+                deletePermissionLauncher.launch(request)
+                viewModel.clearDeletePermissionIntentSender()
+            } catch (e: Exception) {
+                e.printStackTrace()
+                viewModel.cancelDeletePermissionRequest()
+            }
         }
     }
 
@@ -293,14 +333,30 @@ fun HomeScreen(
                     }
                 }
                 if (searchQuery.isNotBlank()) {
-                    Text(
-                        text = "搜索: \"$searchQuery\"",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.primary,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
-                        modifier = Modifier.weight(1f, fill = false).padding(start = 8.dp)
-                    )
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier.weight(1f, fill = false)
+                    ) {
+                        Text(
+                            text = "搜索: \"$searchQuery\"",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.primary,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                            modifier = Modifier.padding(start = 8.dp)
+                        )
+                        IconButton(
+                            onClick = { viewModel.onSearchQueryChange("") },
+                            modifier = Modifier.size(24.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Close,
+                                contentDescription = "清除搜索",
+                                modifier = Modifier.size(16.dp),
+                                tint = MaterialTheme.colorScheme.primary
+                            )
+                        }
+                    }
                 }
             }
 

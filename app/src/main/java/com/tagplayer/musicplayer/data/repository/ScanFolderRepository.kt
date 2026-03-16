@@ -3,6 +3,7 @@ package com.tagplayer.musicplayer.data.repository
 import com.tagplayer.musicplayer.data.local.database.ScanFolderDao
 import com.tagplayer.musicplayer.data.local.entity.ScanFolder
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.first
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -11,6 +12,8 @@ class ScanFolderRepository @Inject constructor(
     private val scanFolderDao: ScanFolderDao
 ) {
     fun getAllScanFolders(): Flow<List<ScanFolder>> = scanFolderDao.getAllScanFolders()
+
+    suspend fun getAllScanFoldersOnce(): List<ScanFolder> = scanFolderDao.getAllScanFolders().first()
 
     suspend fun getScanFolderByPath(path: String): ScanFolder? =
         scanFolderDao.getScanFolderByPath(path)

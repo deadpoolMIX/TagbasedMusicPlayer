@@ -2,11 +2,13 @@ package com.tagplayer.musicplayer.ui.home.viewmodel
 
 import android.content.Context
 import android.content.Intent
+import android.content.IntentSender
 import android.net.Uri
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.tagplayer.musicplayer.data.local.entity.ScanFolder
 import com.tagplayer.musicplayer.data.local.entity.Song
+import com.tagplayer.musicplayer.data.repository.DeleteFileResult
 import com.tagplayer.musicplayer.data.repository.ScanFolderRepository
 import com.tagplayer.musicplayer.data.repository.SettingsRepository
 import com.tagplayer.musicplayer.data.repository.SongRepository
@@ -93,6 +95,13 @@ class HomeViewModel @Inject constructor(
     // 是否显示文件夹管理对话框
     private val _showFolderManager = MutableStateFlow(false)
     val showFolderManager: StateFlow<Boolean> = _showFolderManager.asStateFlow()
+
+    // 删除文件权限请求相关
+    private val _deletePermissionIntentSender = MutableStateFlow<IntentSender?>(null)
+    val deletePermissionIntentSender: StateFlow<IntentSender?> = _deletePermissionIntentSender.asStateFlow()
+
+    private val _songPendingDelete = MutableStateFlow<Song?>(null)
+    val songPendingDelete: StateFlow<Song?> = _songPendingDelete.asStateFlow()
 
     // 扫描文件夹列表
     val scanFolders: StateFlow<List<ScanFolder>> = scanFolderRepository.getAllScanFolders()
@@ -219,11 +228,12 @@ class HomeViewModel @Inject constructor(
 
     /**
      * 检查权限并扫描
+     * 只扫描已添加的文件夹，扫描结果覆盖之前的歌曲
      */
     fun checkPermissionAndScan() {
         if (PermissionUtils.hasAudioPermission(context)) {
             _hasPermission.value = true
-            scanSongs()
+            scanAddedFoldersAndReplace()
         } else {
             _hasPermission.value = false
             _showPermissionDialog.value = true
@@ -265,7 +275,7 @@ class HomeViewModel @Inject constructor(
     }
 
     /**
-     * 扫描所有歌曲
+     * 扫描所有歌曲（全量扫描）
      */
     fun scanSongs() {
         if (!PermissionUtils.hasAudioPermission(context)) {
@@ -277,6 +287,47 @@ class HomeViewModel @Inject constructor(
             _isScanning.value = true
             try {
                 songRepository.scanAndSaveSongs()
+            } catch (e: Exception) {
+                e.printStackTrace()
+            } finally {
+                _isScanning.value = false
+            }
+        }
+    }
+
+    /**
+     * 扫描已添加的文件夹并覆盖之前的歌曲
+     * 1. 先清空数据库中的所有歌曲
+     * 2. 只扫描已添加的文件夹
+     * 3. 扫描结果存入数据库
+     */
+    private fun scanAddedFoldersAndReplace() {
+        if (!PermissionUtils.hasAudioPermission(context)) {
+            _showPermissionDialog.value = true
+            return
+        }
+
+        viewModelScope.launch {
+            _isScanning.value = true
+            try {
+                // 获取所有已添加的文件夹
+                val folders = scanFolderRepository.getAllScanFoldersOnce()
+
+                if (folders.isEmpty()) {
+                    // 没有添加任何文件夹，不做任何操作
+                    return@launch
+                }
+
+                // 先清空所有歌曲
+                songRepository.deleteAllSongs()
+
+                // 扫描每个文件夹
+                folders.forEach { folder ->
+                    val realPath = getRealPathFromUri(Uri.parse(folder.path))
+                    if (realPath != null) {
+                        songRepository.scanFolder(realPath)
+                    }
+                }
             } catch (e: Exception) {
                 e.printStackTrace()
             } finally {
@@ -390,13 +441,61 @@ class HomeViewModel @Inject constructor(
     fun deleteSong(song: Song, deleteFile: Boolean = false) {
         viewModelScope.launch {
             if (deleteFile) {
-                // 先删除本地文件
-                songRepository.deleteSongFile(song)
+                // 尝试删除本地文件
+                when (val result = songRepository.deleteSongFile(song)) {
+                    is DeleteFileResult.Success -> {
+                        // 文件删除成功，继续删除数据库记录
+                        songRepository.deleteSong(song)
+                    }
+                    is DeleteFileResult.NeedPermission -> {
+                        // 需要用户授权，保存状态等待 UI 处理
+                        _deletePermissionIntentSender.value = result.intentSender
+                        _songPendingDelete.value = song
+                        return@launch
+                    }
+                    is DeleteFileResult.Error -> {
+                        // 删除失败，只删除数据库记录
+                        songRepository.deleteSong(song)
+                    }
+                }
+            } else {
+                // 只删除数据库记录
+                songRepository.deleteSong(song)
             }
-            // 从数据库删除
-            songRepository.deleteSong(song)
             dismissActionSheet()
         }
+    }
+
+    /**
+     * 在用户授权删除权限后调用
+     */
+    fun onDeletePermissionGranted() {
+        viewModelScope.launch {
+            val song = _songPendingDelete.value
+            if (song != null) {
+                // 再次尝试删除文件
+                songRepository.deleteSongFileAfterPermission(song)
+                songRepository.deleteSong(song)
+                _songPendingDelete.value = null
+                _deletePermissionIntentSender.value = null
+            }
+            dismissActionSheet()
+        }
+    }
+
+    /**
+     * 取消删除权限请求
+     */
+    fun cancelDeletePermissionRequest() {
+        _songPendingDelete.value = null
+        _deletePermissionIntentSender.value = null
+    }
+
+    /**
+     * 清除删除权限意图（在 IntentSender 启动后调用）
+     */
+    fun clearDeletePermissionIntentSender() {
+        _deletePermissionIntentSender.value = null
     }
 
     fun clearSearch() {
