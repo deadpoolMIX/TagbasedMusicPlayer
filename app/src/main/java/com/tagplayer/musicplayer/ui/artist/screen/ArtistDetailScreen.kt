@@ -1,7 +1,6 @@
 package com.tagplayer.musicplayer.ui.artist.screen
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -10,17 +9,19 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.MusicNote
+import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Done
+import androidx.compose.material.icons.automirrored.filled.Label
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
@@ -34,16 +35,20 @@ import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.tagplayer.musicplayer.data.local.entity.Song
 import com.tagplayer.musicplayer.ui.artist.viewmodel.ArtistDetailViewModel
-import com.tagplayer.musicplayer.ui.components.AlbumArt
+import com.tagplayer.musicplayer.ui.components.SongItem
+import com.tagplayer.musicplayer.ui.components.TagSelectionDialog
 import com.tagplayer.musicplayer.ui.player.viewmodel.PlayerViewModel
+import com.tagplayer.musicplayer.ui.tags.viewmodel.TagViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -52,10 +57,19 @@ fun ArtistDetailScreen(
     onBackClick: () -> Unit,
     modifier: Modifier = Modifier,
     viewModel: ArtistDetailViewModel = hiltViewModel(),
-    playerViewModel: PlayerViewModel = hiltViewModel()
+    playerViewModel: PlayerViewModel = hiltViewModel(),
+    tagViewModel: TagViewModel = hiltViewModel()
 ) {
     val songs by viewModel.songs.collectAsState()
-    val artistInfo by viewModel.artistInfo.collectAsState()
+    val isMultiSelectMode by viewModel.isMultiSelectMode.collectAsState()
+    val selectedSongs by viewModel.selectedSongs.collectAsState()
+
+    // 当前播放歌曲ID
+    val playbackState by playerViewModel.playbackState.collectAsState()
+    val currentPlayingSongId = playbackState.currentSongId
+
+    // 批量添加标签对话框状态
+    var showBatchTagSelection by remember { mutableStateOf(false) }
 
     Scaffold(
         topBar = {
@@ -63,16 +77,18 @@ fun ArtistDetailScreen(
                 title = {
                     Column {
                         Text(
-                            text = artistName,
+                            text = if (isMultiSelectMode) "已选择 ${selectedSongs.size} 首" else artistName,
                             style = MaterialTheme.typography.titleLarge,
                             maxLines = 1,
                             overflow = TextOverflow.Ellipsis
                         )
-                        Text(
-                            text = "${songs.size} 首歌曲",
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
+                        if (!isMultiSelectMode) {
+                            Text(
+                                text = "${songs.size} 首歌曲",
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
                     }
                 },
                 navigationIcon = {
@@ -84,18 +100,35 @@ fun ArtistDetailScreen(
                     }
                 },
                 actions = {
-                    // 播放按钮 - 播放该艺术家的所有歌曲
-                    if (songs.isNotEmpty()) {
-                        IconButton(
-                            onClick = {
-                                playerViewModel.setQueue(songs, 0)
-                            }
-                        ) {
+                    if (isMultiSelectMode) {
+                        // 全选按钮
+                        IconButton(onClick = { viewModel.selectAllSongs(songs) }) {
                             Icon(
-                                imageVector = Icons.Default.PlayArrow,
-                                contentDescription = "播放全部",
-                                modifier = Modifier.size(28.dp)
+                                imageVector = Icons.Default.Done,
+                                contentDescription = "全选"
                             )
+                        }
+                        // 退出多选模式按钮
+                        IconButton(onClick = { viewModel.exitMultiSelectMode() }) {
+                            Icon(
+                                imageVector = Icons.Default.Close,
+                                contentDescription = "取消"
+                            )
+                        }
+                    } else {
+                        // 播放按钮 - 播放该艺术家的所有歌曲
+                        if (songs.isNotEmpty()) {
+                            IconButton(
+                                onClick = {
+                                    playerViewModel.setQueue(songs, 0)
+                                }
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.PlayArrow,
+                                    contentDescription = "播放全部",
+                                    modifier = Modifier.size(28.dp)
+                                )
+                            }
                         }
                     }
                 },
@@ -104,169 +137,119 @@ fun ArtistDetailScreen(
                 )
             )
         },
+        bottomBar = {
+            if (isMultiSelectMode) {
+                MultiSelectBottomBar(
+                    selectedCount = selectedSongs.size,
+                    onAddTags = { showBatchTagSelection = true },
+                    onCancel = { viewModel.exitMultiSelectMode() }
+                )
+            }
+        },
         modifier = modifier
     ) { paddingValues ->
-        Column(
+        // 歌曲列表
+        LazyColumn(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(paddingValues)
+                .padding(paddingValues),
+            contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp)
         ) {
-            // 艺术家信息头部
-            if (artistInfo != null) {
-                ArtistHeader(
-                    artistName = artistName,
-                    songCount = songs.size,
-                    onPlayAll = {
-                        if (songs.isNotEmpty()) {
-                            playerViewModel.setQueue(songs, 0)
+            items(
+                items = songs,
+                key = { it.id }
+            ) { song ->
+                val isSelected = song in selectedSongs
+                val isPlaying = song.id == currentPlayingSongId
+                SongItem(
+                    song = song,
+                    isSelected = isSelected,
+                    isMultiSelectMode = isMultiSelectMode,
+                    isPlaying = isPlaying,
+                    onClick = {
+                        if (isMultiSelectMode) {
+                            viewModel.toggleSongSelection(song)
+                        } else {
+                            playerViewModel.setQueue(songs, songs.indexOf(song))
                         }
+                    },
+                    onLongClick = {
+                        if (!isMultiSelectMode) {
+                            viewModel.enterMultiSelectMode(song)
+                        }
+                    },
+                    onMoreClick = {
+                        // TODO: 显示操作菜单
                     }
                 )
             }
-
-            // 歌曲列表
-            LazyColumn(
-                modifier = Modifier.fillMaxSize(),
-                contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp)
-            ) {
-                items(
-                    items = songs,
-                    key = { it.id }
-                ) { song ->
-                    ArtistSongItem(
-                        song = song,
-                        onClick = {
-                            playerViewModel.setQueue(songs, songs.indexOf(song))
-                        }
-                    )
-                }
-            }
         }
+    }
+
+    // 批量添加标签对话框
+    if (showBatchTagSelection && selectedSongs.isNotEmpty()) {
+        TagSelectionDialog(
+            songs = selectedSongs.toList(),
+            onDismiss = {
+                showBatchTagSelection = false
+                viewModel.exitMultiSelectMode()
+            },
+            viewModel = tagViewModel
+        )
     }
 }
 
+/**
+ * 多选模式底部操作栏
+ */
 @Composable
-private fun ArtistHeader(
-    artistName: String,
-    songCount: Int,
-    onPlayAll: () -> Unit,
-    modifier: Modifier = Modifier
-) {
-    Column(
-        modifier = modifier
-            .fillMaxWidth()
-            .padding(16.dp),
-        horizontalAlignment = Alignment.CenterHorizontally
-    ) {
-        // 艺术家头像
-        Box(
-            modifier = Modifier
-                .size(120.dp)
-                .clip(CircleShape)
-                .background(MaterialTheme.colorScheme.primaryContainer),
-            contentAlignment = Alignment.Center
-        ) {
-            Icon(
-                imageVector = Icons.Default.MusicNote,
-                contentDescription = null,
-                modifier = Modifier.size(60.dp),
-                tint = MaterialTheme.colorScheme.onPrimaryContainer
-            )
-        }
-
-        Spacer(modifier = Modifier.height(16.dp))
-
-        // 艺术家名称
-        Text(
-            text = artistName,
-            style = MaterialTheme.typography.headlineSmall,
-            maxLines = 1,
-            overflow = TextOverflow.Ellipsis
-        )
-
-        Spacer(modifier = Modifier.height(8.dp))
-
-        // 歌曲数量
-        Text(
-            text = "$songCount 首歌曲",
-            style = MaterialTheme.typography.bodyLarge,
-            color = MaterialTheme.colorScheme.onSurfaceVariant
-        )
-
-        Spacer(modifier = Modifier.height(16.dp))
-
-        // 播放全部按钮
-        Surface(
-            modifier = Modifier
-                .clip(RoundedCornerShape(9999.dp))
-                .clickable(onClick = onPlayAll),
-            color = MaterialTheme.colorScheme.primary,
-            shape = RoundedCornerShape(9999.dp)
-        ) {
-            Row(
-                modifier = Modifier.padding(horizontal = 24.dp, vertical = 12.dp),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                Icon(
-                    imageVector = Icons.Default.PlayArrow,
-                    contentDescription = null,
-                    tint = MaterialTheme.colorScheme.onPrimary
-                )
-                Text(
-                    text = "播放全部",
-                    style = MaterialTheme.typography.labelLarge,
-                    color = MaterialTheme.colorScheme.onPrimary
-                )
-            }
-        }
-
-        Spacer(modifier = Modifier.height(8.dp))
-    }
-}
-
-@Composable
-private fun ArtistSongItem(
-    song: Song,
-    onClick: () -> Unit
+private fun MultiSelectBottomBar(
+    selectedCount: Int,
+    onAddTags: () -> Unit,
+    onCancel: () -> Unit
 ) {
     Surface(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clickable(onClick = onClick),
-        color = MaterialTheme.colorScheme.surface
+        modifier = Modifier.fillMaxWidth(),
+        color = MaterialTheme.colorScheme.surface,
+        shadowElevation = 8.dp
     ) {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 16.dp, vertical = 12.dp),
+                .padding(horizontal = 16.dp, vertical = 12.dp)
+                .navigationBarsPadding(),
+            horizontalArrangement = Arrangement.SpaceEvenly,
             verticalAlignment = Alignment.CenterVertically
         ) {
-            // 歌曲封面
-            AlbumArt(
-                albumId = song.albumId,
-                modifier = Modifier.size(48.dp)
-            )
-
-            Spacer(modifier = Modifier.width(16.dp))
-
-            // 歌曲信息
-            Column(
+            // 添加标签按钮
+            androidx.compose.material3.OutlinedButton(
+                onClick = onAddTags,
+                enabled = selectedCount > 0,
                 modifier = Modifier.weight(1f)
             ) {
-                Text(
-                    text = song.title,
-                    style = MaterialTheme.typography.bodyLarge,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
+                Icon(
+                    imageVector = Icons.AutoMirrored.Filled.Label,
+                    contentDescription = null,
+                    modifier = Modifier.size(18.dp)
                 )
-                Text(
-                    text = song.album,
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
+                Spacer(modifier = Modifier.width(4.dp))
+                Text("添加标签")
+            }
+
+            Spacer(modifier = Modifier.width(8.dp))
+
+            // 取消按钮
+            androidx.compose.material3.Button(
+                onClick = onCancel,
+                modifier = Modifier.weight(1f)
+            ) {
+                Icon(
+                    imageVector = Icons.Default.Close,
+                    contentDescription = null,
+                    modifier = Modifier.size(18.dp)
                 )
+                Spacer(modifier = Modifier.width(4.dp))
+                Text("取消")
             }
         }
     }
