@@ -318,14 +318,20 @@ class HomeViewModel @Inject constructor(
                     return@launch
                 }
 
-                // 先清空所有歌曲
-                songRepository.deleteAllSongs()
+                // 只扫描第一个文件夹（带自动刷新）
+                // 因为 scanFolderWithAutoRefresh 会先清空数据库
+                val firstFolder = folders.first()
+                val realPath = getRealPathFromUri(Uri.parse(firstFolder.path))
+                if (realPath != null) {
+                    val (scannedCount, totalCount) = songRepository.scanFolderWithAutoRefresh(realPath)
+                    android.util.Log.d("HomeViewModel", "扫描完成: $scannedCount / $totalCount")
+                }
 
-                // 扫描每个文件夹
-                folders.forEach { folder ->
-                    val realPath = getRealPathFromUri(Uri.parse(folder.path))
-                    if (realPath != null) {
-                        songRepository.scanFolder(realPath)
+                // 如果有多个文件夹，扫描剩余的（追加模式）
+                folders.drop(1).forEach { folder ->
+                    val path = getRealPathFromUri(Uri.parse(folder.path))
+                    if (path != null) {
+                        songRepository.scanFolder(path)
                     }
                 }
             } catch (e: Exception) {
@@ -389,7 +395,7 @@ class HomeViewModel @Inject constructor(
     }
 
     /**
-     * 扫描指定文件夹
+     * 扫描指定文件夹（带自动刷新 MediaStore）
      */
     private suspend fun scanFolder(uriString: String) {
         if (!PermissionUtils.hasAudioPermission(context)) {
@@ -402,12 +408,9 @@ class HomeViewModel @Inject constructor(
             // 尝试从 URI 解析真实路径
             val realPath = getRealPathFromUri(Uri.parse(uriString))
             if (realPath != null) {
-                // 如果有真实路径，使用路径扫描
-                val songs = songRepository.scanFolder(realPath)
-                if (songs.isEmpty()) {
-                    // 如果没有找到歌曲，执行全量扫描（可能路径格式不匹配）
-                    songRepository.scanAndSaveSongs()
-                }
+                // 使用带自动刷新的扫描
+                val (scannedCount, totalCount) = songRepository.scanFolderWithAutoRefresh(realPath)
+                android.util.Log.d("HomeViewModel", "扫描完成: $scannedCount / $totalCount 首")
             } else {
                 // 无法解析路径，执行全量扫描
                 songRepository.scanAndSaveSongs()

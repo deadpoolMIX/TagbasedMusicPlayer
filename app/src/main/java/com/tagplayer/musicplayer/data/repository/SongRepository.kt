@@ -80,6 +80,25 @@ class SongRepository @Inject constructor(
         return songs
     }
 
+    /**
+     * 扫描文件夹（带自动刷新媒体库）
+     * 如果发现文件未被 MediaStore 索引，会自动触发刷新
+     */
+    suspend fun scanFolderWithAutoRefresh(path: String): Pair<Int, Int> = withContext(Dispatchers.IO) {
+        // 先清空数据库
+        songDao.deleteAllSongs()
+
+        // 使用带自动刷新的扫描
+        val result = musicScanner.scanFolderWithAutoRefresh(path, autoRefresh = true)
+
+        // 保存到数据库
+        if (result.songs.isNotEmpty()) {
+            songDao.insertSongs(result.songs)
+        }
+
+        Pair(result.songs.size, result.totalCount)
+    }
+
     suspend fun syncSongs() {
         // Get current songs from MediaStore
         musicScanner.scanAllSongs().collect { scannedSongs ->

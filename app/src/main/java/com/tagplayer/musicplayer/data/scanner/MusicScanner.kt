@@ -3,6 +3,7 @@ package com.tagplayer.musicplayer.data.scanner
 import android.content.ContentResolver
 import android.content.Context
 import android.database.Cursor
+import android.media.MediaScannerConnection
 import android.provider.MediaStore.Audio.Media
 import android.util.Log
 import com.tagplayer.musicplayer.data.local.entity.Song
@@ -12,6 +13,7 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.withContext
+import java.io.File
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -243,4 +245,217 @@ class MusicScanner @Inject constructor(
             lyrics = null  // 歌词延迟加载，不在扫描时解析
         )
     }
+
+    /**
+     * 刷新文件夹的媒体库索引
+     * 扫描文件夹中的音频文件并通知 MediaStore 更新
+     *
+     * @param folderPath 文件夹路径
+     * @param onProgress 进度回调 (已扫描, 总数)
+     * @return 新增索引的文件数量
+     */
+    suspend fun refreshMediaStoreForFolder(
+        folderPath: String,
+        onProgress: ((Int, Int) -> Unit)? = null
+    ): Int = withContext(Dispatchers.IO) {
+        val folder = File(folderPath)
+        if (!folder.exists() || !folder.isDirectory) {
+            Log.e(TAG, "文件夹不存在: $folderPath")
+            return@withContext 0
+        }
+
+        // 收集所有音频文件
+        val audioFiles = mutableListOf<String>()
+        collectAudioFiles(folder, audioFiles)
+
+        if (audioFiles.isEmpty()) {
+            Log.d(TAG, "文件夹中未找到音频文件: $folderPath")
+            return@withContext 0
+        }
+
+        Log.d(TAG, "=== 开始刷新媒体库 ===")
+        Log.d(TAG, "文件夹: $folderPath")
+        Log.d(TAG, "音频文件数: ${audioFiles.size}")
+
+        // 检查哪些文件不在 MediaStore 中
+        val existingPaths = getMediaStorePaths(folderPath)
+        val newFiles = audioFiles.filter { it !in existingPaths }
+
+        Log.d(TAG, "MediaStore 已有记录: ${existingPaths.size}")
+        Log.d(TAG, "需要新增索引: ${newFiles.size}")
+
+        if (newFiles.isEmpty()) {
+            Log.d(TAG, "所有文件已索引，无需刷新")
+            return@withContext 0
+        }
+
+        // 批量扫描新文件
+        var scannedCount = 0
+        val totalCount = newFiles.size
+        val batchSize = 50  // 每批处理50个文件
+
+        newFiles.chunked(batchSize).forEach { batch ->
+            val countDownLatch = java.util.concurrent.CountDownLatch(batch.size)
+
+            batch.forEach { filePath ->
+                MediaScannerConnection.scanFile(context, arrayOf(filePath), null) { path, uri ->
+                    countDownLatch.countDown()
+                    scannedCount++
+                    onProgress?.invoke(scannedCount, totalCount)
+                    if (uri != null) {
+                        Log.v(TAG, "索引成功: $path")
+                    } else {
+                        Log.w(TAG, "索引失败: $path")
+                    }
+                }
+            }
+
+            // 等待当前批次完成
+            try {
+                countDownLatch.await(30, java.util.concurrent.TimeUnit.SECONDS)
+            } catch (e: InterruptedException) {
+                Log.e(TAG, "等待扫描中断", e)
+            }
+        }
+
+        Log.d(TAG, "=== 媒体库刷新完成 ===")
+        Log.d(TAG, "新增索引: $scannedCount 个文件")
+
+        scannedCount
+    }
+
+    /**
+     * 获取 MediaStore 中指定文件夹下的所有文件路径
+     */
+    private fun getMediaStorePaths(folderPath: String): Set<String> {
+        val paths = mutableSetOf<String>()
+        val cursor = contentResolver.query(
+            Media.EXTERNAL_CONTENT_URI,
+            arrayOf(Media.DATA),
+            "${Media.DATA} LIKE ?",
+            arrayOf("$folderPath%"),
+            null
+        )
+
+        cursor?.use {
+            val dataIndex = it.getColumnIndex(Media.DATA)
+            while (it.moveToNext()) {
+                it.getString(dataIndex)?.let { path -> paths.add(path) }
+            }
+        }
+
+        return paths
+    }
+
+    /**
+     * 递归收集文件夹中的音频文件路径
+     */
+    private fun collectAudioFiles(folder: File, audioFiles: MutableList<String>) {
+        folder.listFiles()?.forEach { file ->
+            if (file.isDirectory) {
+                collectAudioFiles(file, audioFiles)
+            } else if (file.isFile && file.extension.lowercase() in supportedExtensions) {
+                audioFiles.add(file.absolutePath)
+            }
+        }
+    }
+
+    /**
+     * 扫描文件夹（带自动刷新）
+     * 如果发现文件未被 MediaStore 索引，会自动触发刷新
+     */
+    suspend fun scanFolderWithAutoRefresh(path: String, autoRefresh: Boolean = true): ScanResult = withContext(Dispatchers.IO) {
+        Log.d(TAG, "=== 扫描文件夹 (自动刷新=$autoRefresh): $path ===")
+
+        // 先尝试普通扫描
+        var songs = scanSongsByPathInternal(path)
+
+        if (autoRefresh) {
+            // 检查实际文件数量
+            val actualFileCount = countAudioFiles(File(path))
+            val scannedCount = songs.size
+
+            Log.d(TAG, "实际文件数: $actualFileCount, 已扫描: $scannedCount")
+
+            if (actualFileCount > scannedCount + 10) {  // 允许10首的误差
+                Log.d(TAG, "检测到未索引文件，触发媒体库刷新...")
+
+                // 刷新媒体库
+                refreshMediaStoreForFolder(path)
+
+                // 等待 MediaStore 更新
+                Thread.sleep(1000)
+
+                // 重新扫描
+                songs = scanSongsByPathInternal(path)
+                Log.d(TAG, "刷新后扫描结果: ${songs.size} 首歌曲")
+            }
+        }
+
+        ScanResult(
+            songs = songs,
+            totalCount = songs.size
+        )
+    }
+
+    /**
+     * 内部扫描方法，不带刷新逻辑
+     */
+    private fun scanSongsByPathInternal(path: String): List<Song> {
+        val songs = mutableListOf<Song>()
+
+        val pathSelection = "${Media.DURATION} > 1000 AND ${Media.DATA} LIKE ?"
+        val pathArgs = arrayOf("$path%")
+
+        val cursor = contentResolver.query(
+            Media.EXTERNAL_CONTENT_URI,
+            projection,
+            pathSelection,
+            pathArgs,
+            sortOrder
+        )
+
+        cursor?.use {
+            val columnIndexMap = createColumnIndexMap(it)
+
+            while (it.moveToNext()) {
+                try {
+                    val filePath = it.getString(columnIndexMap[Media.DATA]!!) ?: ""
+                    val extension = filePath.substringAfterLast('.', "").lowercase()
+
+                    if (extension !in supportedExtensions) continue
+
+                    val song = cursorToSong(it, columnIndexMap, filePath)
+                    songs.add(song)
+                } catch (e: Exception) {
+                    Log.e(TAG, "解析歌曲失败: ${e.message}")
+                }
+            }
+        }
+
+        return songs
+    }
+
+    /**
+     * 统计文件夹中的音频文件数量
+     */
+    private fun countAudioFiles(folder: File): Int {
+        var count = 0
+        folder.listFiles()?.forEach { file ->
+            if (file.isDirectory) {
+                count += countAudioFiles(file)
+            } else if (file.isFile && file.extension.lowercase() in supportedExtensions) {
+                count++
+            }
+        }
+        return count
+    }
 }
+
+/**
+ * 扫描结果
+ */
+data class ScanResult(
+    val songs: List<Song>,
+    val totalCount: Int
+)
