@@ -243,6 +243,12 @@ class MusicPlayer @Inject constructor(
     fun setQueue(songs: List<Song>, startIndex: Int = 0) {
         if (songs.isEmpty()) return
 
+        // 重置随机状态，确保用户点击的歌曲就是要播放的歌曲
+        if (playbackQueue.isShuffleEnabled()) {
+            playbackQueue.setShuffleEnabled(false)
+            _playbackState.value = _playbackState.value.copy(isShuffling = false)
+        }
+
         // 1. 更新内部队列
         playbackQueue.setQueue(songs, startIndex)
         _queue.value = playbackQueue.getQueue()
@@ -259,8 +265,9 @@ class MusicPlayer @Inject constructor(
             // 2. 将整个队列转换为 MediaItem 列表
             val mediaItems = songs.map { song -> createMediaItem(song) }
 
-            // 3. 一次性注入完整队列到 Player
+            // 3. 一次性注入完整队列到 Player（不使用 Player 的 shuffle）
             player?.let { p ->
+                p.shuffleModeEnabled = false
                 p.setMediaItems(mediaItems, startIndex, 0L)
                 p.prepare()
                 p.play()
@@ -386,12 +393,28 @@ class MusicPlayer @Inject constructor(
     fun setShuffleEnabled(enabled: Boolean) {
         if (playbackQueue.isShuffleEnabled() == enabled) return
 
+        // 保存当前播放的歌曲ID，用于在打乱后重新定位
+        val currentSongId = playbackQueue.getCurrentSong()?.id
+
         playbackQueue.setShuffleEnabled(enabled)
         _playbackState.value = _playbackState.value.copy(isShuffling = enabled)
         _queue.value = playbackQueue.getQueue()
 
-        // Media3 的 shuffle 模式
-        player?.shuffleModeEnabled = enabled
+        // 不使用 Media3 的内置随机，而是重新同步打乱后的队列
+        // 这样 Player 和 PlaybackQueue 的顺序完全一致
+        val songs = playbackQueue.getQueue()
+        if (songs.isNotEmpty()) {
+            // 找到当前歌曲在新队列中的位置
+            val newIndex = if (currentSongId != null) {
+                songs.indexOfFirst { it.id == currentSongId }.coerceAtLeast(0)
+            } else {
+                0
+            }
+
+            val mediaItems = songs.map { createMediaItem(it) }
+            player?.setMediaItems(mediaItems, newIndex, player?.currentPosition ?: 0L)
+            _currentIndex.value = newIndex
+        }
     }
 
     fun updatePosition() {
@@ -445,7 +468,10 @@ class MusicPlayer @Inject constructor(
         if (songs.isEmpty()) return
 
         val mediaItems = songs.map { createMediaItem(it) }
-        player?.setMediaItems(mediaItems, startIndex, 0L)
+        player?.let { p ->
+            p.shuffleModeEnabled = false
+            p.setMediaItems(mediaItems, startIndex, 0L)
+        }
     }
 
     /**
