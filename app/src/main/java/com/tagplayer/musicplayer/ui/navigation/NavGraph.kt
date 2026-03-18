@@ -53,6 +53,7 @@ object Routes {
 @Composable
 fun NavGraph(
     navController: NavHostController,
+    scrollToCurrentSongRequest: Int = 0,
     modifier: Modifier = Modifier
 ) {
     NavHost(
@@ -63,7 +64,8 @@ fun NavGraph(
         composable(Routes.HOME) {
             HomeScreen(
                 onNavigateToSettings = { navController.navigate(Routes.SETTINGS) },
-                onNavigateToSearch = { navController.navigate(Routes.SEARCH) }
+                onNavigateToSearch = { navController.navigate(Routes.SEARCH) },
+                scrollToCurrentSongRequest = scrollToCurrentSongRequest
             )
         }
         composable(Routes.SEARCH) {

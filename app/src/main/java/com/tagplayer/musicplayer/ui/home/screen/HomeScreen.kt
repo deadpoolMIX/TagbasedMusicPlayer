@@ -42,6 +42,7 @@ import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Done
 import androidx.compose.material.icons.filled.Folder
 import androidx.compose.material.icons.filled.Label
+import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Sort
@@ -98,6 +99,7 @@ import kotlinx.coroutines.launch
 fun HomeScreen(
     onNavigateToSettings: () -> Unit = {},
     onNavigateToSearch: () -> Unit = {},
+    scrollToCurrentSongRequest: Int = 0,
     modifier: Modifier = Modifier,
     viewModel: HomeViewModel = hiltViewModel(),
     playerViewModel: PlayerViewModel = hiltViewModel(),
@@ -139,6 +141,38 @@ fun HomeScreen(
     // 列表状态
     val listState = rememberLazyListState()
     val scope = rememberCoroutineScope()
+
+    // 滚动到当前播放歌曲
+    LaunchedEffect(scrollToCurrentSongRequest) {
+        if (scrollToCurrentSongRequest > 0 && currentPlayingSongId != null) {
+            if (isTitleSortMode) {
+                // 标题排序模式：需要在分组列表中查找
+                var targetIndex = 0
+                var found = false
+                for ((letter, songList) in groupedSongs) {
+                    // 加上分组标题
+                    targetIndex++
+                    for (song in songList) {
+                        if (song.id == currentPlayingSongId) {
+                            found = true
+                            break
+                        }
+                        targetIndex++
+                    }
+                    if (found) break
+                }
+                if (found) {
+                    listState.animateScrollToItem(targetIndex)
+                }
+            } else {
+                // 其他模式：普通列表
+                val index = songs.indexOfFirst { it.id == currentPlayingSongId }
+                if (index >= 0) {
+                    listState.animateScrollToItem(index)
+                }
+            }
+        }
+    }
 
     // 当前选中的字母（用于气泡提示）
     var selectedLetter by remember { mutableStateOf<Char?>(null) }
@@ -251,13 +285,6 @@ fun HomeScreen(
                                 contentDescription = "设置"
                             )
                         }
-                        // 文件夹管理按钮
-                        IconButton(onClick = { viewModel.showFolderManager() }) {
-                            Icon(
-                                imageVector = Icons.Default.Folder,
-                                contentDescription = "文件夹管理"
-                            )
-                        }
                         // 扫描按钮
                         IconButton(
                             onClick = { viewModel.checkPermissionAndScan() },
@@ -274,6 +301,13 @@ fun HomeScreen(
                                     contentDescription = "扫描歌曲"
                                 )
                             }
+                        }
+                        // 随机播放按钮
+                        IconButton(onClick = { playerViewModel.playRandom(songs) }) {
+                            Icon(
+                                imageVector = Icons.Default.PlayArrow,
+                                contentDescription = "随机播放"
+                            )
                         }
                     }
                 },

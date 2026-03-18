@@ -111,4 +111,15 @@ class PlayerViewModel @Inject constructor(
     fun moveSong(fromIndex: Int, toIndex: Int) {
         musicPlayer.moveSong(fromIndex, toIndex)
     }
+
+    /**
+     * 随机播放歌曲列表
+     */
+    fun playRandom(songs: List<Song>) {
+        if (songs.isEmpty()) return
+        val randomIndex = (0 until songs.size).random()
+        musicPlayer.setQueue(songs, randomIndex)
+        // 开启随机播放模式
+        musicPlayer.setShuffleEnabled(true)
+    }
 }
