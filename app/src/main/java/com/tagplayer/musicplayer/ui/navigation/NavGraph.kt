@@ -66,11 +66,7 @@ fun NavGraph(
         }
         composable(Routes.SEARCH) {
             SearchScreen(
-                onBackClick = { navController.popBackStack() },
-                onSongClick = { song ->
-                    // 播放歌曲并返回首页
-                    navController.popBackStack()
-                }
+                onBackClick = { navController.popBackStack() }
             )
         }
         composable(Routes.PLAYLIST) {

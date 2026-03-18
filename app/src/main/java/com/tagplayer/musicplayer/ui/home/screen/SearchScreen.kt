@@ -57,7 +57,6 @@ import kotlinx.coroutines.delay
 @Composable
 fun SearchScreen(
     onBackClick: () -> Unit,
-    onSongClick: (Song) -> Unit,
     modifier: Modifier = Modifier,
     viewModel: HomeViewModel = hiltViewModel(),
     playerViewModel: PlayerViewModel = hiltViewModel()
@@ -185,14 +184,18 @@ fun SearchScreen(
                         groupedSongs = groupedSongs,
                         letterToIndexMap = letterToIndexMap,
                         listState = listState,
-                        onSongClick = onSongClick
+                        onSongClick = { song ->
+                            playerViewModel.setQueue(songs, songs.indexOf(song))
+                        }
                     )
                 } else {
                     // 其他排序模式显示普通列表
                     SongList(
                         songs = songs,
                         listState = listState,
-                        onSongClick = onSongClick
+                        onSongClick = { song ->
+                            playerViewModel.setQueue(songs, songs.indexOf(song))
+                        }
                     )
                 }
             }
