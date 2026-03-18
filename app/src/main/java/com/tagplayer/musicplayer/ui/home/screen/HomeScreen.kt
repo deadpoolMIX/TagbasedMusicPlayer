@@ -97,6 +97,7 @@ import kotlinx.coroutines.launch
 @Composable
 fun HomeScreen(
     onNavigateToSettings: () -> Unit = {},
+    onNavigateToSearch: () -> Unit = {},
     modifier: Modifier = Modifier,
     viewModel: HomeViewModel = hiltViewModel(),
     playerViewModel: PlayerViewModel = hiltViewModel(),
@@ -106,7 +107,6 @@ fun HomeScreen(
     val songs by viewModel.songs.collectAsState()
     val groupedSongs by viewModel.groupedSongs.collectAsState()
     val letterToIndexMap by viewModel.letterToIndexMap.collectAsState()
-    val searchQuery by viewModel.searchQuery.collectAsState()
     val isScanning by viewModel.isScanning.collectAsState()
     val selectedSong by viewModel.selectedSong.collectAsState()
     val showActionSheet by viewModel.showActionSheet.collectAsState()
@@ -124,14 +124,6 @@ fun HomeScreen(
     // 当前播放歌曲ID
     val playbackState by playerViewModel.playbackState.collectAsState()
     val currentPlayingSongId = playbackState.currentSongId
-
-    // 搜索对话框状态
-    var showSearchDialog by remember { mutableStateOf(false) }
-
-    // 拦截返回键：搜索状态下按返回键清除搜索而非关闭应用
-    BackHandler(enabled = searchQuery.isNotBlank()) {
-        viewModel.onSearchQueryChange("")
-    }
 
     // 判断是否为标题排序模式（显示分组和索引栏）
     val isTitleSortMode = sortType == SortType.TITLE_ASC || sortType == SortType.TITLE_DESC
@@ -246,7 +238,7 @@ fun HomeScreen(
                         }
                     } else {
                         // 搜索按钮
-                        IconButton(onClick = { showSearchDialog = true }) {
+                        IconButton(onClick = onNavigateToSearch) {
                             Icon(
                                 imageVector = Icons.Default.Search,
                                 contentDescription = "搜索"
@@ -336,38 +328,12 @@ fun HomeScreen(
                         )
                     }
                 }
-                if (searchQuery.isNotBlank()) {
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        modifier = Modifier.weight(1f, fill = false)
-                    ) {
-                        Text(
-                            text = "搜索: \"$searchQuery\"",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.primary,
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis,
-                            modifier = Modifier.padding(start = 8.dp)
-                        )
-                        IconButton(
-                            onClick = { viewModel.onSearchQueryChange("") },
-                            modifier = Modifier.size(24.dp)
-                        ) {
-                            Icon(
-                                imageVector = Icons.Default.Close,
-                                contentDescription = "清除搜索",
-                                modifier = Modifier.size(16.dp),
-                                tint = MaterialTheme.colorScheme.primary
-                            )
-                        }
-                    }
-                }
             }
 
             // 歌曲列表
             if (songs.isEmpty()) {
                 EmptyState(
-                    isSearching = searchQuery.isNotBlank(),
+                    isSearching = false,
                     hasPermission = hasPermission,
                     onScanClick = { viewModel.checkPermissionAndScan() },
                     onGrantPermission = { viewModel.showPermissionDialog() },
@@ -404,10 +370,6 @@ fun HomeScreen(
                                             viewModel.toggleSongSelection(song)
                                         } else {
                                             playerViewModel.setQueue(songs, songs.indexOf(song))
-                                            // 如果有搜索词，清除搜索词
-                                            if (searchQuery.isNotBlank()) {
-                                                viewModel.onSearchQueryChange("")
-                                            }
                                         }
                                     },
                                     onLongClick = {
@@ -479,10 +441,6 @@ fun HomeScreen(
                                 } else {
                                     // 播放选中的歌曲
                                     playerViewModel.setQueue(songs, songs.indexOf(song))
-                                    // 如果有搜索词，清除搜索词
-                                    if (searchQuery.isNotBlank()) {
-                                        viewModel.onSearchQueryChange("")
-                                    }
                                 }
                             },
                             onLongClick = {
@@ -498,18 +456,6 @@ fun HomeScreen(
                 }
             }
         }
-    }
-
-    // 搜索对话框
-    if (showSearchDialog) {
-        SearchDialog(
-            initialQuery = searchQuery,
-            onDismiss = { showSearchDialog = false },
-            onSearch = { query ->
-                viewModel.onSearchQueryChange(query)
-                showSearchDialog = false
-            }
-        )
     }
 
     // 权限请求对话框
@@ -623,39 +569,6 @@ fun HomeScreen(
             }
         )
     }
-}
-
-@Composable
-private fun SearchDialog(
-    initialQuery: String,
-    onDismiss: () -> Unit,
-    onSearch: (String) -> Unit
-) {
-    var query by remember { mutableStateOf(initialQuery) }
-
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        title = { Text("搜索") },
-        text = {
-            androidx.compose.material3.OutlinedTextField(
-                value = query,
-                onValueChange = { query = it },
-                placeholder = { Text("搜索歌曲、艺术家、专辑...") },
-                singleLine = true,
-                modifier = Modifier.fillMaxWidth()
-            )
-        },
-        confirmButton = {
-            TextButton(onClick = { onSearch(query) }) {
-                Text("搜索")
-            }
-        },
-        dismissButton = {
-            TextButton(onClick = onDismiss) {
-                Text("取消")
-            }
-        }
-    )
 }
 
 @Composable

@@ -135,23 +135,6 @@ fun SettingsScreen(
         }
     }
 
-    // 导出歌曲名称文件选择器
-    val exportSongNamesLauncher = rememberLauncherForActivityResult(
-        ActivityResultContracts.StartActivityForResult()
-    ) { result ->
-        if (result.resultCode == Activity.RESULT_OK) {
-            result.data?.data?.let { uri ->
-                isLoading = true
-                viewModel.exportSongNames(context, uri) { success, message ->
-                    isLoading = false
-                    scope.launch {
-                        snackbarHostState.showSnackbar(message)
-                    }
-                }
-            }
-        }
-    }
-
     // 文件夹选择器
     val folderLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.OpenDocumentTree()
@@ -258,17 +241,6 @@ fun SettingsScreen(
                     },
                     onImport = {
                         importLauncher.launch(arrayOf("application/json"))
-                    },
-                    onExportSongNames = {
-                        val intent = android.content.Intent(Intent.ACTION_CREATE_DOCUMENT).apply {
-                            addCategory(Intent.CATEGORY_OPENABLE)
-                            type = "application/json"
-                            putExtra(Intent.EXTRA_TITLE, "song_names_${
-                                java.text.SimpleDateFormat("yyyyMMdd_HHmmss", java.util.Locale.getDefault())
-                                    .format(java.util.Date())
-                            }.json")
-                        }
-                        exportSongNamesLauncher.launch(intent)
                     }
                 )
             }
@@ -644,8 +616,7 @@ private fun SortSelectionDialog(
 @Composable
 private fun BackupCard(
     onExport: () -> Unit,
-    onImport: () -> Unit,
-    onExportSongNames: () -> Unit
+    onImport: () -> Unit
 ) {
     Card(
         modifier = Modifier.fillMaxWidth(),
@@ -715,42 +686,6 @@ private fun BackupCard(
                     )
                     Text(
                         text = "从JSON文件恢复标签、歌单和设置",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                }
-            }
-
-            // 分割线
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(1.dp)
-                    .background(MaterialTheme.colorScheme.outlineVariant)
-            )
-
-            // 导出歌曲名称
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .clickable(onClick = onExportSongNames)
-                    .padding(16.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Icon(
-                    imageVector = Icons.Default.CloudUpload,
-                    contentDescription = null,
-                    tint = MaterialTheme.colorScheme.primary,
-                    modifier = Modifier.size(24.dp)
-                )
-                Spacer(modifier = Modifier.width(16.dp))
-                Column(modifier = Modifier.weight(1f)) {
-                    Text(
-                        text = "导出歌曲名称",
-                        style = MaterialTheme.typography.bodyLarge
-                    )
-                    Text(
-                        text = "导出扫描到的歌曲名称为JSON文件，用于对比检查",
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )

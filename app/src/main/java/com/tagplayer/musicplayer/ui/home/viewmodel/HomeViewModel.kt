@@ -107,7 +107,7 @@ class HomeViewModel @Inject constructor(
     val scanFolders: StateFlow<List<ScanFolder>> = scanFolderRepository.getAllScanFolders()
         .stateIn(
             scope = viewModelScope,
-            started = SharingStarted.WhileSubscribed(5000),
+            started = SharingStarted.Lazily,
             initialValue = emptyList()
         )
 

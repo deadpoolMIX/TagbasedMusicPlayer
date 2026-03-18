@@ -10,6 +10,7 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.navArgument
 import com.tagplayer.musicplayer.ui.home.screen.HomeScreen
+import com.tagplayer.musicplayer.ui.home.screen.SearchScreen
 import com.tagplayer.musicplayer.ui.playlist.screen.PlaylistScreen
 import com.tagplayer.musicplayer.ui.playlist.screen.PlaylistDetailScreen
 import com.tagplayer.musicplayer.ui.playlist.screen.AddSongsToPlaylistScreen
@@ -25,6 +26,7 @@ import com.tagplayer.musicplayer.ui.settings.screen.SettingsScreen
 
 object Routes {
     const val HOME = "home"
+    const val SEARCH = "search"
     const val PLAYLIST = "playlist"
     const val PLAYLIST_DETAIL = "playlist_detail/{playlistId}"
     const val ADD_SONGS_TO_PLAYLIST = "add_songs_to_playlist/{playlistId}"
@@ -58,7 +60,17 @@ fun NavGraph(
     ) {
         composable(Routes.HOME) {
             HomeScreen(
-                onNavigateToSettings = { navController.navigate(Routes.SETTINGS) }
+                onNavigateToSettings = { navController.navigate(Routes.SETTINGS) },
+                onNavigateToSearch = { navController.navigate(Routes.SEARCH) }
+            )
+        }
+        composable(Routes.SEARCH) {
+            SearchScreen(
+                onBackClick = { navController.popBackStack() },
+                onSongClick = { song ->
+                    // 播放歌曲并返回首页
+                    navController.popBackStack()
+                }
             )
         }
         composable(Routes.PLAYLIST) {
