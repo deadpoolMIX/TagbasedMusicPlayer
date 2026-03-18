@@ -15,6 +15,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.MyLocation
 import androidx.compose.material3.FloatingActionButton
@@ -192,13 +193,17 @@ class MainActivity : ComponentActivity() {
                                             onClick = { scrollToCurrentSongRequest++ },
                                             modifier = Modifier
                                                 .align(Alignment.TopEnd)
-                                                .padding(top = 4.dp, end = 24.dp),
+                                                .padding(top = (-8).dp, end = 24.dp),
                                             containerColor = MaterialTheme.colorScheme.primaryContainer,
-                                            contentColor = MaterialTheme.colorScheme.onPrimaryContainer
+                                            contentColor = MaterialTheme.colorScheme.onPrimaryContainer,
+                                            elevation = androidx.compose.material3.FloatingActionButtonDefaults.elevation(
+                                                defaultElevation = 0.dp
+                                            )
                                         ) {
                                             Icon(
                                                 imageVector = Icons.Default.MyLocation,
-                                                contentDescription = "跳转到当前歌曲"
+                                                contentDescription = "跳转到当前歌曲",
+                                                modifier = Modifier.size(20.dp)
                                             )
                                         }
                                     }

@@ -149,7 +149,7 @@ fun HomeScreen(
                 // 标题排序模式：需要在分组列表中查找
                 var targetIndex = 0
                 var found = false
-                for ((letter, songList) in groupedSongs) {
+                for ((_, songList) in groupedSongs) {
                     // 加上分组标题
                     targetIndex++
                     for (song in songList) {
@@ -162,13 +162,13 @@ fun HomeScreen(
                     if (found) break
                 }
                 if (found) {
-                    listState.animateScrollToItem(targetIndex)
+                    listState.scrollToItem(targetIndex)
                 }
             } else {
                 // 其他模式：普通列表
                 val index = songs.indexOfFirst { it.id == currentPlayingSongId }
                 if (index >= 0) {
-                    listState.animateScrollToItem(index)
+                    listState.scrollToItem(index)
                 }
             }
         }
