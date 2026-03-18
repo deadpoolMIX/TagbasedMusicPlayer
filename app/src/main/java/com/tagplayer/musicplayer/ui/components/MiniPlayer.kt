@@ -155,7 +155,7 @@ fun MiniPlayer(
             onClick = onScrollToCurrentSong,
             modifier = Modifier
                 .align(Alignment.TopEnd)
-                .offset(y = (-24).dp, x = (-20).dp)
+                .offset(y = (-48).dp, x = (-20).dp)
                 .size(40.dp),
             shape = CircleShape,
             color = MaterialTheme.colorScheme.primaryContainer,
@@ -165,7 +165,7 @@ fun MiniPlayer(
             Icon(
                 imageVector = Icons.Default.MyLocation,
                 contentDescription = "跳转到当前歌曲",
-                modifier = Modifier.size(20.dp)
+                modifier = Modifier.size(18.dp)
             )
         }
     }
