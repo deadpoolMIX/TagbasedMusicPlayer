@@ -15,13 +15,13 @@ class FilterRepository @Inject constructor(
     private val tagDao: TagDao
 ) {
     /**
-     * Filter songs using boolean logic: (A AND B AND ...) OR (B AND ...) - C
+     * Filter songs using boolean logic: (A AND B AND ...) OR (B1 OR B2 OR ...) - C
      *
      * Special case: When both A and B are empty but C is not empty,
      * the result is "all songs minus songs with C tags"
      *
      * @param boxATags Tags that songs in box A must have (AND logic within box)
-     * @param boxBTags Tags that songs in box B must have (AND logic within box)
+     * @param boxBTags Tags that songs in box B must have (OR logic within box)
      * @param boxCTags Tags that songs must NOT have
      * @return Filtered songs matching: (A-songs ∪ B-songs) - C-songs, or (all-songs - C-songs) when A and B are empty
      */
@@ -36,7 +36,7 @@ class FilterRepository @Inject constructor(
             return@flow
         }
 
-        // Get songs for each tag in box A (must have ALL tags in box A)
+        // Get songs for each tag in box A (must have ALL tags in box A - AND logic)
         val boxASongs = if (boxATags.isEmpty()) {
             emptySet()
         } else {
@@ -52,20 +52,13 @@ class FilterRepository @Inject constructor(
             }
         }
 
-        // Get songs for each tag in box B (must have ALL tags in box B)
+        // Get songs for each tag in box B (must have ANY tag in box B - OR logic)
         val boxBSongs = if (boxBTags.isEmpty()) {
             emptySet()
         } else {
-            val firstTagSongs = tagDao.getSongsForTag(boxBTags[0]).first().map { it.id }.toSet()
-            if (boxBTags.size == 1) {
-                firstTagSongs
-            } else {
-                firstTagSongs.intersect(
-                    boxBTags.drop(1).map { tagId ->
-                        tagDao.getSongsForTag(tagId).first().map { it.id }.toSet()
-                    }.reduce { acc, set -> acc.intersect(set) }
-                )
-            }
+            boxBTags.flatMap { tagId ->
+                tagDao.getSongsForTag(tagId).first().map { it.id }
+            }.toSet()
         }
 
         // Get songs to exclude (have ANY tag in box C)

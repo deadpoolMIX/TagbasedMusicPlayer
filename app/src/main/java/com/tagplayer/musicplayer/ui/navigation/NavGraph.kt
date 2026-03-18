@@ -176,6 +176,9 @@ fun NavGraph(
                 },
                 onNavigateToQueue = {
                     navController.navigate(Routes.QUEUE)
+                },
+                onNavigateToArtistDetail = { artistName ->
+                    navController.navigate(Routes.artistDetail(artistName))
                 }
             )
         }

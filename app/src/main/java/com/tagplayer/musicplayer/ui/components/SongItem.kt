@@ -23,6 +23,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.MusicNote
+import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -50,12 +51,14 @@ fun SongItem(
     song: Song,
     onClick: () -> Unit,
     onMoreClick: () -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    isPlaying: Boolean = false
 ) {
     SongItem(
         song = song,
         isSelected = false,
         isMultiSelectMode = false,
+        isPlaying = isPlaying,
         onClick = onClick,
         onLongClick = {},
         onMoreClick = onMoreClick,
@@ -72,7 +75,8 @@ fun SongItem(
     onClick: () -> Unit,
     onLongClick: () -> Unit,
     onMoreClick: () -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    isPlaying: Boolean = false
 ) {
     val backgroundColor = if (isSelected) {
         MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.5f)
@@ -136,17 +140,34 @@ fun SongItem(
         Column(
             modifier = Modifier.weight(1f)
         ) {
-            Text(
-                text = song.title,
-                style = MaterialTheme.typography.bodyMedium,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-                color = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onBackground
-            )
+            Row(
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                // 正在播放标识
+                if (isPlaying) {
+                    Icon(
+                        imageVector = Icons.Default.PlayArrow,
+                        contentDescription = "正在播放",
+                        tint = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.size(16.dp)
+                    )
+                    Spacer(modifier = Modifier.width(4.dp))
+                }
+                Text(
+                    text = song.title,
+                    style = MaterialTheme.typography.bodyMedium,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                    color = if (isPlaying) MaterialTheme.colorScheme.primary
+                            else if (isSelected) MaterialTheme.colorScheme.primary
+                            else MaterialTheme.colorScheme.onBackground
+                )
+            }
             Text(
                 text = song.artist,
                 style = MaterialTheme.typography.bodySmall,
-                color = if (isSelected) MaterialTheme.colorScheme.primary.copy(alpha = 0.7f)
+                color = if (isPlaying) MaterialTheme.colorScheme.primary.copy(alpha = 0.7f)
+                        else if (isSelected) MaterialTheme.colorScheme.primary.copy(alpha = 0.7f)
                         else MaterialTheme.colorScheme.onSurfaceVariant,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis

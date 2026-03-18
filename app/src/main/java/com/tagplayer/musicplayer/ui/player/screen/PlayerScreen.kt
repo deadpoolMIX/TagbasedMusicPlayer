@@ -90,6 +90,7 @@ fun PlayerScreen(
     onBackClick: () -> Unit,
     onNavigateToLyrics: () -> Unit = {},
     onNavigateToQueue: () -> Unit = {},
+    onNavigateToArtistDetail: (String) -> Unit = {},
     modifier: Modifier = Modifier,
     viewModel: PlayerViewModel = hiltViewModel(),
     tagViewModel: TagViewModel = hiltViewModel(),
@@ -206,6 +207,7 @@ fun PlayerScreen(
 
                 // Album Art - 点击进入歌词
                 AlbumArt(
+                    filePath = currentSong.filePath,
                     albumId = currentSong.albumId,
                     modifier = Modifier
                         .fillMaxWidth(0.85f)
@@ -231,11 +233,17 @@ fun PlayerScreen(
                 Text(
                     text = currentSong.artist,
                     style = MaterialTheme.typography.titleMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    color = MaterialTheme.colorScheme.primary,
                     textAlign = TextAlign.Center,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
-                    modifier = Modifier.fillMaxWidth()
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clickable {
+                            if (currentSong.artist.isNotBlank() && currentSong.artist != "<unknown>") {
+                                onNavigateToArtistDetail(currentSong.artist)
+                            }
+                        }
                 )
 
                 Spacer(modifier = Modifier.height(16.dp))
@@ -296,15 +304,19 @@ fun PlayerScreen(
 
 @Composable
 private fun AlbumArt(
+    filePath: String,
     albumId: Long,
     modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current
 
-    // 使用 produceState 异步加载专辑封面
-    val bitmap = produceState<Bitmap?>(initialValue = null, albumId) {
+    // 使用 produceState 异步加载专辑封面（优先内嵌封面）
+    val bitmap = produceState<Bitmap?>(initialValue = null, filePath, albumId) {
         value = withContext(Dispatchers.IO) {
-            loadPlayerAlbumArt(context, albumId)
+            // 优先从文件提取内嵌封面
+            loadEmbeddedAlbumArt(context, filePath)
+                // fallback 到 albumId 封面
+                ?: loadPlayerAlbumArt(context, albumId)
         }
     }
 
@@ -329,6 +341,29 @@ private fun AlbumArt(
                 tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)
             )
         }
+    }
+}
+
+/**
+ * 从音频文件中提取内嵌封面
+ */
+@Suppress("DEPRECATION")
+private fun loadEmbeddedAlbumArt(context: android.content.Context, filePath: String): Bitmap? {
+    if (filePath.isBlank()) return null
+
+    return try {
+        val retriever = android.media.MediaMetadataRetriever()
+        retriever.setDataSource(filePath)
+        val embeddedPicture = retriever.embeddedPicture
+        retriever.release()
+
+        if (embeddedPicture != null) {
+            BitmapFactory.decodeByteArray(embeddedPicture, 0, embeddedPicture.size)
+        } else {
+            null
+        }
+    } catch (e: Exception) {
+        null
     }
 }
 

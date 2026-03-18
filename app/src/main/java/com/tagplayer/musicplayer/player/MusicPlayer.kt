@@ -233,14 +233,7 @@ class MusicPlayer @Inject constructor(
     }
 
     fun playPrevious() {
-        player?.let {
-            // 如果播放超过 3 秒，则重新播放当前歌曲
-            if (it.currentPosition > 3000) {
-                it.seekTo(0)
-            } else {
-                it.seekToPreviousMediaItem()
-            }
-        }
+        player?.seekToPreviousMediaItem()
     }
 
     /**

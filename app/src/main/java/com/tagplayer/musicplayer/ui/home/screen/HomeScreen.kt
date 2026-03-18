@@ -121,6 +121,10 @@ fun HomeScreen(
     val isMultiSelectMode by viewModel.isMultiSelectMode.collectAsState()
     val selectedSongs by viewModel.selectedSongs.collectAsState()
 
+    // 当前播放歌曲ID
+    val playbackState by playerViewModel.playbackState.collectAsState()
+    val currentPlayingSongId = playbackState.currentSongId
+
     // 搜索对话框状态
     var showSearchDialog by remember { mutableStateOf(false) }
 
@@ -389,10 +393,12 @@ fun HomeScreen(
                                 key = { it.id }
                             ) { song ->
                                 val isSelected = song in selectedSongs
+                                val isPlaying = song.id == currentPlayingSongId
                                 SongItem(
                                     song = song,
                                     isSelected = isSelected,
                                     isMultiSelectMode = isMultiSelectMode,
+                                    isPlaying = isPlaying,
                                     onClick = {
                                         if (isMultiSelectMode) {
                                             viewModel.toggleSongSelection(song)
@@ -461,10 +467,12 @@ fun HomeScreen(
                         key = { it.id }
                     ) { song ->
                         val isSelected = song in selectedSongs
+                        val isPlaying = song.id == currentPlayingSongId
                         SongItem(
                             song = song,
                             isSelected = isSelected,
                             isMultiSelectMode = isMultiSelectMode,
+                            isPlaying = isPlaying,
                             onClick = {
                                 if (isMultiSelectMode) {
                                     viewModel.toggleSongSelection(song)

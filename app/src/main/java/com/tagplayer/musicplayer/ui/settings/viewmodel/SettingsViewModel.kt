@@ -5,21 +5,30 @@ import android.net.Uri
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.tagplayer.musicplayer.data.local.database.ScanFolderDao
+import com.tagplayer.musicplayer.data.local.database.SongDao
 import com.tagplayer.musicplayer.data.local.entity.ScanFolder
 import com.tagplayer.musicplayer.data.repository.SettingsRepository
 import com.tagplayer.musicplayer.ui.home.viewmodel.SortType
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import kotlinx.serialization.Serializable
+import kotlinx.serialization.encodeToString
+import kotlinx.serialization.json.Json
+import java.io.OutputStreamWriter
 import javax.inject.Inject
+import kotlinx.coroutines.Dispatchers
 
 @HiltViewModel
 class SettingsViewModel @Inject constructor(
     private val settingsRepository: SettingsRepository,
-    private val scanFolderDao: ScanFolderDao
+    private val scanFolderDao: ScanFolderDao,
+    private val songDao: SongDao
 ) : ViewModel() {
 
     // 主题设置
@@ -108,6 +117,28 @@ class SettingsViewModel @Inject constructor(
         }
     }
 
+    // 导出歌曲名称列表
+    fun exportSongNames(context: Context, uri: Uri, onResult: (Boolean, String) -> Unit) {
+        viewModelScope.launch {
+            try {
+                val songs = withContext(Dispatchers.IO) {
+                    songDao.getAllSongsList()
+                }
+                val songNames = songs.map { it.title }
+                val jsonData = Json.encodeToString(SongNamesExport(songNames))
+
+                context.contentResolver.openOutputStream(uri)?.use { outputStream ->
+                    OutputStreamWriter(outputStream).use { writer ->
+                        writer.write(jsonData)
+                    }
+                }
+                onResult(true, "已导出 ${songNames.size} 首歌曲名称")
+            } catch (e: Exception) {
+                onResult(false, "导出失败: ${e.message}")
+            }
+        }
+    }
+
     private fun formatFileSize(size: Long): String {
         return when {
             size < 1024 -> "$size B"
@@ -123,3 +154,8 @@ enum class ThemeMode {
     DARK,
     SYSTEM
 }
+
+@Serializable
+data class SongNamesExport(
+    val songs: List<String>
+)

@@ -29,12 +29,10 @@ import androidx.compose.material.icons.filled.RemoveCircleOutline
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.FilterChip
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
@@ -56,9 +54,9 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.core.graphics.ColorUtils
 import androidx.hilt.navigation.compose.hiltViewModel
-import com.tagplayer.musicplayer.data.local.entity.Song
 import com.tagplayer.musicplayer.data.local.entity.Tag
 import com.tagplayer.musicplayer.ui.components.SongItem
+import com.tagplayer.musicplayer.ui.components.TagPickerDialog
 import com.tagplayer.musicplayer.ui.filter.viewmodel.FilterBox
 import com.tagplayer.musicplayer.ui.filter.viewmodel.FilterState
 import com.tagplayer.musicplayer.ui.filter.viewmodel.FilterViewModel
@@ -72,7 +70,10 @@ fun FilterScreen(
     playerViewModel: PlayerViewModel = hiltViewModel()
 ) {
     val filterState by viewModel.filterState.collectAsState()
-    val allTags by viewModel.allTags.collectAsState(initial = emptyList())
+
+    // 当前播放歌曲ID
+    val playbackState by playerViewModel.playbackState.collectAsState()
+    val currentPlayingSongId = playbackState.currentSongId
 
     var showTagSelector by remember { mutableStateOf<FilterBox?>(null) }
     var showSavePlaylistDialog by remember { mutableStateOf(false) }
@@ -141,7 +142,7 @@ fun FilterScreen(
                 // 框B - 可选标签
                 FilterBoxSection(
                     title = "框 B",
-                    subtitle = "可选，满足框B的歌曲也会加入结果",
+                    subtitle = "可选，满足框B任意标签的歌曲也会加入结果",
                     tags = filterState.boxBTags,
                     onAddClick = { showTagSelector = FilterBox.B },
                     onRemoveTag = { tag -> viewModel.removeTagFromBox(tag, FilterBox.B) },
@@ -202,10 +203,16 @@ fun FilterScreen(
                     items = filterState.filteredSongs,
                     key = { it.id }
                 ) { song ->
+                    val isPlaying = song.id == currentPlayingSongId
                     SongItem(
                         song = song,
+                        isPlaying = isPlaying,
                         onClick = {
-                            playerViewModel.setQueue(filterState.filteredSongs, filterState.filteredSongs.indexOf(song))
+                            // 使用 ID 查找索引，避免对象比较问题
+                            val index = filterState.filteredSongs.indexOfFirst { it.id == song.id }
+                            if (index >= 0) {
+                                playerViewModel.setQueue(filterState.filteredSongs, index)
+                            }
                         },
                         onMoreClick = {
                             // TODO: 显示操作菜单
@@ -216,23 +223,21 @@ fun FilterScreen(
         }
     }
 
-    // 标签选择器弹窗
+    // 标签选择器弹窗 - 复用 TagPickerDialog 组件
     showTagSelector?.let { box ->
-        val availableTags = allTags.filter { tag ->
-            when (box) {
-                FilterBox.A -> tag.id !in filterState.boxATags.map { it.id }
-                FilterBox.B -> tag.id !in filterState.boxBTags.map { it.id }
-                FilterBox.C -> tag.id !in filterState.boxCTags.map { it.id }
-            }
+        val excludeTagIds = when (box) {
+            FilterBox.A -> filterState.boxATags.map { it.id }
+            FilterBox.B -> filterState.boxBTags.map { it.id }
+            FilterBox.C -> filterState.boxCTags.map { it.id }
         }
 
-        TagSelectorDialog(
+        TagPickerDialog(
             title = when (box) {
                 FilterBox.A -> "添加到框A"
                 FilterBox.B -> "添加到框B"
                 FilterBox.C -> "添加到框C"
             },
-            tags = availableTags,
+            excludeTagIds = excludeTagIds,
             onDismiss = { showTagSelector = null },
             onTagSelected = { tag ->
                 viewModel.addTagToBox(tag, box)
@@ -274,13 +279,13 @@ private fun FilterFormula() {
             )
             Spacer(modifier = Modifier.height(4.dp))
             Text(
-                text = "(A ∩ A2 ∩ ...) ∪ (B ∩ B2 ∩ ...) - C",
+                text = "(A ∩ A2 ∩ ...) ∪ (B ∪ B2 ∪ ...) - C",
                 style = MaterialTheme.typography.bodyMedium,
                 fontWeight = FontWeight.Medium,
                 color = MaterialTheme.colorScheme.primary
             )
             Text(
-                text = "框A交集 ∪ 框B交集 - 框C",
+                text = "框A交集 ∪ 框B并集 - 框C",
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
@@ -514,99 +519,6 @@ private fun EmptyFilterState(hasActiveFilters: Boolean) {
                 textAlign = TextAlign.Center
             )
         }
-    }
-}
-
-@Composable
-private fun TagSelectorDialog(
-    title: String,
-    tags: List<Tag>,
-    onDismiss: () -> Unit,
-    onTagSelected: (Tag) -> Unit
-) {
-    var searchQuery by remember { mutableStateOf("") }
-    val filteredTags = tags.filter {
-        it.name.contains(searchQuery, ignoreCase = true)
-    }
-
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        title = { Text(title) },
-        text = {
-            Column {
-                OutlinedTextField(
-                    value = searchQuery,
-                    onValueChange = { searchQuery = it },
-                    placeholder = { Text("搜索标签...") },
-                    singleLine = true,
-                    modifier = Modifier.fillMaxWidth()
-                )
-
-                Spacer(modifier = Modifier.height(12.dp))
-
-                if (filteredTags.isEmpty()) {
-                    Box(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(100.dp),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Text(
-                            text = if (searchQuery.isBlank()) "暂无可用标签" else "未找到匹配标签",
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    }
-                } else {
-                    Column(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                    ) {
-                        filteredTags.forEach { tag ->
-                            TagListItem(
-                                tag = tag,
-                                onClick = { onTagSelected(tag) }
-                            )
-                        }
-                    }
-                }
-            }
-        },
-        confirmButton = {},
-        dismissButton = {
-            TextButton(onClick = onDismiss) {
-                Text("取消")
-            }
-        }
-    )
-}
-
-@Composable
-private fun TagListItem(
-    tag: Tag,
-    onClick: () -> Unit
-) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clickable(onClick = onClick)
-            .padding(vertical = 10.dp, horizontal = 4.dp),
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        Box(
-            modifier = Modifier
-                .size(32.dp)
-                .clip(RoundedCornerShape(8.dp))
-                .background(
-                    tag.color?.let { androidx.compose.ui.graphics.Color(it) }
-                        ?: MaterialTheme.colorScheme.primaryContainer
-                )
-        )
-        Spacer(modifier = Modifier.width(12.dp))
-        Text(
-            text = tag.name,
-            style = MaterialTheme.typography.bodyLarge
-        )
     }
 }
 
