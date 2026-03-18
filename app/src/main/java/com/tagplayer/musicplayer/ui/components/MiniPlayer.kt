@@ -42,6 +42,7 @@ import com.tagplayer.musicplayer.ui.player.viewmodel.PlayerViewModel
 fun MiniPlayer(
     onPlayerClick: () -> Unit = {},
     onScrollToCurrentSong: () -> Unit = {},
+    showScrollButton: Boolean = false,
     modifier: Modifier = Modifier,
     viewModel: PlayerViewModel = hiltViewModel()
 ) {
@@ -150,23 +151,25 @@ fun MiniPlayer(
             }
         }
 
-        // 右上角跳转到当前歌曲按钮
-        Surface(
-            onClick = onScrollToCurrentSong,
-            modifier = Modifier
-                .align(Alignment.TopEnd)
-                .offset(y = (-48).dp, x = (-20).dp)
-                .size(40.dp),
-            shape = CircleShape,
-            color = MaterialTheme.colorScheme.primaryContainer,
-            contentColor = MaterialTheme.colorScheme.onPrimaryContainer,
-            shadowElevation = 0.dp
-        ) {
-            Icon(
-                imageVector = Icons.Default.MyLocation,
-                contentDescription = "跳转到当前歌曲",
-                modifier = Modifier.size(18.dp)
-            )
+        // 右上角跳转到当前歌曲按钮（仅在首页显示）
+        if (showScrollButton) {
+            Surface(
+                onClick = onScrollToCurrentSong,
+                modifier = Modifier
+                    .align(Alignment.TopEnd)
+                    .offset(y = (-48).dp, x = (-20).dp)
+                    .size(40.dp),
+                shape = CircleShape,
+                color = MaterialTheme.colorScheme.primaryContainer,
+                contentColor = MaterialTheme.colorScheme.onPrimaryContainer,
+                shadowElevation = 0.dp
+            ) {
+                Icon(
+                    imageVector = Icons.Default.MyLocation,
+                    contentDescription = "跳转到当前歌曲",
+                    modifier = Modifier.size(10.dp)
+                )
+            }
         }
     }
 }
