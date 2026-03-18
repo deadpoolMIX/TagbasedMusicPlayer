@@ -2,6 +2,7 @@ package com.tagplayer.musicplayer.ui.tags.screen
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -10,6 +11,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -18,10 +20,16 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.Label
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Done
 import androidx.compose.material.icons.filled.LocalOffer
 import androidx.compose.material.icons.filled.MusicNote
 import androidx.compose.material.icons.filled.PlayArrow
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -29,6 +37,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
@@ -68,12 +77,23 @@ fun TagDetailScreen(
     val tag = allTags.find { it.id == tagId }
     val tagSongs by viewModel.selectedTagSongs.collectAsState()
 
+    // 多选模式状态
+    val isMultiSelectMode by viewModel.isMultiSelectMode.collectAsState()
+    val selectedSongs by viewModel.selectedSongs.collectAsState()
+
+    // 当前播放歌曲ID
+    val playbackState by playerViewModel.playbackState.collectAsState()
+    val currentPlayingSongId = playbackState.currentSongId
+
     // 操作菜单状态
     var showActionSheet by remember { mutableStateOf(false) }
     var selectedSong by remember { mutableStateOf<Song?>(null) }
 
     // 标签选择对话框状态
     var showTagSelection by remember { mutableStateOf(false) }
+
+    // 批量删除确认对话框
+    var showBatchDeleteConfirm by remember { mutableStateOf(false) }
 
     // 加载标签
     LaunchedEffect(tagId, allTags) {
@@ -83,10 +103,11 @@ fun TagDetailScreen(
         }
     }
 
-    // 页面离开时清除选中标签
+    // 页面离开时清除选中标签和多选模式
     DisposableEffect(Unit) {
         onDispose {
             viewModel.clearSelectedTag()
+            viewModel.exitMultiSelectMode()
         }
     }
 
@@ -105,33 +126,60 @@ fun TagDetailScreen(
             TopAppBar(
                 title = {
                     Text(
-                        text = tag.name,
+                        text = if (isMultiSelectMode) "已选择 ${selectedSongs.size} 首"
+                               else tag.name,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis
                     )
                 },
                 navigationIcon = {
-                    IconButton(onClick = onBackClick) {
+                    IconButton(onClick = {
+                        if (isMultiSelectMode) {
+                            viewModel.exitMultiSelectMode()
+                        } else {
+                            onBackClick()
+                        }
+                    }) {
                         Icon(
-                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                            contentDescription = "返回"
+                            imageVector = if (isMultiSelectMode) Icons.Default.Close
+                                          else Icons.AutoMirrored.Filled.ArrowBack,
+                            contentDescription = if (isMultiSelectMode) "取消" else "返回"
                         )
                     }
                 },
                 actions = {
-                    // 添加歌曲按钮
-                    IconButton(onClick = onAddSongsClick) {
-                        Icon(
-                            imageVector = Icons.Default.Add,
-                            contentDescription = "添加歌曲",
-                            tint = MaterialTheme.colorScheme.onSurface
-                        )
+                    if (isMultiSelectMode) {
+                        // 全选按钮
+                        IconButton(onClick = { viewModel.selectAllSongs(tagSongs) }) {
+                            Icon(
+                                imageVector = Icons.Default.Done,
+                                contentDescription = "全选"
+                            )
+                        }
+                    } else {
+                        // 添加歌曲按钮
+                        IconButton(onClick = onAddSongsClick) {
+                            Icon(
+                                imageVector = Icons.Default.Add,
+                                contentDescription = "添加歌曲",
+                                tint = MaterialTheme.colorScheme.onSurface
+                            )
+                        }
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
                     containerColor = MaterialTheme.colorScheme.background
                 )
             )
+        },
+        bottomBar = {
+            if (isMultiSelectMode) {
+                MultiSelectBottomBar(
+                    selectedCount = selectedSongs.size,
+                    onRemove = { showBatchDeleteConfirm = true },
+                    onCancel = { viewModel.exitMultiSelectMode() }
+                )
+            }
         },
         modifier = modifier
     ) { paddingValues ->
@@ -140,16 +188,18 @@ fun TagDetailScreen(
                 .fillMaxSize()
                 .padding(paddingValues)
         ) {
-            // 标签信息卡片
-            TagHeader(
-                tag = tag,
-                songCount = tagSongs.size,
-                onPlayAll = {
-                    if (tagSongs.isNotEmpty()) {
-                        playerViewModel.setQueue(tagSongs, 0)
+            // 标签信息卡片（非多选模式显示）
+            if (!isMultiSelectMode) {
+                TagHeader(
+                    tag = tag,
+                    songCount = tagSongs.size,
+                    onPlayAll = {
+                        if (tagSongs.isNotEmpty()) {
+                            playerViewModel.setQueue(tagSongs, 0)
+                        }
                     }
-                }
-            )
+                )
+            }
 
             // 歌曲列表
             if (tagSongs.isEmpty()) {
@@ -159,7 +209,7 @@ fun TagDetailScreen(
                 ) {
                     Column(
                         horizontalAlignment = Alignment.CenterHorizontally,
-                        verticalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(16.dp)
+                        verticalArrangement = Arrangement.spacedBy(16.dp)
                     ) {
                         Icon(
                             imageVector = Icons.Default.MusicNote,
@@ -188,10 +238,24 @@ fun TagDetailScreen(
                         items = tagSongs,
                         key = { it.id }
                     ) { song ->
+                        val isSelected = song in selectedSongs
+                        val isPlaying = song.id == currentPlayingSongId
                         SongItem(
                             song = song,
+                            isSelected = isSelected,
+                            isMultiSelectMode = isMultiSelectMode,
+                            isPlaying = isPlaying,
                             onClick = {
-                                playerViewModel.setQueue(tagSongs, tagSongs.indexOf(song))
+                                if (isMultiSelectMode) {
+                                    viewModel.toggleSongSelection(song)
+                                } else {
+                                    playerViewModel.setQueue(tagSongs, tagSongs.indexOf(song))
+                                }
+                            },
+                            onLongClick = {
+                                if (!isMultiSelectMode) {
+                                    viewModel.enterMultiSelectMode(song)
+                                }
                             },
                             onMoreClick = {
                                 selectedSong = song
@@ -252,6 +316,33 @@ fun TagDetailScreen(
             onDismiss = {
                 showTagSelection = false
                 selectedSong = null
+            }
+        )
+    }
+
+    // 批量删除确认对话框
+    if (showBatchDeleteConfirm) {
+        AlertDialog(
+            onDismissRequest = { showBatchDeleteConfirm = false },
+            title = { Text("移除歌曲") },
+            text = { Text("确定要从标签中移除选中的 ${selectedSongs.size} 首歌曲吗？") },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        viewModel.removeSelectedSongsFromTag(tagId)
+                        showBatchDeleteConfirm = false
+                    }
+                ) {
+                    Text(
+                        text = "移除",
+                        color = MaterialTheme.colorScheme.error
+                    )
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showBatchDeleteConfirm = false }) {
+                    Text("取消")
+                }
             }
         )
     }
@@ -328,6 +419,62 @@ private fun TagHeader(
                         tint = MaterialTheme.colorScheme.primary
                     )
                 }
+            }
+        }
+    }
+}
+
+/**
+ * 多选模式底部操作栏
+ */
+@Composable
+private fun MultiSelectBottomBar(
+    selectedCount: Int,
+    onRemove: () -> Unit,
+    onCancel: () -> Unit
+) {
+    Surface(
+        modifier = Modifier.fillMaxWidth(),
+        color = MaterialTheme.colorScheme.surface,
+        shadowElevation = 8.dp
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp, vertical = 12.dp)
+                .navigationBarsPadding(),
+            horizontalArrangement = Arrangement.SpaceEvenly,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            // 移除按钮
+            androidx.compose.material3.Button(
+                onClick = onRemove,
+                enabled = selectedCount > 0,
+                modifier = Modifier.weight(1f)
+            ) {
+                Icon(
+                    imageVector = Icons.Default.Delete,
+                    contentDescription = null,
+                    modifier = Modifier.size(18.dp)
+                )
+                Spacer(modifier = Modifier.width(4.dp))
+                Text("从标签移除")
+            }
+
+            Spacer(modifier = Modifier.width(8.dp))
+
+            // 取消按钮
+            androidx.compose.material3.OutlinedButton(
+                onClick = onCancel,
+                modifier = Modifier.weight(1f)
+            ) {
+                Icon(
+                    imageVector = Icons.Default.Close,
+                    contentDescription = null,
+                    modifier = Modifier.size(18.dp)
+                )
+                Spacer(modifier = Modifier.width(4.dp))
+                Text("取消")
             }
         }
     }

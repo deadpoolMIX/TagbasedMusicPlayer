@@ -301,4 +301,71 @@ class TagViewModel @Inject constructor(
             }
         }
     }
+
+    // ==================== 多选模式相关 ====================
+
+    // 多选模式状态
+    private val _isMultiSelectMode = MutableStateFlow(false)
+    val isMultiSelectMode: StateFlow<Boolean> = _isMultiSelectMode.asStateFlow()
+
+    // 多选模式下选中的歌曲集合
+    private val _selectedSongs = MutableStateFlow<Set<Song>>(emptySet())
+    val selectedSongs: StateFlow<Set<Song>> = _selectedSongs.asStateFlow()
+
+    /**
+     * 进入多选模式
+     */
+    fun enterMultiSelectMode(initialSong: Song? = null) {
+        _isMultiSelectMode.value = true
+        if (initialSong != null) {
+            _selectedSongs.value = setOf(initialSong)
+        } else {
+            _selectedSongs.value = emptySet()
+        }
+    }
+
+    /**
+     * 退出多选模式
+     */
+    fun exitMultiSelectMode() {
+        _isMultiSelectMode.value = false
+        _selectedSongs.value = emptySet()
+    }
+
+    /**
+     * 切换歌曲选中状态
+     */
+    fun toggleSongSelection(song: Song) {
+        val currentSet = _selectedSongs.value.toMutableSet()
+        if (song in currentSet) {
+            currentSet.remove(song)
+        } else {
+            currentSet.add(song)
+        }
+        _selectedSongs.value = currentSet
+
+        // 如果没有任何选中的歌曲，退出多选模式
+        if (currentSet.isEmpty()) {
+            _isMultiSelectMode.value = false
+        }
+    }
+
+    /**
+     * 全选当前列表中的所有歌曲
+     */
+    fun selectAllSongs(allSongs: List<Song>) {
+        _selectedSongs.value = allSongs.toSet()
+    }
+
+    /**
+     * 批量从标签移除歌曲
+     */
+    fun removeSelectedSongsFromTag(tagId: Long) {
+        viewModelScope.launch {
+            _selectedSongs.value.forEach { song ->
+                tagRepository.removeTagFromSong(song.id, tagId)
+            }
+            exitMultiSelectMode()
+        }
+    }
 }

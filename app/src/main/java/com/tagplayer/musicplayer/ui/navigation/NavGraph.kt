@@ -22,6 +22,7 @@ import com.tagplayer.musicplayer.ui.player.screen.PlayerScreen
 import com.tagplayer.musicplayer.ui.player.screen.LyricsScreen
 import com.tagplayer.musicplayer.ui.artist.screen.ArtistListScreen
 import com.tagplayer.musicplayer.ui.artist.screen.ArtistDetailScreen
+import com.tagplayer.musicplayer.ui.artist.screen.ArtistSearchScreen
 import com.tagplayer.musicplayer.ui.settings.screen.SettingsScreen
 
 object Routes {
@@ -36,6 +37,7 @@ object Routes {
     const val FILTER = "filter"
     const val PLAYER = "player"
     const val ARTIST = "artist"
+    const val ARTIST_SEARCH = "artist_search"
     const val ARTIST_DETAIL = "artist_detail/{artistName}"
     const val SETTINGS = "settings"
     const val LYRICS = "lyrics"
@@ -151,6 +153,15 @@ fun NavGraph(
         composable(Routes.ARTIST) {
             ArtistListScreen(
                 onBackClick = null,
+                onArtistClick = { artist ->
+                    navController.navigate(Routes.artistDetail(artist.name))
+                },
+                onNavigateToSearch = { navController.navigate(Routes.ARTIST_SEARCH) }
+            )
+        }
+        composable(Routes.ARTIST_SEARCH) {
+            ArtistSearchScreen(
+                onBackClick = { navController.popBackStack() },
                 onArtistClick = { artist ->
                     navController.navigate(Routes.artistDetail(artist.name))
                 }

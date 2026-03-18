@@ -1,9 +1,5 @@
-package com.tagplayer.musicplayer.ui.home.screen
+package com.tagplayer.musicplayer.ui.artist.screen
 
-import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.fadeOut
-import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
@@ -12,19 +8,17 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Clear
+import androidx.compose.material.icons.filled.MusicNote
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -40,41 +34,44 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
-import com.tagplayer.musicplayer.data.local.entity.Song
-import com.tagplayer.musicplayer.ui.components.AlbumArt
-import com.tagplayer.musicplayer.ui.home.viewmodel.HomeViewModel
-import com.tagplayer.musicplayer.ui.home.viewmodel.SortType
-import com.tagplayer.musicplayer.ui.player.viewmodel.PlayerViewModel
+import com.tagplayer.musicplayer.data.repository.Artist
+import com.tagplayer.musicplayer.ui.artist.viewmodel.ArtistViewModel
 import kotlinx.coroutines.delay
 
 @Composable
-fun SearchScreen(
+fun ArtistSearchScreen(
     onBackClick: () -> Unit,
+    onArtistClick: (Artist) -> Unit,
     modifier: Modifier = Modifier,
-    viewModel: HomeViewModel = hiltViewModel(),
-    playerViewModel: PlayerViewModel = hiltViewModel()
+    viewModel: ArtistViewModel = hiltViewModel()
 ) {
     val searchQuery by viewModel.searchQuery.collectAsState()
-    val songs by viewModel.songs.collectAsState()
-    val sortType by viewModel.sortType.collectAsState()
-    val groupedSongs by viewModel.groupedSongs.collectAsState()
-    val letterToIndexMap by viewModel.letterToIndexMap.collectAsState()
+    val allArtists by viewModel.artists.collectAsState()
+
+    // 根据搜索词过滤歌手
+    val filteredArtists = remember(searchQuery, allArtists) {
+        if (searchQuery.isEmpty()) {
+            emptyList()
+        } else {
+            allArtists.filter { artist ->
+                artist.name.contains(searchQuery, ignoreCase = true)
+            }
+        }
+    }
 
     val focusRequester = remember { FocusRequester() }
     val keyboardController = LocalSoftwareKeyboardController.current
-    val listState = rememberLazyListState()
 
     // 进入页面自动聚焦并弹出键盘
     LaunchedEffect(Unit) {
         focusRequester.requestFocus()
-        // 等待一帧确保焦点已设置
         delay(50)
         keyboardController?.show()
     }
@@ -82,8 +79,7 @@ fun SearchScreen(
     // 搜索后关闭键盘
     LaunchedEffect(searchQuery) {
         if (searchQuery.isNotEmpty()) {
-            // 延迟一点关闭键盘，让用户看到搜索结果
-            kotlinx.coroutines.delay(100)
+            delay(100)
             keyboardController?.hide()
         }
     }
@@ -147,7 +143,6 @@ fun SearchScreen(
 
             // 搜索结果
             if (searchQuery.isEmpty()) {
-                // 空状态提示
                 Box(
                     modifier = Modifier
                         .fillMaxSize()
@@ -155,14 +150,12 @@ fun SearchScreen(
                     contentAlignment = Alignment.Center
                 ) {
                     Text(
-                        text = "输入关键词搜索歌曲",
+                        text = "输入关键词搜索歌手",
                         style = MaterialTheme.typography.bodyLarge,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        textAlign = TextAlign.Center
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
-            } else if (songs.isEmpty()) {
-                // 无结果
+            } else if (filteredArtists.isEmpty()) {
                 Box(
                     modifier = Modifier
                         .fillMaxSize()
@@ -170,32 +163,24 @@ fun SearchScreen(
                     contentAlignment = Alignment.Center
                 ) {
                     Text(
-                        text = "未找到匹配 \"$searchQuery\" 的歌曲",
+                        text = "未找到匹配 \"$searchQuery\" 的歌手",
                         style = MaterialTheme.typography.bodyLarge,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        textAlign = TextAlign.Center
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
             } else {
-                // 标题排序模式显示分组列表
-                if (sortType == SortType.TITLE_ASC || sortType == SortType.TITLE_DESC) {
-                    GroupedSongList(
-                        groupedSongs = groupedSongs,
-                        letterToIndexMap = letterToIndexMap,
-                        listState = listState,
-                        onSongClick = { song ->
-                            playerViewModel.setQueue(songs, songs.indexOf(song))
-                        }
-                    )
-                } else {
-                    // 其他排序模式显示普通列表
-                    SongList(
-                        songs = songs,
-                        listState = listState,
-                        onSongClick = { song ->
-                            playerViewModel.setQueue(songs, songs.indexOf(song))
-                        }
-                    )
+                LazyColumn(
+                    modifier = Modifier.fillMaxSize()
+                ) {
+                    items(
+                        items = filteredArtists,
+                        key = { it.name }
+                    ) { artist ->
+                        ArtistSearchItem(
+                            artist = artist,
+                            onClick = { onArtistClick(artist) }
+                        )
+                    }
                 }
             }
         }
@@ -203,95 +188,47 @@ fun SearchScreen(
 }
 
 @Composable
-private fun SongList(
-    songs: List<Song>,
-    listState: LazyListState,
-    onSongClick: (Song) -> Unit
-) {
-    LazyColumn(
-        state = listState,
-        modifier = Modifier.fillMaxSize()
-    ) {
-        items(songs, key = { it.id }) { song ->
-            SearchSongItem(
-                song = song,
-                onClick = { onSongClick(song) }
-            )
-        }
-    }
-}
-
-@OptIn(ExperimentalFoundationApi::class)
-@Composable
-private fun GroupedSongList(
-    groupedSongs: Map<Char, List<Song>>,
-    letterToIndexMap: Map<Char, Int>,
-    listState: LazyListState,
-    onSongClick: (Song) -> Unit
-) {
-    LazyColumn(
-        state = listState,
-        modifier = Modifier.fillMaxSize()
-    ) {
-        groupedSongs.forEach { (letter, songsInGroup) ->
-            // 字母标题
-            stickyHeader {
-                Text(
-                    text = letter.toString(),
-                    style = MaterialTheme.typography.labelMedium,
-                    color = MaterialTheme.colorScheme.primary,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .background(MaterialTheme.colorScheme.background)
-                        .padding(horizontal = 16.dp, vertical = 4.dp)
-                )
-            }
-
-            // 该字母下的歌曲
-            items(songsInGroup, key = { "${letter}_${it.id}" }) { song ->
-                SearchSongItem(
-                    song = song,
-                    onClick = { onSongClick(song) }
-                )
-            }
-        }
-    }
-}
-
-@Composable
-private fun SearchSongItem(
-    song: Song,
+private fun ArtistSearchItem(
+    artist: Artist,
     onClick: () -> Unit
 ) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
             .clickable(onClick = onClick)
-            .padding(horizontal = 16.dp, vertical = 8.dp),
+            .padding(horizontal = 16.dp, vertical = 10.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        // 封面
-        AlbumArt(
-            albumId = song.albumId,
-            modifier = Modifier.size(48.dp)
-        )
+        // 艺术家头像
+        Box(
+            modifier = Modifier
+                .size(42.dp)
+                .clip(CircleShape)
+                .background(MaterialTheme.colorScheme.primaryContainer),
+            contentAlignment = Alignment.Center
+        ) {
+            Icon(
+                imageVector = Icons.Default.MusicNote,
+                contentDescription = null,
+                modifier = Modifier.size(20.dp),
+                tint = MaterialTheme.colorScheme.onPrimaryContainer
+            )
+        }
 
         Spacer(modifier = Modifier.width(12.dp))
 
-        // 歌曲信息
+        // 艺术家信息
         Column(modifier = Modifier.weight(1f)) {
             Text(
-                text = song.title,
+                text = artist.name,
                 style = MaterialTheme.typography.bodyLarge,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis
             )
             Text(
-                text = song.artist,
+                text = "${artist.songCount} 首歌曲",
                 style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis
+                color = MaterialTheme.colorScheme.onSurfaceVariant
             )
         }
     }

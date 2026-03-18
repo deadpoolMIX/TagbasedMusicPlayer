@@ -27,6 +27,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.MusicNote
+import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -64,6 +65,7 @@ import kotlinx.coroutines.awaitCancellation
 fun ArtistListScreen(
     onBackClick: (() -> Unit)?,
     onArtistClick: (Artist) -> Unit,
+    onNavigateToSearch: () -> Unit = {},
     modifier: Modifier = Modifier,
     viewModel: ArtistViewModel = hiltViewModel()
 ) {
@@ -110,6 +112,14 @@ fun ArtistListScreen(
                                 contentDescription = "返回"
                             )
                         }
+                    }
+                },
+                actions = {
+                    IconButton(onClick = onNavigateToSearch) {
+                        Icon(
+                            imageVector = Icons.Default.Search,
+                            contentDescription = "搜索"
+                        )
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
