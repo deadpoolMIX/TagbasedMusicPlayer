@@ -43,6 +43,13 @@ class ArtistDetailViewModel @Inject constructor(
     private val _selectedSongs = MutableStateFlow<Set<Song>>(emptySet())
     val selectedSongs: StateFlow<Set<Song>> = _selectedSongs.asStateFlow()
 
+    // 操作菜单相关状态
+    private val _selectedSong = MutableStateFlow<Song?>(null)
+    val selectedSong: StateFlow<Song?> = _selectedSong.asStateFlow()
+
+    private val _showActionSheet = MutableStateFlow(false)
+    val showActionSheet: StateFlow<Boolean> = _showActionSheet.asStateFlow()
+
     init {
         // 获取艺术家信息
         viewModelScope.launch {
@@ -104,5 +111,29 @@ class ArtistDetailViewModel @Inject constructor(
      */
     fun clearSelection() {
         _selectedSongs.value = emptySet()
+    }
+
+    // ==================== 操作菜单相关方法 ====================
+
+    /**
+     * 点击更多按钮
+     */
+    fun onSongMoreClick(song: Song) {
+        _selectedSong.value = song
+        _showActionSheet.value = true
+    }
+
+    /**
+     * 关闭操作菜单
+     */
+    fun dismissActionSheet() {
+        _showActionSheet.value = false
+    }
+
+    /**
+     * 清除选中的歌曲
+     */
+    fun clearSelectedSong() {
+        _selectedSong.value = null
     }
 }

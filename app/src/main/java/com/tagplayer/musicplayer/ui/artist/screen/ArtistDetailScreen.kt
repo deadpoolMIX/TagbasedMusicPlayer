@@ -45,9 +45,11 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.tagplayer.musicplayer.data.local.entity.Song
 import com.tagplayer.musicplayer.ui.artist.viewmodel.ArtistDetailViewModel
+import com.tagplayer.musicplayer.ui.components.SongActionSheet
 import com.tagplayer.musicplayer.ui.components.SongItem
 import com.tagplayer.musicplayer.ui.components.TagSelectionDialog
 import com.tagplayer.musicplayer.ui.player.viewmodel.PlayerViewModel
+import com.tagplayer.musicplayer.ui.playlist.viewmodel.PlaylistViewModel
 import com.tagplayer.musicplayer.ui.tags.viewmodel.TagViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -58,15 +60,21 @@ fun ArtistDetailScreen(
     modifier: Modifier = Modifier,
     viewModel: ArtistDetailViewModel = hiltViewModel(),
     playerViewModel: PlayerViewModel = hiltViewModel(),
+    playlistViewModel: PlaylistViewModel = hiltViewModel(),
     tagViewModel: TagViewModel = hiltViewModel()
 ) {
     val songs by viewModel.songs.collectAsState()
     val isMultiSelectMode by viewModel.isMultiSelectMode.collectAsState()
     val selectedSongs by viewModel.selectedSongs.collectAsState()
+    val selectedSong by viewModel.selectedSong.collectAsState()
+    val showActionSheet by viewModel.showActionSheet.collectAsState()
 
     // 当前播放歌曲ID
     val playbackState by playerViewModel.playbackState.collectAsState()
     val currentPlayingSongId = playbackState.currentSongId
+
+    // 标签选择对话框状态
+    var showTagSelection by remember { mutableStateOf(false) }
 
     // 批量添加标签对话框状态
     var showBatchTagSelection by remember { mutableStateOf(false) }
@@ -179,7 +187,7 @@ fun ArtistDetailScreen(
                         }
                     },
                     onMoreClick = {
-                        // TODO: 显示操作菜单
+                        viewModel.onSongMoreClick(song)
                     }
                 )
             }
@@ -195,6 +203,58 @@ fun ArtistDetailScreen(
                 viewModel.exitMultiSelectMode()
             },
             viewModel = tagViewModel
+        )
+    }
+
+    // 操作菜单
+    if (showActionSheet && selectedSong != null) {
+        SongActionSheet(
+            song = selectedSong!!,
+            onDismiss = viewModel::dismissActionSheet,
+            onPlayNext = {
+                playerViewModel.addToQueueNext(selectedSong!!)
+                viewModel.dismissActionSheet()
+            },
+            onAddToPlaylist = {
+                playlistViewModel.showAddToPlaylistDialog(selectedSong!!)
+                viewModel.dismissActionSheet()
+            },
+            onAddTag = {
+                showTagSelection = true
+            },
+            onViewArtist = {
+                viewModel.dismissActionSheet()
+            },
+            onViewAlbum = {
+                viewModel.dismissActionSheet()
+            },
+            onDelete = { deleteFile ->
+                // TODO: 实现删除功能
+            }
+        )
+    }
+
+    // 标签选择对话框
+    if (showTagSelection && selectedSong != null) {
+        TagSelectionDialog(
+            song = selectedSong!!,
+            onDismiss = {
+                showTagSelection = false
+                viewModel.dismissActionSheet()
+                viewModel.clearSelectedSong()
+            },
+            viewModel = tagViewModel
+        )
+    }
+
+    // 添加到歌单对话框
+    val showAddToPlaylistDialog by playlistViewModel.showAddToPlaylistDialog.collectAsState()
+    val songToAdd by playlistViewModel.songToAdd.collectAsState()
+
+    if (showAddToPlaylistDialog && songToAdd != null) {
+        com.tagplayer.musicplayer.ui.playlist.screen.AddToPlaylistDialog(
+            songTitle = songToAdd!!.title,
+            onDismiss = playlistViewModel::dismissAddToPlaylistDialog
         )
     }
 }
