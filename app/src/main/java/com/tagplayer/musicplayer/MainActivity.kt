@@ -11,16 +11,9 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.isSystemInDarkTheme
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.MyLocation
-import androidx.compose.material3.FloatingActionButton
-import androidx.compose.material3.Icon
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.derivedStateOf
@@ -28,9 +21,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.compose.currentBackStackEntryAsState
@@ -39,7 +30,6 @@ import com.tagplayer.musicplayer.ui.components.MiniPlayer
 import com.tagplayer.musicplayer.ui.navigation.BottomNavBar
 import com.tagplayer.musicplayer.ui.navigation.NavGraph
 import com.tagplayer.musicplayer.ui.navigation.Routes
-import com.tagplayer.musicplayer.ui.player.viewmodel.PlayerViewModel
 import com.tagplayer.musicplayer.ui.settings.viewmodel.SettingsViewModel
 import com.tagplayer.musicplayer.ui.settings.viewmodel.ThemeMode
 import com.tagplayer.musicplayer.ui.theme.TagPlayerTheme
@@ -170,44 +160,17 @@ class MainActivity : ComponentActivity() {
                 // 滚动到当前歌曲的请求计数器
                 var scrollToCurrentSongRequest by remember { mutableIntStateOf(0) }
 
-                // 获取播放状态以判断是否有正在播放的歌曲
-                val playerViewModel: PlayerViewModel = hiltViewModel()
-                val playbackState by playerViewModel.playbackState.collectAsState()
-                val hasCurrentSong = playbackState.currentSong != null
-
                 Scaffold(
                     modifier = Modifier.fillMaxSize(),
                     bottomBar = {
                         if (!showPlayer && !hideBottomBar) {
                             Column {
-                                // MiniPlayer 容器，右上角带跳转按钮
-                                Box {
-                                    MiniPlayer(
-                                        onPlayerClick = {
-                                            navController.navigate(Routes.PLAYER)
-                                        }
-                                    )
-                                    // 右上角跳转到当前歌曲按钮
-                                    if (hasCurrentSong) {
-                                        FloatingActionButton(
-                                            onClick = { scrollToCurrentSongRequest++ },
-                                            modifier = Modifier
-                                                .align(Alignment.TopEnd)
-                                                .padding(top = (-8).dp, end = 24.dp),
-                                            containerColor = MaterialTheme.colorScheme.primaryContainer,
-                                            contentColor = MaterialTheme.colorScheme.onPrimaryContainer,
-                                            elevation = androidx.compose.material3.FloatingActionButtonDefaults.elevation(
-                                                defaultElevation = 0.dp
-                                            )
-                                        ) {
-                                            Icon(
-                                                imageVector = Icons.Default.MyLocation,
-                                                contentDescription = "跳转到当前歌曲",
-                                                modifier = Modifier.size(20.dp)
-                                            )
-                                        }
-                                    }
-                                }
+                                MiniPlayer(
+                                    onPlayerClick = {
+                                        navController.navigate(Routes.PLAYER)
+                                    },
+                                    onScrollToCurrentSong = { scrollToCurrentSongRequest++ }
+                                )
                                 BottomNavBar(navController = navController)
                             }
                         }
