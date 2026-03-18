@@ -142,7 +142,7 @@ fun FilterScreen(
                 // 框B - 可选标签
                 FilterBoxSection(
                     title = "框 B",
-                    subtitle = "可选，满足框B任意标签的歌曲也会加入结果",
+                    subtitle = "满足任意标签即可",
                     tags = filterState.boxBTags,
                     onAddClick = { showTagSelector = FilterBox.B },
                     onRemoveTag = { tag -> viewModel.removeTagFromBox(tag, FilterBox.B) },
@@ -239,8 +239,10 @@ fun FilterScreen(
             },
             excludeTagIds = excludeTagIds,
             onDismiss = { showTagSelector = null },
-            onTagSelected = { tag ->
-                viewModel.addTagToBox(tag, box)
+            onTagsSelected = { tags ->
+                tags.forEach { tag ->
+                    viewModel.addTagToBox(tag, box)
+                }
                 showTagSelector = null
             }
         )
@@ -352,21 +354,15 @@ private fun FilterBoxSection(
                     shape = RoundedCornerShape(9999.dp),
                     color = MaterialTheme.colorScheme.primaryContainer
                 ) {
-                    Row(
-                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
-                        verticalAlignment = Alignment.CenterVertically
+                    Box(
+                        modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
+                        contentAlignment = Alignment.Center
                     ) {
                         Icon(
                             imageVector = Icons.Default.Add,
-                            contentDescription = null,
-                            modifier = Modifier.size(16.dp),
+                            contentDescription = "添加标签",
+                            modifier = Modifier.size(18.dp),
                             tint = MaterialTheme.colorScheme.onPrimaryContainer
-                        )
-                        Spacer(modifier = Modifier.width(4.dp))
-                        Text(
-                            text = "添加标签",
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onPrimaryContainer
                         )
                     }
                 }

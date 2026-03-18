@@ -71,14 +71,14 @@ fun TagSelectionDialog(
 
 /**
  * 标签选择弹窗（筛选页面专用）
- * 用于从标签列表中选择标签，不关联歌曲
+ * 支持多选，确认后批量添加标签
  */
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun TagPickerDialog(
     title: String = "选择标签",
     excludeTagIds: List<Long> = emptyList(),
-    onTagSelected: (Tag) -> Unit,
+    onTagsSelected: (List<Tag>) -> Unit,
     onDismiss: () -> Unit,
     viewModel: TagViewModel = hiltViewModel()
 ) {
@@ -86,6 +86,9 @@ fun TagPickerDialog(
     val searchQuery by viewModel.searchQuery.collectAsState()
     val filteredTags by viewModel.filteredTags.collectAsState()
     val focusManager = LocalFocusManager.current
+
+    // 多选状态
+    val selectedTags = remember { mutableStateListOf<Tag>() }
 
     Dialog(onDismissRequest = onDismiss) {
         Card(
@@ -131,6 +134,32 @@ fun TagPickerDialog(
                     color = MaterialTheme.colorScheme.outline.copy(alpha = 0.2f)
                 )
 
+                // 已选标签预览
+                if (selectedTags.isNotEmpty()) {
+                    Text(
+                        text = "已选 ${selectedTags.size} 个",
+                        style = MaterialTheme.typography.labelMedium,
+                        color = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.padding(bottom = 8.dp)
+                    )
+                    FlowRow(
+                        horizontalArrangement = Arrangement.spacedBy(6.dp),
+                        verticalArrangement = Arrangement.spacedBy(6.dp),
+                        modifier = Modifier.padding(bottom = 8.dp)
+                    ) {
+                        selectedTags.forEach { tag ->
+                            SelectedTagChip(
+                                tag = tag,
+                                onRemove = { selectedTags.remove(tag) }
+                            )
+                        }
+                    }
+                    HorizontalDivider(
+                        modifier = Modifier.padding(vertical = 8.dp),
+                        color = MaterialTheme.colorScheme.outline.copy(alpha = 0.2f)
+                    )
+                }
+
                 // 搜索框
                 OutlinedTextField(
                     value = searchQuery,
@@ -153,12 +182,12 @@ fun TagPickerDialog(
 
                 // 可用标签列表（排除已选标签）
                 val availableTags = if (searchQuery.isBlank()) {
-                    allTags.filter { tag -> tag.id !in excludeTagIds }
+                    allTags.filter { tag -> tag.id !in excludeTagIds && selectedTags.none { it.id == tag.id } }
                 } else {
-                    filteredTags.filter { tag -> tag.id !in excludeTagIds }
+                    filteredTags.filter { tag -> tag.id !in excludeTagIds && selectedTags.none { it.id == tag.id } }
                 }
 
-                if (availableTags.isEmpty()) {
+                if (availableTags.isEmpty() && selectedTags.isEmpty()) {
                     Box(
                         modifier = Modifier
                             .fillMaxWidth()
@@ -172,37 +201,31 @@ fun TagPickerDialog(
                         )
                     }
                 } else {
-                    if (searchQuery.isNotBlank()) {
+                    if (availableTags.isNotEmpty()) {
                         Text(
-                            text = "匹配结果",
+                            text = if (searchQuery.isNotBlank()) "匹配结果" else "可选标签",
                             style = MaterialTheme.typography.labelMedium,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                             modifier = Modifier.padding(bottom = 4.dp)
                         )
-                    } else {
-                        Text(
-                            text = "常用标签",
-                            style = MaterialTheme.typography.labelMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            modifier = Modifier.padding(bottom = 4.dp)
-                        )
-                    }
 
-                    LazyColumn(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .weight(1f, fill = false)
-                            .heightIn(max = 200.dp)
-                    ) {
-                        items(availableTags, key = { it.id }) { tag ->
-                            TagListItem(
-                                tag = tag,
-                                onClick = {
-                                    onTagSelected(tag)
-                                    viewModel.onSearchQueryChange("")
-                                    focusManager.clearFocus()
-                                }
-                            )
+                        LazyColumn(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .weight(1f, fill = false)
+                                .heightIn(max = 200.dp)
+                        ) {
+                            items(availableTags, key = { it.id }) { tag ->
+                                TagSelectableItem(
+                                    tag = tag,
+                                    isSelected = false,
+                                    onClick = {
+                                        selectedTags.add(tag)
+                                        viewModel.onSearchQueryChange("")
+                                        focusManager.clearFocus()
+                                    }
+                                )
+                            }
                         }
                     }
                 }
@@ -227,8 +250,57 @@ fun TagPickerDialog(
                     ) {
                         Text("取消")
                     }
+                    Button(
+                        onClick = {
+                            if (selectedTags.isNotEmpty()) {
+                                onTagsSelected(selectedTags.toList())
+                            }
+                        },
+                        modifier = Modifier.weight(1f),
+                        shape = RoundedCornerShape(8.dp),
+                        enabled = selectedTags.isNotEmpty()
+                    ) {
+                        Text(if (selectedTags.isEmpty()) "确认" else "确认(${selectedTags.size})")
+                    }
                 }
             }
+        }
+    }
+}
+
+@Composable
+private fun TagSelectableItem(
+    tag: Tag,
+    isSelected: Boolean,
+    onClick: () -> Unit
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(6.dp))
+            .clickable(onClick = onClick)
+            .padding(vertical = 8.dp, horizontal = 4.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Text(
+            text = "#",
+            style = MaterialTheme.typography.bodyLarge,
+            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
+            modifier = Modifier.width(24.dp)
+        )
+        Text(
+            text = tag.name,
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurface
+        )
+        Spacer(modifier = Modifier.weight(1f))
+        if (isSelected) {
+            Icon(
+                imageVector = Icons.Default.Add,
+                contentDescription = null,
+                modifier = Modifier.size(18.dp),
+                tint = MaterialTheme.colorScheme.primary
+            )
         }
     }
 }
