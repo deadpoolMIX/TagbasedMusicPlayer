@@ -155,7 +155,7 @@ fun MiniPlayer(
             onClick = onScrollToCurrentSong,
             modifier = Modifier
                 .align(Alignment.TopEnd)
-                .padding(top = 4.dp, end = 24.dp),
+                .padding(top = (-20).dp, end = 20.dp),
             containerColor = MaterialTheme.colorScheme.primaryContainer,
             contentColor = MaterialTheme.colorScheme.onPrimaryContainer,
             elevation = FloatingActionButtonDefaults.elevation(
