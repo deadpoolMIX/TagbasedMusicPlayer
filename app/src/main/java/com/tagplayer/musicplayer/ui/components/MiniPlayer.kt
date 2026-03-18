@@ -16,7 +16,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.LocationOn
+import androidx.compose.material.icons.filled.MyLocation
 import androidx.compose.material.icons.filled.Pause
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.SkipNext
@@ -155,7 +155,7 @@ fun MiniPlayer(
             onClick = onScrollToCurrentSong,
             modifier = Modifier
                 .align(Alignment.TopEnd)
-                .offset(y = (-12).dp, x = (-20).dp)
+                .offset(y = (-24).dp, x = (-20).dp)
                 .size(40.dp),
             shape = CircleShape,
             color = MaterialTheme.colorScheme.primaryContainer,
@@ -163,7 +163,7 @@ fun MiniPlayer(
             shadowElevation = 0.dp
         ) {
             Icon(
-                imageVector = Icons.Default.LocationOn,
+                imageVector = Icons.Default.MyLocation,
                 contentDescription = "跳转到当前歌曲",
                 modifier = Modifier.size(20.dp)
             )
