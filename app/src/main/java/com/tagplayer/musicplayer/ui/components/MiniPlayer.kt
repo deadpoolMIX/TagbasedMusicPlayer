@@ -9,18 +9,18 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.MyLocation
+import androidx.compose.material.icons.filled.LocationOn
 import androidx.compose.material.icons.filled.Pause
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.SkipNext
 import androidx.compose.material.icons.filled.SkipPrevious
-import androidx.compose.material3.FloatingActionButton
-import androidx.compose.material3.FloatingActionButtonDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
@@ -151,19 +151,19 @@ fun MiniPlayer(
         }
 
         // 右上角跳转到当前歌曲按钮
-        FloatingActionButton(
+        Surface(
             onClick = onScrollToCurrentSong,
             modifier = Modifier
                 .align(Alignment.TopEnd)
-                .padding(top = (-20).dp, end = 20.dp),
-            containerColor = MaterialTheme.colorScheme.primaryContainer,
+                .offset(y = (-12).dp, x = (-20).dp)
+                .size(40.dp),
+            shape = CircleShape,
+            color = MaterialTheme.colorScheme.primaryContainer,
             contentColor = MaterialTheme.colorScheme.onPrimaryContainer,
-            elevation = FloatingActionButtonDefaults.elevation(
-                defaultElevation = 0.dp
-            )
+            shadowElevation = 0.dp
         ) {
             Icon(
-                imageVector = Icons.Default.MyLocation,
+                imageVector = Icons.Default.LocationOn,
                 contentDescription = "跳转到当前歌曲",
                 modifier = Modifier.size(20.dp)
             )
