@@ -435,12 +435,15 @@ class MusicPlayer @Inject constructor(
             }
 
             val mediaItems = songs.map { createMediaItem(it) }
+            // 使用 setMediaItems 并指定位置，保持当前播放位置
             player?.setMediaItems(mediaItems, newIndex, currentPosition)
+            // 必须调用 prepare() 来准备播放
+            player?.prepare()
             _currentIndex.value = newIndex
 
-            // 如果之前正在播放，确保继续播放
+            // 如果之前正在播放，立即恢复播放
             if (wasPlaying) {
-                player?.play()
+                player?.playWhenReady = true
             }
         }
     }
