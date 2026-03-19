@@ -229,11 +229,30 @@ class MusicPlayer @Inject constructor(
     }
 
     fun playNext() {
-        player?.seekToNextMediaItem()
+        val currentIndex = player?.currentMediaItemIndex ?: 0
+        val queueSize = playbackQueue.getQueue().size
+        if (currentIndex < queueSize - 1) {
+            player?.seekToDefaultPosition(currentIndex + 1)
+        } else if (playbackState.value.repeatMode == RepeatMode.ALL) {
+            // 列表循环模式下，跳到第一首
+            player?.seekToDefaultPosition(0)
+        }
+        player?.play()
     }
 
     fun playPrevious() {
-        player?.seekToPreviousMediaItem()
+        val currentIndex = player?.currentMediaItemIndex ?: 0
+        if (currentIndex > 0) {
+            // 直接跳到上一首歌曲，不管播放进度
+            player?.seekToDefaultPosition(currentIndex - 1)
+        } else if (playbackState.value.repeatMode == RepeatMode.ALL) {
+            // 列表循环模式下，跳到最后一首
+            val lastIndex = playbackQueue.getQueue().size - 1
+            if (lastIndex >= 0) {
+                player?.seekToDefaultPosition(lastIndex)
+            }
+        }
+        player?.play()
     }
 
     /**
@@ -393,6 +412,10 @@ class MusicPlayer @Inject constructor(
     fun setShuffleEnabled(enabled: Boolean) {
         if (playbackQueue.isShuffleEnabled() == enabled) return
 
+        // 保存当前播放状态
+        val wasPlaying = player?.isPlaying == true
+        val currentPosition = player?.currentPosition ?: 0L
+
         // 保存当前播放的歌曲ID，用于在打乱后重新定位
         val currentSongId = playbackQueue.getCurrentSong()?.id
 
@@ -412,8 +435,13 @@ class MusicPlayer @Inject constructor(
             }
 
             val mediaItems = songs.map { createMediaItem(it) }
-            player?.setMediaItems(mediaItems, newIndex, player?.currentPosition ?: 0L)
+            player?.setMediaItems(mediaItems, newIndex, currentPosition)
             _currentIndex.value = newIndex
+
+            // 如果之前正在播放，确保继续播放
+            if (wasPlaying) {
+                player?.play()
+            }
         }
     }
 

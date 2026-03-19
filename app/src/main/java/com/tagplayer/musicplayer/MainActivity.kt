@@ -160,10 +160,10 @@ class MainActivity : ComponentActivity() {
                 // 滚动到当前歌曲的请求计数器
                 var scrollToCurrentSongRequest by remember { mutableIntStateOf(0) }
 
-                // 判断是否在首页（用于显示跳转按钮）
-                val isHomePage by remember(currentRoute) {
+                // 判断是否在首页或筛选页（用于显示跳转按钮）
+                val showScrollButton by remember(currentRoute) {
                     derivedStateOf {
-                        currentRoute == Routes.HOME
+                        currentRoute == Routes.HOME || currentRoute == Routes.FILTER
                     }
                 }
 
@@ -177,7 +177,7 @@ class MainActivity : ComponentActivity() {
                                         navController.navigate(Routes.PLAYER)
                                     },
                                     onScrollToCurrentSong = { scrollToCurrentSongRequest++ },
-                                    showScrollButton = isHomePage
+                                    showScrollButton = showScrollButton
                                 )
                                 BottomNavBar(navController = navController)
                             }
