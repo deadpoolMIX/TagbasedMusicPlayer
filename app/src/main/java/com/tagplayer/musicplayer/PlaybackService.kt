@@ -1,14 +1,51 @@
 package com.tagplayer.musicplayer
 
+import androidx.media3.common.ForwardingPlayer
 import androidx.media3.common.Player
 import androidx.media3.common.util.UnstableApi
 import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.session.MediaSession
 import androidx.media3.session.MediaSessionService
-import androidx.media3.session.SessionCommand
-import androidx.media3.session.SessionResult
-import com.google.common.util.concurrent.ListenableFuture
-import com.google.common.util.concurrent.Futures
+
+/**
+ * 自定义 ForwardingPlayer，拦截上一首/下一首命令
+ * 确保直接切换到上一首/下一首歌曲，而不是跳到歌曲开头
+ */
+@UnstableApi
+class CustomForwardingPlayer(
+    private val exoPlayer: ExoPlayer
+) : ForwardingPlayer(exoPlayer) {
+
+    override fun seekToPreviousMediaItem() {
+        // 直接跳到上一首歌曲，不管播放进度
+        val currentIndex = exoPlayer.currentMediaItemIndex
+        if (currentIndex > 0) {
+            exoPlayer.seekToDefaultPosition(currentIndex - 1)
+            exoPlayer.play()
+        } else if (exoPlayer.repeatMode == Player.REPEAT_MODE_ALL) {
+            // 列表循环：跳到最后一首
+            val lastIndex = exoPlayer.mediaItemCount - 1
+            if (lastIndex >= 0) {
+                exoPlayer.seekToDefaultPosition(lastIndex)
+                exoPlayer.play()
+            }
+        }
+    }
+
+    override fun seekToNextMediaItem() {
+        // 直接跳到下一首歌曲
+        val currentIndex = exoPlayer.currentMediaItemIndex
+        val nextIndex = currentIndex + 1
+        if (nextIndex < exoPlayer.mediaItemCount) {
+            exoPlayer.seekToDefaultPosition(nextIndex)
+            exoPlayer.play()
+        } else if (exoPlayer.repeatMode == Player.REPEAT_MODE_ALL) {
+            // 列表循环：跳到第一首
+            exoPlayer.seekToDefaultPosition(0)
+            exoPlayer.play()
+        }
+    }
+}
 
 /**
  * 媒体会话服务
@@ -21,7 +58,8 @@ import com.google.common.util.concurrent.Futures
 @UnstableApi
 class PlaybackService : MediaSessionService() {
 
-    private var player: ExoPlayer? = null
+    private var exoPlayer: ExoPlayer? = null
+    private var forwardingPlayer: CustomForwardingPlayer? = null
     private var mediaSession: MediaSession? = null
 
     companion object {
@@ -29,67 +67,28 @@ class PlaybackService : MediaSessionService() {
         @Volatile
         private var instance: PlaybackService? = null
 
-        fun getPlayer(): Player? = instance?.player
+        fun getPlayer(): Player? = instance?.exoPlayer
     }
 
     override fun onCreate() {
         super.onCreate()
 
         // 1. 初始化 ExoPlayer
-        player = ExoPlayer.Builder(this).build()
+        exoPlayer = ExoPlayer.Builder(this).build()
 
-        // 2. 创建 MediaSession 并绑定 Player
+        // 2. 使用自定义 ForwardingPlayer 包装 ExoPlayer
+        forwardingPlayer = CustomForwardingPlayer(exoPlayer!!)
+
+        // 3. 创建 MediaSession 并绑定 ForwardingPlayer
         // 系统拿到 Session 就会自动接管通知栏和蓝牙按键
-        mediaSession = MediaSession.Builder(this, player!!)
-            .setCallback(object : MediaSession.Callback {
-                override fun onPlayerCommandRequest(
-                    session: MediaSession,
-                    controller: MediaSession.ControllerInfo,
-                    playerCommand: Int
-                ): Int {
-                    // 拦截上一首/下一首命令，直接跳转而不跳到歌曲开头
-                    when (playerCommand) {
-                        Player.COMMAND_SEEK_TO_PREVIOUS_MEDIA_ITEM -> {
-                            // 直接跳到上一首
-                            val currentIndex = player?.currentMediaItemIndex ?: 0
-                            if (currentIndex > 0) {
-                                player?.seekToDefaultPosition(currentIndex - 1)
-                                player?.play()
-                            } else {
-                                // 列表循环：跳到最后一首
-                                val lastIndex = (player?.mediaItemCount ?: 1) - 1
-                                if (lastIndex >= 0 && player?.repeatMode == Player.REPEAT_MODE_ALL) {
-                                    player?.seekToDefaultPosition(lastIndex)
-                                    player?.play()
-                                }
-                            }
-                            return SessionResult.RESULT_SUCCESS
-                        }
-                        Player.COMMAND_SEEK_TO_NEXT_MEDIA_ITEM -> {
-                            // 直接跳到下一首
-                            val currentIndex = player?.currentMediaItemIndex ?: 0
-                            val nextIndex = currentIndex + 1
-                            if (nextIndex < (player?.mediaItemCount ?: 0)) {
-                                player?.seekToDefaultPosition(nextIndex)
-                                player?.play()
-                            } else if (player?.repeatMode == Player.REPEAT_MODE_ALL) {
-                                // 列表循环：跳到第一首
-                                player?.seekToDefaultPosition(0)
-                                player?.play()
-                            }
-                            return SessionResult.RESULT_SUCCESS
-                        }
-                    }
-                    return super.onPlayerCommandRequest(session, controller, playerCommand)
-                }
-            })
+        mediaSession = MediaSession.Builder(this, forwardingPlayer!!)
             .build()
 
-        // 3. 设置单例引用
+        // 4. 设置单例引用
         instance = this
     }
 
-    // 4. 系统底层（包括 MediaController）连接服务时，必须返回此 Session
+    // 5. 系统底层（包括 MediaController）连接服务时，必须返回此 Session
     override fun onGetSession(controllerInfo: MediaSession.ControllerInfo): MediaSession? {
         return mediaSession
     }
@@ -98,8 +97,9 @@ class PlaybackService : MediaSessionService() {
         instance = null
         mediaSession?.release()
         mediaSession = null
-        player?.release()
-        player = null
+        forwardingPlayer = null
+        exoPlayer?.release()
+        exoPlayer = null
         super.onDestroy()
     }
 }
