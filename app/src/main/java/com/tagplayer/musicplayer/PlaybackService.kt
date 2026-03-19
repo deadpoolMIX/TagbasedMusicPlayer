@@ -45,6 +45,18 @@ class CustomForwardingPlayer(
             exoPlayer.play()
         }
     }
+
+    // 重写 seekToPrevious() 以拦截通知栏上一首按钮
+    // 默认行为：进度超过阈值就跳到当前歌曲开头
+    // 我们改为：始终直接跳到上一首歌曲
+    override fun seekToPrevious() {
+        seekToPreviousMediaItem()
+    }
+
+    // 重写 seekToNext() 保持一致性
+    override fun seekToNext() {
+        seekToNextMediaItem()
+    }
 }
 
 /**
