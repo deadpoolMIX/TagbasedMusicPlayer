@@ -262,11 +262,7 @@ class MusicPlayer @Inject constructor(
     fun setQueue(songs: List<Song>, startIndex: Int = 0) {
         if (songs.isEmpty()) return
 
-        // 重置随机状态，确保用户点击的歌曲就是要播放的歌曲
-        if (playbackQueue.isShuffleEnabled()) {
-            playbackQueue.setShuffleEnabled(false)
-            _playbackState.value = _playbackState.value.copy(isShuffling = false)
-        }
+        // 保持用户设置的随机状态，不再重置
 
         // 1. 更新内部队列
         playbackQueue.setQueue(songs, startIndex)

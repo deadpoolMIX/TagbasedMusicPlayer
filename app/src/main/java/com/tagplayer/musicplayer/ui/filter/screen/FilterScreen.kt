@@ -26,6 +26,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Clear
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.KeyboardArrowUp
 import androidx.compose.material.icons.filled.MyLocation
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.PlaylistAdd
@@ -130,6 +131,17 @@ fun FilterScreen(
                         )
                     },
                     actions = {
+                        // 返回顶部按钮
+                        IconButton(onClick = {
+                            scope.launch {
+                                listState.scrollToItem(0)
+                            }
+                        }) {
+                            Icon(
+                                imageVector = Icons.Default.KeyboardArrowUp,
+                                contentDescription = "返回顶部"
+                            )
+                        }
                         if (filterState.filteredSongs.isNotEmpty()) {
                             IconButton(onClick = { showSavePlaylistDialog = true }) {
                                 Icon(

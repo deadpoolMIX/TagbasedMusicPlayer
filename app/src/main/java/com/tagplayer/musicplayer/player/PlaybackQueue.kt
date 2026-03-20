@@ -36,12 +36,18 @@ class PlaybackQueue {
         return when (repeatMode) {
             RepeatMode.ONE -> getCurrentSong()
             RepeatMode.OFF -> {
-                currentIndex++
-                if (currentIndex >= queue.size) {
-                    currentIndex = -1
-                    null
-                } else {
+                // 随机模式下自动循环，顺序模式下播放到末尾停止
+                if (isShuffling) {
+                    currentIndex = (currentIndex + 1) % queue.size
                     queue[currentIndex]
+                } else {
+                    currentIndex++
+                    if (currentIndex >= queue.size) {
+                        currentIndex = -1
+                        null
+                    } else {
+                        queue[currentIndex]
+                    }
                 }
             }
             RepeatMode.ALL -> {
