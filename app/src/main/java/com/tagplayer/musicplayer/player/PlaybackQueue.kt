@@ -7,7 +7,7 @@ class PlaybackQueue {
     private var shuffledQueue: MutableList<Song> = mutableListOf()
     private var currentIndex: Int = -1
     private var repeatMode: RepeatMode = RepeatMode.OFF
-    private var isShuffling: Boolean = false
+    private var isShuffling: Boolean = true  // 默认开启随机播放
 
     fun setQueue(songs: List<Song>, startIndex: Int = 0) {
         originalQueue = songs.toMutableList()

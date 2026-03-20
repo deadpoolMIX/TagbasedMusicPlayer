@@ -8,7 +8,7 @@ data class PlaybackState(
     val currentSongId: Long? = null,
     val currentIndex: Int = 0,
     val repeatMode: RepeatMode = RepeatMode.OFF,
-    val isShuffling: Boolean = false,
+    val isShuffling: Boolean = true,  // 默认开启随机播放
     val position: Long = 0L,
     val duration: Long = 0L,
     val bufferedPosition: Long = 0L,
