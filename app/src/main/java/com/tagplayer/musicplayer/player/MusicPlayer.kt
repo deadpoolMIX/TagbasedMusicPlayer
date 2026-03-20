@@ -231,28 +231,55 @@ class MusicPlayer @Inject constructor(
     fun playNext() {
         val currentIndex = player?.currentMediaItemIndex ?: 0
         val queueSize = playbackQueue.getQueue().size
+        val isShuffling = playbackQueue.isShuffleEnabled()
+        val repeatMode = playbackState.value.repeatMode
+
         if (currentIndex < queueSize - 1) {
             player?.seekToDefaultPosition(currentIndex + 1)
-        } else if (playbackState.value.repeatMode == RepeatMode.ALL) {
-            // 列表循环模式下，跳到第一首
-            player?.seekToDefaultPosition(0)
+        } else {
+            // 到达列表末尾
+            if (repeatMode == RepeatMode.ALL || isShuffling) {
+                // 列表循环或随机模式下，跳到第一首
+                if (isShuffling && repeatMode != RepeatMode.ONE) {
+                    // 随机模式：重新打乱队列
+                    reshuffleQueue()
+                }
+                player?.seekToDefaultPosition(0)
+            }
         }
         player?.play()
     }
 
     fun playPrevious() {
         val currentIndex = player?.currentMediaItemIndex ?: 0
+        val isShuffling = playbackQueue.isShuffleEnabled()
+
         if (currentIndex > 0) {
-            // 直接跳到上一首歌曲，不管播放进度
             player?.seekToDefaultPosition(currentIndex - 1)
-        } else if (playbackState.value.repeatMode == RepeatMode.ALL) {
-            // 列表循环模式下，跳到最后一首
+        } else if (playbackState.value.repeatMode == RepeatMode.ALL || isShuffling) {
+            // 列表循环或随机模式下，跳到最后一首
             val lastIndex = playbackQueue.getQueue().size - 1
             if (lastIndex >= 0) {
                 player?.seekToDefaultPosition(lastIndex)
             }
         }
         player?.play()
+    }
+
+    /**
+     * 重新打乱队列（用于随机模式下一轮播放结束）
+     */
+    private fun reshuffleQueue() {
+        val currentSong = playbackQueue.getCurrentSong()
+        playbackQueue.reshuffle()
+        val newQueue = playbackQueue.getQueue()
+        _queue.value = newQueue
+
+        // 同步到Player
+        val mediaItems = newQueue.map { createMediaItem(it) }
+        val newIndex = currentSong?.let { newQueue.indexOfFirst { it.id == currentSong.id }.coerceAtLeast(0) } ?: 0
+        player?.setMediaItems(mediaItems, newIndex, player?.currentPosition ?: 0L)
+        player?.prepare()
     }
 
     /**
@@ -286,6 +313,10 @@ class MusicPlayer @Inject constructor(
             // 4. 一次性注入完整队列到 Player（不使用 Player 的 shuffle）
             player?.let { p ->
                 p.shuffleModeEnabled = false
+                // 随机模式下使用REPEAT_MODE_ALL让Player循环播放
+                if (playbackQueue.isShuffleEnabled()) {
+                    p.repeatMode = Player.REPEAT_MODE_ALL
+                }
                 p.setMediaItems(mediaItems, currentIndex, 0L)
                 p.prepare()
                 p.play()
@@ -405,7 +436,12 @@ class MusicPlayer @Inject constructor(
     fun setRepeatMode(mode: RepeatMode) {
         playbackQueue.setRepeatMode(mode)
         _playbackState.value = _playbackState.value.copy(repeatMode = mode)
-        updatePlayerRepeatMode(mode)
+        // 随机模式下Player始终使用REPEAT_MODE_ALL
+        if (playbackQueue.isShuffleEnabled()) {
+            player?.repeatMode = Player.REPEAT_MODE_ALL
+        } else {
+            updatePlayerRepeatMode(mode)
+        }
     }
 
     fun setShuffleEnabled(enabled: Boolean) {
@@ -421,6 +457,14 @@ class MusicPlayer @Inject constructor(
         playbackQueue.setShuffleEnabled(enabled)
         _playbackState.value = _playbackState.value.copy(isShuffling = enabled)
         _queue.value = playbackQueue.getQueue()
+
+        // 更新Player的repeatMode：随机模式下使用REPEAT_MODE_ALL
+        player?.repeatMode = if (enabled) Player.REPEAT_MODE_ALL
+                             else when (playbackQueue.getRepeatMode()) {
+                                 RepeatMode.OFF -> Player.REPEAT_MODE_OFF
+                                 RepeatMode.ONE -> Player.REPEAT_MODE_ONE
+                                 RepeatMode.ALL -> Player.REPEAT_MODE_ALL
+                             }
 
         // 不使用 Media3 的内置随机，而是重新同步打乱后的队列
         // 这样 Player 和 PlaybackQueue 的顺序完全一致

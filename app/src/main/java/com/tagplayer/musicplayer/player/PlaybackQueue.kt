@@ -151,6 +151,26 @@ class PlaybackQueue {
 
     fun isShuffleEnabled(): Boolean = isShuffling
 
+    /**
+     * 重新打乱队列（随机模式下一轮播放结束后调用）
+     */
+    fun reshuffle() {
+        if (!isShuffling || originalQueue.isEmpty()) return
+
+        val currentSong = getCurrentSong()
+        shuffledQueue = originalQueue.toMutableList()
+        shuffledQueue.shuffle()
+
+        // 将当前歌曲保持在当前位置
+        if (currentSong != null) {
+            val newIndex = shuffledQueue.indexOf(currentSong)
+            if (newIndex != -1 && newIndex != currentIndex) {
+                shuffledQueue.removeAt(newIndex)
+                shuffledQueue.add(currentIndex.coerceIn(0, shuffledQueue.size), currentSong)
+            }
+        }
+    }
+
     private fun shuffleQueue() {
         if (originalQueue.isEmpty()) return
 
