@@ -14,7 +14,9 @@ class PlaybackQueue {
         shuffledQueue = originalQueue.toMutableList()
         currentIndex = if (songs.isNotEmpty()) startIndex.coerceIn(0, songs.size - 1) else -1
         if (isShuffling) {
-            shuffleQueue()
+            // 随机模式下，打乱队列但确保用户点击的歌曲在索引0
+            shuffleQueueWithStartSong(startIndex)
+            currentIndex = 0
         }
     }
 
@@ -163,6 +165,25 @@ class PlaybackQueue {
                 shuffledQueue.removeAt(newIndex)
                 shuffledQueue.add(currentIndex.coerceIn(0, shuffledQueue.size), currentSong)
             }
+        }
+    }
+
+    /**
+     * 打乱队列并确保指定索引的歌曲在位置0
+     * 用于设置新队列时保持用户点击的歌曲为当前播放歌曲
+     */
+    private fun shuffleQueueWithStartSong(startIndex: Int) {
+        if (originalQueue.isEmpty() || startIndex !in originalQueue.indices) return
+
+        val startSong = originalQueue[startIndex]
+        shuffledQueue = originalQueue.toMutableList()
+        shuffledQueue.shuffle()
+
+        // 将用户点击的歌曲移到索引0
+        val startSongIndex = shuffledQueue.indexOf(startSong)
+        if (startSongIndex != -1 && startSongIndex != 0) {
+            shuffledQueue.removeAt(startSongIndex)
+            shuffledQueue.add(0, startSong)
         }
     }
 

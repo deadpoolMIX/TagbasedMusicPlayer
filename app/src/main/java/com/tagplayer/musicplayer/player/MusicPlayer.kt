@@ -262,28 +262,31 @@ class MusicPlayer @Inject constructor(
     fun setQueue(songs: List<Song>, startIndex: Int = 0) {
         if (songs.isEmpty()) return
 
-        // 保持用户设置的随机状态，不再重置
-
-        // 1. 更新内部队列
+        // 1. 更新内部队列（如果在随机模式下，会打乱队列并确保用户点击的歌曲在索引0）
         playbackQueue.setQueue(songs, startIndex)
-        _queue.value = playbackQueue.getQueue()
-        _currentIndex.value = playbackQueue.getCurrentIndex()
+
+        // 2. 获取队列（可能是打乱后的），确保Player和PlaybackQueue使用相同的顺序
+        val queue = playbackQueue.getQueue()
+        val currentIndex = playbackQueue.getCurrentIndex()
+
+        _queue.value = queue
+        _currentIndex.value = currentIndex
 
         val currentSong = playbackQueue.getCurrentSong()
         if (currentSong != null) {
             _playbackState.value = _playbackState.value.copy(
                 currentSong = currentSong,
                 currentSongId = currentSong.id,
-                currentIndex = startIndex
+                currentIndex = currentIndex
             )
 
-            // 2. 将整个队列转换为 MediaItem 列表
-            val mediaItems = songs.map { song -> createMediaItem(song) }
+            // 3. 将队列转换为 MediaItem 列表（使用与PlaybackQueue相同的顺序）
+            val mediaItems = queue.map { song -> createMediaItem(song) }
 
-            // 3. 一次性注入完整队列到 Player（不使用 Player 的 shuffle）
+            // 4. 一次性注入完整队列到 Player（不使用 Player 的 shuffle）
             player?.let { p ->
                 p.shuffleModeEnabled = false
-                p.setMediaItems(mediaItems, startIndex, 0L)
+                p.setMediaItems(mediaItems, currentIndex, 0L)
                 p.prepare()
                 p.play()
             }
