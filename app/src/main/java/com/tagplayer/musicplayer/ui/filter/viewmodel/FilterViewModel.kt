@@ -142,6 +142,15 @@ class FilterViewModel @Inject constructor(
     fun getFilteredSongIds(): List<Long> {
         return filterState.value.filteredSongs.map { it.id }
     }
+
+    fun deleteSong(song: Song, deleteFile: Boolean = false) {
+        viewModelScope.launch {
+            if (deleteFile) {
+                songRepository.deleteSongFile(song)
+            }
+            songRepository.deleteSong(song)
+        }
+    }
 }
 
 enum class FilterBox {

@@ -2,6 +2,7 @@ package com.tagplayer.musicplayer.ui.filter.screen
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.scrollBy
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -10,6 +11,7 @@ import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -48,6 +50,7 @@ import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
@@ -56,31 +59,41 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.core.graphics.ColorUtils
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.compose.ui.platform.LocalContext
-import androidx.lifecycle.ViewModelProvider
-import androidx.compose.runtime.DisposableEffect
 import androidx.activity.ComponentActivity
+import com.tagplayer.musicplayer.data.local.entity.Song
 import com.tagplayer.musicplayer.data.local.entity.Tag
+import com.tagplayer.musicplayer.ui.components.SongActionSheet
 import com.tagplayer.musicplayer.ui.components.SongItem
 import com.tagplayer.musicplayer.ui.components.TagPickerDialog
+import com.tagplayer.musicplayer.ui.components.TagSelectionDialog
 import com.tagplayer.musicplayer.ui.filter.viewmodel.FilterBox
 import com.tagplayer.musicplayer.ui.filter.viewmodel.FilterState
 import com.tagplayer.musicplayer.ui.filter.viewmodel.FilterViewModel
 import com.tagplayer.musicplayer.ui.player.viewmodel.PlayerViewModel
+import com.tagplayer.musicplayer.ui.playlist.viewmodel.PlaylistViewModel
+import com.tagplayer.musicplayer.ui.tags.viewmodel.TagViewModel
 import kotlinx.coroutines.launch
+import kotlin.math.abs
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun FilterScreen(
     modifier: Modifier = Modifier,
     activityViewModel: FilterViewModel? = null,
-    playerViewModel: PlayerViewModel = hiltViewModel()
+    playerViewModel: PlayerViewModel = hiltViewModel(),
+    playlistViewModel: PlaylistViewModel = hiltViewModel(),
+    tagViewModel: TagViewModel = hiltViewModel()
 ) {
     // 使用 Activity 级别的 ViewModel，确保导航返回后状态保持
     val activity = LocalContext.current as ComponentActivity
@@ -94,6 +107,11 @@ fun FilterScreen(
 
     var showTagSelector by remember { mutableStateOf<FilterBox?>(null) }
     var showSavePlaylistDialog by remember { mutableStateOf(false) }
+
+    // 歌曲操作菜单状态
+    var selectedSong by remember { mutableStateOf<Song?>(null) }
+    var showActionSheet by remember { mutableStateOf(false) }
+    var showTagSelection by remember { mutableStateOf(false) }
 
     // 列表状态和协程作用域
     val listState = rememberLazyListState()
@@ -162,117 +180,133 @@ fun FilterScreen(
                 )
             }
         ) { paddingValues ->
-            LazyColumn(
-                state = listState,
+            // 使用 Box 包裹 LazyColumn 和滚动条
+            Box(
                 modifier = Modifier
                     .fillMaxSize()
-                    .padding(paddingValues),
-                contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp)
+                    .padding(paddingValues)
             ) {
-                // 筛选条件区域
-                item {
-                    // 逻辑公式展示
-                    FilterFormula()
-
-                    Spacer(modifier = Modifier.height(16.dp))
-
-                    // 框A - 包含标签
-                    FilterBoxSection(
-                        title = "框 A",
-                        subtitle = "必须包含以下所有标签",
-                        tags = filterState.boxATags,
-                        onAddClick = { showTagSelector = FilterBox.A },
-                        onRemoveTag = { tag -> viewModel.removeTagFromBox(tag, FilterBox.A) },
-                        onClear = { viewModel.clearBox(FilterBox.A) }
-                    )
-
-                    Spacer(modifier = Modifier.height(8.dp))
-
-                    // 并集符号
-                    OperatorSymbol("+")
-
-                    Spacer(modifier = Modifier.height(8.dp))
-
-                    // 框B - 可选标签
-                    FilterBoxSection(
-                        title = "框 B",
-                        subtitle = "满足任意标签即可",
-                        tags = filterState.boxBTags,
-                        onAddClick = { showTagSelector = FilterBox.B },
-                        onRemoveTag = { tag -> viewModel.removeTagFromBox(tag, FilterBox.B) },
-                        onClear = { viewModel.clearBox(FilterBox.B) }
-                    )
-
-                    Spacer(modifier = Modifier.height(8.dp))
-
-                    // 差集符号
-                    OperatorSymbol("-")
-
-                    Spacer(modifier = Modifier.height(8.dp))
-
-                    // 框C - 排除标签
-                    FilterBoxSection(
-                        title = "框 C",
-                        subtitle = "排除包含以下任意标签的歌曲",
-                        tags = filterState.boxCTags,
-                        onAddClick = { showTagSelector = FilterBox.C },
-                        onRemoveTag = { tag -> viewModel.removeTagFromBox(tag, FilterBox.C) },
-                        onClear = { viewModel.clearBox(FilterBox.C) }
-                    )
-
-                    Spacer(modifier = Modifier.height(16.dp))
-
-                    HorizontalDivider()
-
-                    Spacer(modifier = Modifier.height(16.dp))
-
-                    // 结果统计
-                    FilterResultHeader(
-                        count = filterState.filteredSongs.size,
-                        hasActiveFilters = hasActiveFilters(filterState),
-                        onPlayAll = {
-                            if (filterState.filteredSongs.isNotEmpty()) {
-                                playerViewModel.setQueue(filterState.filteredSongs, 0)
-                            }
-                        }
-                    )
-
-                    Spacer(modifier = Modifier.height(16.dp))
-                }
-
-                // 歌曲列表
-                if (filterState.filteredSongs.isEmpty()) {
+                LazyColumn(
+                    state = listState,
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(end = 12.dp), // 为滚动条留出空间
+                    contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp)
+                ) {
+                    // 筛选条件区域
                     item {
-                        Box(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .height(200.dp),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            EmptyFilterState(hasActiveFilters(filterState))
-                        }
-                    }
-                } else {
-                    items(
-                        items = filterState.filteredSongs,
-                        key = { it.id }
-                    ) { song ->
-                        val isPlaying = song.id == currentPlayingSongId
-                        SongItem(
-                            song = song,
-                            isPlaying = isPlaying,
-                            onClick = {
-                                // 使用 ID 查找索引，避免对象比较问题
-                                val index = filterState.filteredSongs.indexOfFirst { it.id == song.id }
-                                if (index >= 0) {
-                                    playerViewModel.setQueue(filterState.filteredSongs, index)
+                        // 逻辑公式展示
+                        FilterFormula()
+
+                        Spacer(modifier = Modifier.height(16.dp))
+
+                        // 框A - 包含标签
+                        FilterBoxSection(
+                            title = "框 A",
+                            subtitle = "必须包含以下所有标签",
+                            tags = filterState.boxATags,
+                            onAddClick = { showTagSelector = FilterBox.A },
+                            onRemoveTag = { tag -> viewModel.removeTagFromBox(tag, FilterBox.A) },
+                            onClear = { viewModel.clearBox(FilterBox.A) }
+                        )
+
+                        Spacer(modifier = Modifier.height(8.dp))
+
+                        // 并集符号
+                        OperatorSymbol("+")
+
+                        Spacer(modifier = Modifier.height(8.dp))
+
+                        // 框B - 可选标签
+                        FilterBoxSection(
+                            title = "框 B",
+                            subtitle = "满足任意标签即可",
+                            tags = filterState.boxBTags,
+                            onAddClick = { showTagSelector = FilterBox.B },
+                            onRemoveTag = { tag -> viewModel.removeTagFromBox(tag, FilterBox.B) },
+                            onClear = { viewModel.clearBox(FilterBox.B) }
+                        )
+
+                        Spacer(modifier = Modifier.height(8.dp))
+
+                        // 差集符号
+                        OperatorSymbol("-")
+
+                        Spacer(modifier = Modifier.height(8.dp))
+
+                        // 框C - 排除标签
+                        FilterBoxSection(
+                            title = "框 C",
+                            subtitle = "排除包含以下任意标签的歌曲",
+                            tags = filterState.boxCTags,
+                            onAddClick = { showTagSelector = FilterBox.C },
+                            onRemoveTag = { tag -> viewModel.removeTagFromBox(tag, FilterBox.C) },
+                            onClear = { viewModel.clearBox(FilterBox.C) }
+                        )
+
+                        Spacer(modifier = Modifier.height(16.dp))
+
+                        HorizontalDivider()
+
+                        Spacer(modifier = Modifier.height(16.dp))
+
+                        // 结果统计
+                        FilterResultHeader(
+                            count = filterState.filteredSongs.size,
+                            hasActiveFilters = hasActiveFilters(filterState),
+                            onPlayAll = {
+                                if (filterState.filteredSongs.isNotEmpty()) {
+                                    playerViewModel.setQueue(filterState.filteredSongs, 0)
                                 }
-                            },
-                            onMoreClick = {
-                                // TODO: 显示操作菜单
                             }
                         )
+
+                        Spacer(modifier = Modifier.height(16.dp))
                     }
+
+                    // 歌曲列表
+                    if (filterState.filteredSongs.isEmpty()) {
+                        item {
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .height(200.dp),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                EmptyFilterState(hasActiveFilters(filterState))
+                            }
+                        }
+                    } else {
+                        items(
+                            items = filterState.filteredSongs,
+                            key = { it.id }
+                        ) { song ->
+                            val isPlaying = song.id == currentPlayingSongId
+                            SongItem(
+                                song = song,
+                                isPlaying = isPlaying,
+                                onClick = {
+                                    // 使用 ID 查找索引，避免对象比较问题
+                                    val index = filterState.filteredSongs.indexOfFirst { it.id == song.id }
+                                    if (index >= 0) {
+                                        playerViewModel.setQueue(filterState.filteredSongs, index)
+                                    }
+                                },
+                                onMoreClick = {
+                                    selectedSong = song
+                                    showActionSheet = true
+                                }
+                            )
+                        }
+                    }
+                }
+
+                // 快速滚动条
+                if (filterState.filteredSongs.isNotEmpty()) {
+                    FastScrollBar(
+                        listState = listState,
+                        modifier = Modifier.align(Alignment.CenterEnd)
+                    )
                 }
             }
         }
@@ -338,6 +372,131 @@ fun FilterScreen(
                 }
             }
         )
+    }
+
+    // 歌曲操作菜单
+    if (showActionSheet && selectedSong != null) {
+        SongActionSheet(
+            song = selectedSong!!,
+            onDismiss = {
+                showActionSheet = false
+                selectedSong = null
+            },
+            onPlayNext = {
+                playerViewModel.addToQueueNext(selectedSong!!)
+                showActionSheet = false
+                selectedSong = null
+            },
+            onAddToPlaylist = {
+                playlistViewModel.showAddToPlaylistDialog(selectedSong!!)
+                showActionSheet = false
+            },
+            onAddTag = {
+                showTagSelection = true
+            },
+            onViewArtist = {
+                // TODO: 导航到艺术家详情
+                showActionSheet = false
+                selectedSong = null
+            },
+            onViewAlbum = {
+                // TODO: 导航到专辑详情
+                showActionSheet = false
+                selectedSong = null
+            },
+            onDelete = { deleteFile ->
+                viewModel.deleteSong(selectedSong!!, deleteFile)
+                showActionSheet = false
+                selectedSong = null
+            }
+        )
+    }
+
+    // 添加到歌单对话框
+    val showAddToPlaylistDialog by playlistViewModel.showAddToPlaylistDialog.collectAsState()
+    val songToAdd by playlistViewModel.songToAdd.collectAsState()
+
+    if (showAddToPlaylistDialog && songToAdd != null) {
+        com.tagplayer.musicplayer.ui.playlist.screen.AddToPlaylistDialog(
+            songTitle = songToAdd!!.title,
+            onDismiss = playlistViewModel::dismissAddToPlaylistDialog
+        )
+    }
+
+    // 标签选择对话框
+    if (showTagSelection && selectedSong != null) {
+        TagSelectionDialog(
+            song = selectedSong!!,
+            onDismiss = {
+                showTagSelection = false
+                showActionSheet = false
+                selectedSong = null
+            },
+            viewModel = tagViewModel
+        )
+    }
+}
+
+/**
+ * 快速滚动条组件
+ */
+@Composable
+private fun FastScrollBar(
+    listState: androidx.compose.foundation.lazy.LazyListState,
+    modifier: Modifier = Modifier
+) {
+    val totalItems = listState.layoutInfo.totalItemsCount
+    val firstVisibleItem by remember { derivedStateOf { listState.firstVisibleItemIndex } }
+
+    // 计算滚动条位置
+    val scrollProgress = if (totalItems > 1) {
+        firstVisibleItem.toFloat() / (totalItems - 1).coerceAtLeast(1)
+    } else 0f
+
+    val scope = rememberCoroutineScope()
+
+    Column(
+        modifier = modifier
+            .fillMaxHeight()
+            .padding(vertical = 48.dp, horizontal = 4.dp)
+            .width(20.dp)
+            .pointerInput(totalItems) {
+                awaitPointerEventScope {
+                    while (true) {
+                        val event = awaitPointerEvent()
+                        val change = event.changes.firstOrNull { it.pressed } ?: continue
+
+                        val y = change.position.y
+                        val height = size.height.toFloat()
+
+                        if (height > 0 && totalItems > 0) {
+                            // 计算目标位置
+                            val targetProgress = (y / height).coerceIn(0f, 1f)
+                            val targetItem = (targetProgress * (totalItems - 1)).toInt()
+
+                            scope.launch {
+                                listState.scrollToItem(targetItem.coerceAtLeast(0))
+                            }
+                        }
+                    }
+                }
+            },
+        verticalArrangement = Arrangement.SpaceBetween
+    ) {
+        // 使用百分比指示器
+        repeat(5) { index ->
+            val indicatorAlpha = if (index == (scrollProgress * 4).toInt()) {
+                0.8f
+            } else {
+                0.3f
+            }
+            Box(
+                modifier = Modifier
+                    .size(4.dp)
+                    .clip(CircleShape)
+                    .background(MaterialTheme.colorScheme.primary.copy(alpha = indicatorAlpha))
+            )
+        }
     }
 }
 
@@ -464,7 +623,7 @@ private fun FilterTagChip(
 ) {
     Surface(
         shape = RoundedCornerShape(9999.dp),
-        color = tag.color?.let { androidx.compose.ui.graphics.Color(it) }
+        color = tag.color?.let { Color(it) }
             ?: MaterialTheme.colorScheme.secondaryContainer
     ) {
         Row(
@@ -479,8 +638,8 @@ private fun FilterTagChip(
                 color = tag.color?.let {
                     val hsl = FloatArray(3)
                     ColorUtils.colorToHSL(it, hsl)
-                    if (hsl[2] > 0.5f) androidx.compose.ui.graphics.Color.Black
-                    else androidx.compose.ui.graphics.Color.White
+                    if (hsl[2] > 0.5f) Color.Black
+                    else Color.White
                 } ?: MaterialTheme.colorScheme.onSecondaryContainer
             )
             Spacer(modifier = Modifier.width(4.dp))
@@ -491,8 +650,8 @@ private fun FilterTagChip(
                 tint = tag.color?.let {
                     val hsl = FloatArray(3)
                     ColorUtils.colorToHSL(it, hsl)
-                    if (hsl[2] > 0.5f) androidx.compose.ui.graphics.Color.Black
-                    else androidx.compose.ui.graphics.Color.White
+                    if (hsl[2] > 0.5f) Color.Black
+                    else Color.White
                 } ?: MaterialTheme.colorScheme.onSecondaryContainer
             )
         }

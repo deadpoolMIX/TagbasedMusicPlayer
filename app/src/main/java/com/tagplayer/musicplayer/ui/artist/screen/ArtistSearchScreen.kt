@@ -15,6 +15,8 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardActions
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Clear
@@ -31,13 +33,16 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
+import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
@@ -55,7 +60,10 @@ fun ArtistSearchScreen(
     val searchQuery by viewModel.searchQuery.collectAsState()
     val allArtists by viewModel.artists.collectAsState()
 
-    // 根据搜索词过滤歌手
+    // 本地输入状态，用于手动搜索
+    var inputText by remember { mutableStateOf(searchQuery) }
+
+    // 根据搜索词过滤歌手（只在搜索词变化时过滤）
     val filteredArtists = remember(searchQuery, allArtists) {
         if (searchQuery.isEmpty()) {
             emptyList()
@@ -76,12 +84,10 @@ fun ArtistSearchScreen(
         keyboardController?.show()
     }
 
-    // 搜索后关闭键盘
-    LaunchedEffect(searchQuery) {
-        if (searchQuery.isNotEmpty()) {
-            delay(100)
-            keyboardController?.hide()
-        }
+    // 执行搜索
+    fun performSearch() {
+        viewModel.onSearchQueryChange(inputText)
+        keyboardController?.hide()
     }
 
     Scaffold(
@@ -107,8 +113,8 @@ fun ArtistSearchScreen(
                 }
 
                 OutlinedTextField(
-                    value = searchQuery,
-                    onValueChange = { viewModel.onSearchQueryChange(it) },
+                    value = inputText,
+                    onValueChange = { inputText = it },
                     modifier = Modifier
                         .weight(1f)
                         .focusRequester(focusRequester),
@@ -119,8 +125,9 @@ fun ArtistSearchScreen(
                         )
                     },
                     trailingIcon = {
-                        if (searchQuery.isNotEmpty()) {
+                        if (inputText.isNotEmpty()) {
                             IconButton(onClick = {
+                                inputText = ""
                                 viewModel.onSearchQueryChange("")
                             }) {
                                 Icon(
@@ -132,6 +139,12 @@ fun ArtistSearchScreen(
                     },
                     singleLine = true,
                     shape = RoundedCornerShape(24.dp),
+                    keyboardOptions = KeyboardOptions(
+                        imeAction = ImeAction.Search
+                    ),
+                    keyboardActions = KeyboardActions(
+                        onSearch = { performSearch() }
+                    ),
                     colors = OutlinedTextFieldDefaults.colors(
                         focusedContainerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f),
                         unfocusedContainerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f),
@@ -139,6 +152,14 @@ fun ArtistSearchScreen(
                         unfocusedBorderColor = MaterialTheme.colorScheme.outline.copy(alpha = 0.3f)
                     )
                 )
+
+                // 搜索按钮
+                IconButton(onClick = { performSearch() }) {
+                    Icon(
+                        imageVector = Icons.Default.Search,
+                        contentDescription = "搜索"
+                    )
+                }
             }
 
             // 搜索结果
