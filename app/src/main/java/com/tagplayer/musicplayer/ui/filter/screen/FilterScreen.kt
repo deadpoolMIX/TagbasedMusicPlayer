@@ -2,7 +2,6 @@ package com.tagplayer.musicplayer.ui.filter.screen
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.gestures.scrollBy
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -20,6 +19,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
@@ -59,13 +59,14 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.input.pointer.PointerEventType
 import androidx.compose.ui.input.pointer.pointerInput
-import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.core.graphics.ColorUtils
 import androidx.hilt.navigation.compose.hiltViewModel
@@ -84,7 +85,6 @@ import com.tagplayer.musicplayer.ui.player.viewmodel.PlayerViewModel
 import com.tagplayer.musicplayer.ui.playlist.viewmodel.PlaylistViewModel
 import com.tagplayer.musicplayer.ui.tags.viewmodel.TagViewModel
 import kotlinx.coroutines.launch
-import kotlin.math.abs
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -138,198 +138,184 @@ fun FilterScreen(
         currentPlayingSongId != null && filterState.filteredSongs.any { it.id == currentPlayingSongId }
     }
 
-    Box(modifier = modifier) {
-        Scaffold(
-            topBar = {
-                TopAppBar(
-                    title = {
-                        Text(
-                            text = "筛选",
-                            style = MaterialTheme.typography.titleMedium
-                        )
-                    },
-                    actions = {
-                        // 返回顶部按钮
-                        IconButton(onClick = {
-                            scope.launch {
-                                listState.scrollToItem(0)
-                            }
-                        }) {
+    Scaffold(
+        modifier = modifier,
+        topBar = {
+            TopAppBar(
+                title = {
+                    Text(
+                        text = "筛选",
+                        style = MaterialTheme.typography.titleMedium
+                    )
+                },
+                actions = {
+                    // 跳转到当前歌曲按钮
+                    if (currentSongInFilter) {
+                        IconButton(onClick = { scrollToCurrentSongRequest++ }) {
                             Icon(
-                                imageVector = Icons.Default.KeyboardArrowUp,
-                                contentDescription = "返回顶部"
+                                imageVector = Icons.Default.MyLocation,
+                                contentDescription = "跳转到当前歌曲"
                             )
                         }
-                        if (filterState.filteredSongs.isNotEmpty()) {
-                            IconButton(onClick = { showSavePlaylistDialog = true }) {
-                                Icon(
-                                    imageVector = Icons.Default.PlaylistAdd,
-                                    contentDescription = "保存为歌单"
-                                )
-                            }
+                    }
+                    // 返回顶部按钮
+                    IconButton(onClick = {
+                        scope.launch {
+                            listState.scrollToItem(0)
                         }
-                        if (hasActiveFilters(filterState)) {
-                            TextButton(onClick = { viewModel.clearAllFilters() }) {
-                                Text("清除")
-                            }
+                    }) {
+                        Icon(
+                            imageVector = Icons.Default.KeyboardArrowUp,
+                            contentDescription = "返回顶部"
+                        )
+                    }
+                    if (filterState.filteredSongs.isNotEmpty()) {
+                        IconButton(onClick = { showSavePlaylistDialog = true }) {
+                            Icon(
+                                imageVector = Icons.Default.PlaylistAdd,
+                                contentDescription = "保存为歌单"
+                            )
                         }
-                    },
-                    colors = TopAppBarDefaults.topAppBarColors(
-                        containerColor = MaterialTheme.colorScheme.background
-                    )
+                    }
+                    if (hasActiveFilters(filterState)) {
+                        TextButton(onClick = { viewModel.clearAllFilters() }) {
+                            Text("清除")
+                        }
+                    }
+                },
+                colors = TopAppBarDefaults.topAppBarColors(
+                    containerColor = MaterialTheme.colorScheme.background
                 )
-            }
-        ) { paddingValues ->
-            // 使用 Box 包裹 LazyColumn 和滚动条
-            Box(
+            )
+        }
+    ) { paddingValues ->
+        // 使用 Box 包裹 LazyColumn 和滚动条
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(paddingValues)
+        ) {
+            LazyColumn(
+                state = listState,
                 modifier = Modifier
                     .fillMaxSize()
-                    .padding(paddingValues)
+                    .padding(end = 16.dp), // 为滚动条留出空间
+                contentPadding = PaddingValues(start = 16.dp, end = 4.dp, top = 8.dp, bottom = 8.dp)
             ) {
-                LazyColumn(
-                    state = listState,
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .padding(end = 12.dp), // 为滚动条留出空间
-                    contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp)
-                ) {
-                    // 筛选条件区域
-                    item {
-                        // 逻辑公式展示
-                        FilterFormula()
+                // 筛选条件区域
+                item {
+                    // 逻辑公式展示
+                    FilterFormula()
 
-                        Spacer(modifier = Modifier.height(16.dp))
+                    Spacer(modifier = Modifier.height(16.dp))
 
-                        // 框A - 包含标签
-                        FilterBoxSection(
-                            title = "框 A",
-                            subtitle = "必须包含以下所有标签",
-                            tags = filterState.boxATags,
-                            onAddClick = { showTagSelector = FilterBox.A },
-                            onRemoveTag = { tag -> viewModel.removeTagFromBox(tag, FilterBox.A) },
-                            onClear = { viewModel.clearBox(FilterBox.A) }
-                        )
+                    // 框A - 包含标签
+                    FilterBoxSection(
+                        title = "框 A",
+                        subtitle = "必须包含以下所有标签",
+                        tags = filterState.boxATags,
+                        onAddClick = { showTagSelector = FilterBox.A },
+                        onRemoveTag = { tag -> viewModel.removeTagFromBox(tag, FilterBox.A) },
+                        onClear = { viewModel.clearBox(FilterBox.A) }
+                    )
 
-                        Spacer(modifier = Modifier.height(8.dp))
+                    Spacer(modifier = Modifier.height(8.dp))
 
-                        // 并集符号
-                        OperatorSymbol("+")
+                    // 并集符号
+                    OperatorSymbol("+")
 
-                        Spacer(modifier = Modifier.height(8.dp))
+                    Spacer(modifier = Modifier.height(8.dp))
 
-                        // 框B - 可选标签
-                        FilterBoxSection(
-                            title = "框 B",
-                            subtitle = "满足任意标签即可",
-                            tags = filterState.boxBTags,
-                            onAddClick = { showTagSelector = FilterBox.B },
-                            onRemoveTag = { tag -> viewModel.removeTagFromBox(tag, FilterBox.B) },
-                            onClear = { viewModel.clearBox(FilterBox.B) }
-                        )
+                    // 框B - 可选标签
+                    FilterBoxSection(
+                        title = "框 B",
+                        subtitle = "满足任意标签即可",
+                        tags = filterState.boxBTags,
+                        onAddClick = { showTagSelector = FilterBox.B },
+                        onRemoveTag = { tag -> viewModel.removeTagFromBox(tag, FilterBox.B) },
+                        onClear = { viewModel.clearBox(FilterBox.B) }
+                    )
 
-                        Spacer(modifier = Modifier.height(8.dp))
+                    Spacer(modifier = Modifier.height(8.dp))
 
-                        // 差集符号
-                        OperatorSymbol("-")
+                    // 差集符号
+                    OperatorSymbol("-")
 
-                        Spacer(modifier = Modifier.height(8.dp))
+                    Spacer(modifier = Modifier.height(8.dp))
 
-                        // 框C - 排除标签
-                        FilterBoxSection(
-                            title = "框 C",
-                            subtitle = "排除包含以下任意标签的歌曲",
-                            tags = filterState.boxCTags,
-                            onAddClick = { showTagSelector = FilterBox.C },
-                            onRemoveTag = { tag -> viewModel.removeTagFromBox(tag, FilterBox.C) },
-                            onClear = { viewModel.clearBox(FilterBox.C) }
-                        )
+                    // 框C - 排除标签
+                    FilterBoxSection(
+                        title = "框 C",
+                        subtitle = "排除包含以下任意标签的歌曲",
+                        tags = filterState.boxCTags,
+                        onAddClick = { showTagSelector = FilterBox.C },
+                        onRemoveTag = { tag -> viewModel.removeTagFromBox(tag, FilterBox.C) },
+                        onClear = { viewModel.clearBox(FilterBox.C) }
+                    )
 
-                        Spacer(modifier = Modifier.height(16.dp))
+                    Spacer(modifier = Modifier.height(16.dp))
 
-                        HorizontalDivider()
+                    HorizontalDivider()
 
-                        Spacer(modifier = Modifier.height(16.dp))
+                    Spacer(modifier = Modifier.height(16.dp))
 
-                        // 结果统计
-                        FilterResultHeader(
-                            count = filterState.filteredSongs.size,
-                            hasActiveFilters = hasActiveFilters(filterState),
-                            onPlayAll = {
-                                if (filterState.filteredSongs.isNotEmpty()) {
-                                    playerViewModel.setQueue(filterState.filteredSongs, 0)
-                                }
-                            }
-                        )
-
-                        Spacer(modifier = Modifier.height(16.dp))
-                    }
-
-                    // 歌曲列表
-                    if (filterState.filteredSongs.isEmpty()) {
-                        item {
-                            Box(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .height(200.dp),
-                                contentAlignment = Alignment.Center
-                            ) {
-                                EmptyFilterState(hasActiveFilters(filterState))
+                    // 结果统计
+                    FilterResultHeader(
+                        count = filterState.filteredSongs.size,
+                        hasActiveFilters = hasActiveFilters(filterState),
+                        onPlayAll = {
+                            if (filterState.filteredSongs.isNotEmpty()) {
+                                playerViewModel.setQueue(filterState.filteredSongs, 0)
                             }
                         }
-                    } else {
-                        items(
-                            items = filterState.filteredSongs,
-                            key = { it.id }
-                        ) { song ->
-                            val isPlaying = song.id == currentPlayingSongId
-                            SongItem(
-                                song = song,
-                                isPlaying = isPlaying,
-                                onClick = {
-                                    // 使用 ID 查找索引，避免对象比较问题
-                                    val index = filterState.filteredSongs.indexOfFirst { it.id == song.id }
-                                    if (index >= 0) {
-                                        playerViewModel.setQueue(filterState.filteredSongs, index)
-                                    }
-                                },
-                                onMoreClick = {
-                                    selectedSong = song
-                                    showActionSheet = true
-                                }
-                            )
-                        }
-                    }
+                    )
+
+                    Spacer(modifier = Modifier.height(16.dp))
                 }
 
-                // 快速滚动条
-                if (filterState.filteredSongs.isNotEmpty()) {
-                    FastScrollBar(
-                        listState = listState,
-                        modifier = Modifier.align(Alignment.CenterEnd)
-                    )
+                // 歌曲列表
+                if (filterState.filteredSongs.isEmpty()) {
+                    item {
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(200.dp),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            EmptyFilterState(hasActiveFilters(filterState))
+                        }
+                    }
+                } else {
+                    items(
+                        items = filterState.filteredSongs,
+                        key = { it.id }
+                    ) { song ->
+                        val isPlaying = song.id == currentPlayingSongId
+                        SongItem(
+                            song = song,
+                            isPlaying = isPlaying,
+                            onClick = {
+                                // 使用 ID 查找索引，避免对象比较问题
+                                val index = filterState.filteredSongs.indexOfFirst { it.id == song.id }
+                                if (index >= 0) {
+                                    playerViewModel.setQueue(filterState.filteredSongs, index)
+                                }
+                            },
+                            onMoreClick = {
+                                selectedSong = song
+                                showActionSheet = true
+                            }
+                        )
+                    }
                 }
             }
-        }
 
-        // 右上角跳转到当前歌曲按钮
-        if (currentSongInFilter) {
-            Surface(
-                onClick = { scrollToCurrentSongRequest++ },
-                modifier = Modifier
-                    .align(Alignment.TopEnd)
-                    .offset(y = 8.dp, x = (-16).dp)
-                    .size(40.dp),
-                shape = CircleShape,
-                color = MaterialTheme.colorScheme.primaryContainer,
-                contentColor = MaterialTheme.colorScheme.onPrimaryContainer,
-                shadowElevation = 0.dp
-            ) {
-                Icon(
-                    imageVector = Icons.Default.MyLocation,
-                    contentDescription = "跳转到当前歌曲",
-                    modifier = Modifier
-                        .size(20.dp)
-                        .padding(8.dp)
+            // 快速滚动条
+            if (filterState.filteredSongs.isNotEmpty()) {
+                VerticalScrollbar(
+                    listState = listState,
+                    itemCount = filterState.filteredSongs.size + 1, // +1 为筛选条件区域
+                    modifier = Modifier.align(Alignment.CenterEnd)
                 )
             }
         }
@@ -438,65 +424,144 @@ fun FilterScreen(
 }
 
 /**
- * 快速滚动条组件
+ * 垂直滚动条组件（与标签页样式一致）
  */
 @Composable
-private fun FastScrollBar(
-    listState: androidx.compose.foundation.lazy.LazyListState,
+private fun VerticalScrollbar(
+    listState: LazyListState,
+    itemCount: Int,
     modifier: Modifier = Modifier
 ) {
-    val totalItems = listState.layoutInfo.totalItemsCount
-    val firstVisibleItem by remember { derivedStateOf { listState.firstVisibleItemIndex } }
+    if (itemCount == 0) return
 
-    // 计算滚动条位置
-    val scrollProgress = if (totalItems > 1) {
-        firstVisibleItem.toFloat() / (totalItems - 1).coerceAtLeast(1)
-    } else 0f
+    val coroutineScope = rememberCoroutineScope()
 
-    val scope = rememberCoroutineScope()
+    // 状态分离：拖拽状态
+    var isDragging by remember { mutableStateOf(false) }
+    // 拖拽时的进度值（由手势驱动）
+    var dragProgress by remember { mutableStateOf(0f) }
+    // 轨道高度（像素）
+    var trackHeightPx by remember { mutableStateOf(0) }
 
-    Column(
+    // 计算可见项目数量
+    val visibleItemCount = listState.layoutInfo.visibleItemsInfo.size
+
+    // 不需要滚动条的情况
+    if (visibleItemCount >= itemCount) return
+
+    // ========== 1. 精确的进度计算（基于 Index 含小数） ==========
+    val listProgress by remember {
+        derivedStateOf {
+            if (itemCount == 0) return@derivedStateOf 0f
+
+            val firstVisibleIndex = listState.firstVisibleItemIndex
+            val firstVisibleOffset = listState.firstVisibleItemScrollOffset
+
+            // 获取可见项目的高度（假设高度大致相同）
+            val itemHeight = listState.layoutInfo.visibleItemsInfo.firstOrNull()?.size ?: 1
+
+            // 精确索引 = 整数部分 + 小数部分（偏移量/项目高度）
+            val exactIndex = firstVisibleIndex + (firstVisibleOffset.toFloat() / itemHeight.toFloat())
+
+            // 进度 = 精确索引 / 总项目数
+            (exactIndex / itemCount.toFloat()).coerceIn(0f, 1f)
+        }
+    }
+
+    // 滑块高度比例
+    val thumbHeightPercent = visibleItemCount.toFloat() / itemCount.toFloat()
+
+    // ========== 2. 状态分离：选择数据源 ==========
+    // 拖拽时用手势驱动的进度，否则用列表状态驱动的进度
+    val displayProgress = if (isDragging) dragProgress else listProgress
+
+    // ========== 3. 滑块位置计算 ==========
+    // 滑块Y坐标 = 进度 * (轨道高度 - 滑块高度)
+    val thumbOffsetY = (trackHeightPx * (1f - thumbHeightPercent) * displayProgress).toInt()
+
+    Box(
         modifier = modifier
             .fillMaxHeight()
-            .padding(vertical = 48.dp, horizontal = 4.dp)
             .width(20.dp)
-            .pointerInput(totalItems) {
+            .padding(vertical = 8.dp, horizontal = 4.dp)
+            .onSizeChanged { trackHeightPx = it.height }
+            .pointerInput(itemCount, trackHeightPx) {
                 awaitPointerEventScope {
                     while (true) {
                         val event = awaitPointerEvent()
-                        val change = event.changes.firstOrNull { it.pressed } ?: continue
 
-                        val y = change.position.y
-                        val height = size.height.toFloat()
+                        when (event.type) {
+                            PointerEventType.Press -> {
+                                // 开始拖拽：记录初始进度
+                                isDragging = true
+                                dragProgress = displayProgress
+                                event.changes.forEach { it.consume() }
+                            }
+                            PointerEventType.Release -> {
+                                // 结束拖拽
+                                isDragging = false
+                                event.changes.forEach { it.consume() }
+                            }
+                            PointerEventType.Move -> {
+                                if (isDragging && trackHeightPx > 0) {
+                                    val change = event.changes.first()
 
-                        if (height > 0 && totalItems > 0) {
-                            // 计算目标位置
-                            val targetProgress = (y / height).coerceIn(0f, 1f)
-                            val targetItem = (targetProgress * (totalItems - 1)).toInt()
+                                    // 手指在轨道上的Y坐标
+                                    val touchY = change.position.y
 
-                            scope.launch {
-                                listState.scrollToItem(targetItem.coerceAtLeast(0))
+                                    // 可滚动的轨道高度 = 总轨道高度 - 滑块高度
+                                    val scrollableTrackHeight = trackHeightPx * (1f - thumbHeightPercent)
+
+                                    // 计算新进度（0-1）
+                                    val newProgress = (touchY / scrollableTrackHeight).coerceIn(0f, 1f)
+
+                                    // 更新拖拽进度（由手势驱动）
+                                    dragProgress = newProgress
+
+                                    // 反向计算目标索引
+                                    val targetIndex = (newProgress * itemCount).toInt()
+                                        .coerceIn(0, itemCount - 1)
+
+                                    // 驱动列表滚动
+                                    coroutineScope.launch {
+                                        listState.scrollToItem(targetIndex)
+                                    }
+
+                                    change.consume()
+                                }
                             }
                         }
                     }
                 }
-            },
-        verticalArrangement = Arrangement.SpaceBetween
-    ) {
-        // 使用百分比指示器
-        repeat(5) { index ->
-            val indicatorAlpha = if (index == (scrollProgress * 4).toInt()) {
-                0.8f
-            } else {
-                0.3f
             }
-            Box(
-                modifier = Modifier
-                    .size(4.dp)
-                    .clip(CircleShape)
-                    .background(MaterialTheme.colorScheme.primary.copy(alpha = indicatorAlpha))
-            )
-        }
+    ) {
+        // 滚动条背景轨道
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .clip(RoundedCornerShape(4.dp))
+                .background(
+                    if (isDragging)
+                        MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
+                    else
+                        MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f)
+                )
+        )
+
+        // 滚动条滑块
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .fillMaxHeight(thumbHeightPercent)
+                .offset { IntOffset(0, thumbOffsetY) }
+                .clip(RoundedCornerShape(4.dp))
+                .background(
+                    if (isDragging)
+                        MaterialTheme.colorScheme.primary.copy(alpha = 0.8f)
+                    else
+                        MaterialTheme.colorScheme.primary.copy(alpha = 0.5f)
+                )
+        )
     }
 }
 
