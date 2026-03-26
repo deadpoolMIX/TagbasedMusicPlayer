@@ -83,8 +83,139 @@ import com.tagplayer.musicplayer.ui.filter.viewmodel.FilterState
 import com.tagplayer.musicplayer.ui.filter.viewmodel.FilterViewModel
 import com.tagplayer.musicplayer.ui.player.viewmodel.PlayerViewModel
 import com.tagplayer.musicplayer.ui.playlist.viewmodel.PlaylistViewModel
+import androidx.compose.ui.tooling.preview.Preview
 import com.tagplayer.musicplayer.ui.tags.viewmodel.TagViewModel
 import kotlinx.coroutines.launch
+
+// ========== Preview Functions ==========
+
+@Preview(showBackground = true, name = "筛选页面预览")
+@Composable
+private fun FilterScreenPreview() {
+    MaterialTheme {
+        Surface {
+            Column(
+                modifier = Modifier.padding(16.dp)
+            ) {
+                FilterFormula()
+                Spacer(modifier = Modifier.height(16.dp))
+                FilterBoxSection(
+                    title = "框 A",
+                    subtitle = "必须包含以下所有标签",
+                    tags = listOf(
+                        Tag(id = 1, name = "流行", color = 0xFF2196F3.toInt(), createdAt = 0, updatedAt = 0),
+                        Tag(id = 2, name = "华语", color = 0xFF4CAF50.toInt(), createdAt = 0, updatedAt = 0)
+                    ),
+                    onAddClick = {},
+                    onRemoveTag = {},
+                    onClear = {}
+                )
+                Spacer(modifier = Modifier.height(8.dp))
+                OperatorSymbol("+")
+                Spacer(modifier = Modifier.height(8.dp))
+                FilterBoxSection(
+                    title = "框 B",
+                    subtitle = "满足任意标签即可",
+                    tags = listOf(
+                        Tag(id = 3, name = "摇滚", color = 0xFFFF5722.toInt(), createdAt = 0, updatedAt = 0)
+                    ),
+                    onAddClick = {},
+                    onRemoveTag = {},
+                    onClear = {}
+                )
+                Spacer(modifier = Modifier.height(8.dp))
+                OperatorSymbol("-")
+                Spacer(modifier = Modifier.height(8.dp))
+                FilterBoxSection(
+                    title = "框 C",
+                    subtitle = "排除包含以下任意标签的歌曲",
+                    tags = emptyList(),
+                    onAddClick = {},
+                    onRemoveTag = {},
+                    onClear = {}
+                )
+            }
+        }
+    }
+}
+
+@Preview(showBackground = true, name = "筛选条件区域预览")
+@Composable
+private fun FilterBoxSectionPreview() {
+    MaterialTheme {
+        FilterBoxSection(
+            title = "框 A",
+            subtitle = "必须包含以下所有标签",
+            tags = listOf(
+                Tag(id = 1, name = "流行", color = 0xFF2196F3.toInt(), createdAt = 0, updatedAt = 0),
+                Tag(id = 2, name = "华语", color = 0xFF4CAF50.toInt(), createdAt = 0, updatedAt = 0),
+                Tag(id = 3, name = "情歌", color = 0xFFE91E63.toInt(), createdAt = 0, updatedAt = 0)
+            ),
+            onAddClick = {},
+            onRemoveTag = {},
+            onClear = {}
+        )
+    }
+}
+
+@Preview(showBackground = true, name = "空筛选条件预览")
+@Composable
+private fun EmptyFilterBoxSectionPreview() {
+    MaterialTheme {
+        FilterBoxSection(
+            title = "框 C",
+            subtitle = "排除包含以下任意标签的歌曲",
+            tags = emptyList(),
+            onAddClick = {},
+            onRemoveTag = {},
+            onClear = {}
+        )
+    }
+}
+
+@Preview(showBackground = true, name = "筛选结果头部预览")
+@Composable
+private fun FilterResultHeaderPreview() {
+    MaterialTheme {
+        FilterResultHeader(
+            count = 42,
+            hasActiveFilters = true,
+            onPlayAll = {}
+        )
+    }
+}
+
+@Preview(showBackground = true, name = "空状态预览")
+@Composable
+private fun EmptyFilterStatePreview() {
+    MaterialTheme {
+        EmptyFilterState(hasActiveFilters = true)
+    }
+}
+
+@Preview(showBackground = true, name = "标签芯片预览")
+@Composable
+private fun FilterTagChipPreview() {
+    MaterialTheme {
+        Row(
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            modifier = Modifier.padding(16.dp)
+        ) {
+            FilterTagChip(
+                tag = Tag(id = 1, name = "流行", color = 0xFF2196F3.toInt(), createdAt = 0, updatedAt = 0),
+                onRemove = {}
+            )
+            FilterTagChip(
+                tag = Tag(id = 2, name = "摇滚", color = 0xFFFF5722.toInt(), createdAt = 0, updatedAt = 0),
+                onRemove = {}
+            )
+            FilterTagChip(
+                tag = Tag(id = 3, name = "民谣", color = null, createdAt = 0, updatedAt = 0),
+                onRemove = {}
+            )
+        }
+    }
+}
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -197,10 +328,8 @@ fun FilterScreen(
         ) {
             LazyColumn(
                 state = listState,
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(end = 16.dp), // 为滚动条留出空间
-                contentPadding = PaddingValues(start = 16.dp, end = 4.dp, top = 8.dp, bottom = 8.dp)
+                modifier = Modifier.fillMaxSize(),
+                contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp)
             ) {
                 // 筛选条件区域
                 item {

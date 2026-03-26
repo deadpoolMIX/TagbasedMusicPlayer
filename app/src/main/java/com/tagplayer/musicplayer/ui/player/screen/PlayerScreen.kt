@@ -138,13 +138,6 @@ fun PlayerScreen(
                     }
                 },
                 actions = {
-                    // 播放队列按钮
-                    IconButton(onClick = onNavigateToQueue) {
-                        Icon(
-                            imageVector = Icons.Default.List,
-                            contentDescription = "播放队列"
-                        )
-                    }
                     // 收藏按钮
                     IconButton(
                         onClick = {
@@ -277,15 +270,29 @@ fun PlayerScreen(
                     onPlayPause = { viewModel.playPauseToggle() },
                     onNext = { viewModel.playNext() },
                     onPrevious = { viewModel.playPrevious() },
-                    onShuffle = { viewModel.toggleShuffle() },
-                    onRepeat = {
-                        val nextMode = when (playbackState.repeatMode) {
-                            RepeatMode.OFF -> RepeatMode.ALL
-                            RepeatMode.ALL -> RepeatMode.ONE
-                            RepeatMode.ONE -> RepeatMode.OFF
+                    onModeChange = {
+                        // 循环切换：顺序 → 随机 → 列表循环 → 单曲循环 → 顺序
+                        when {
+                            playbackState.isShuffling -> {
+                                // 当前是随机，切换到列表循环
+                                viewModel.setShuffleEnabled(false)
+                                viewModel.setRepeatMode(RepeatMode.ALL)
+                            }
+                            playbackState.repeatMode == RepeatMode.ALL -> {
+                                // 当前是列表循环，切换到单曲循环
+                                viewModel.setRepeatMode(RepeatMode.ONE)
+                            }
+                            playbackState.repeatMode == RepeatMode.ONE -> {
+                                // 当前是单曲循环，切换到顺序
+                                viewModel.setRepeatMode(RepeatMode.OFF)
+                            }
+                            else -> {
+                                // 当前是顺序，切换到随机
+                                viewModel.setShuffleEnabled(true)
+                            }
                         }
-                        viewModel.setRepeatMode(nextMode)
-                    }
+                    },
+                    onQueueClick = onNavigateToQueue
                 )
 
                 Spacer(modifier = Modifier.height(48.dp))
@@ -517,27 +524,23 @@ private fun ControlButtons(
     onPlayPause: () -> Unit,
     onNext: () -> Unit,
     onPrevious: () -> Unit,
-    onShuffle: () -> Unit,
-    onRepeat: () -> Unit
+    onModeChange: () -> Unit,
+    onQueueClick: () -> Unit
 ) {
     Row(
         modifier = Modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.SpaceEvenly,
         verticalAlignment = Alignment.CenterVertically
     ) {
-        // Shuffle
+        // 播放队列按钮（左侧）
         IconButton(
-            onClick = onShuffle,
+            onClick = onQueueClick,
             modifier = Modifier.size(48.dp)
         ) {
             Icon(
-                imageVector = Icons.Default.Shuffle,
-                contentDescription = "随机播放",
-                tint = if (isShuffling) {
-                    MaterialTheme.colorScheme.primary
-                } else {
-                    MaterialTheme.colorScheme.onSurfaceVariant
-                }
+                imageVector = Icons.Default.List,
+                contentDescription = "播放队列",
+                tint = MaterialTheme.colorScheme.onSurfaceVariant
             )
         }
 
@@ -582,31 +585,38 @@ private fun ControlButtons(
             )
         }
 
-        // Repeat
+        // 合并的播放模式按钮（右侧）：顺序 → 随机 → 列表循环 → 单曲循环
         IconButton(
-            onClick = onRepeat,
+            onClick = onModeChange,
             modifier = Modifier.size(48.dp)
         ) {
-            when (repeatMode) {
-                RepeatMode.OFF -> {
+            when {
+                isShuffling -> {
                     Icon(
-                        imageVector = Icons.Default.Repeat,
-                        contentDescription = "顺序播放",
-                        tint = MaterialTheme.colorScheme.onSurfaceVariant
+                        imageVector = Icons.Default.Shuffle,
+                        contentDescription = "随机播放",
+                        tint = MaterialTheme.colorScheme.primary
                     )
                 }
-                RepeatMode.ALL -> {
+                repeatMode == RepeatMode.ALL -> {
                     Icon(
                         imageVector = Icons.Default.Repeat,
                         contentDescription = "列表循环",
                         tint = MaterialTheme.colorScheme.primary
                     )
                 }
-                RepeatMode.ONE -> {
+                repeatMode == RepeatMode.ONE -> {
                     Icon(
                         imageVector = Icons.Default.RepeatOne,
                         contentDescription = "单曲循环",
                         tint = MaterialTheme.colorScheme.primary
+                    )
+                }
+                else -> {
+                    Icon(
+                        imageVector = Icons.Default.Repeat,
+                        contentDescription = "顺序播放",
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
             }

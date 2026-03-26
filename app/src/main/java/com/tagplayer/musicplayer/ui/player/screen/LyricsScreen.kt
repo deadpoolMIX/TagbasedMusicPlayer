@@ -74,10 +74,23 @@ fun LyricsScreen(
         }
     }
 
-    // 解析歌词
-    val lyrics = remember(currentSong?.lyrics) {
-        currentSong?.lyrics?.let { LyricsParser.parseLyrics(it) } ?: emptyList()
+    // 实时加载歌词（从 .lrc 文件或内嵌歌词）
+    val context = androidx.compose.ui.platform.LocalContext.current
+    var loadedLyrics by remember { mutableStateOf<List<LyricLine>>(emptyList()) }
+
+    LaunchedEffect(currentSong?.filePath) {
+        currentSong?.filePath?.let { filePath ->
+            val lyricsContent = LyricsParser.getLyrics(context, filePath)
+            loadedLyrics = if (!lyricsContent.isNullOrBlank()) {
+                LyricsParser.parseLyrics(lyricsContent)
+            } else {
+                emptyList()
+            }
+        }
     }
+
+    // 解析歌词
+    val lyrics = loadedLyrics
 
     val listState = rememberLazyListState()
     val scope = rememberCoroutineScope()

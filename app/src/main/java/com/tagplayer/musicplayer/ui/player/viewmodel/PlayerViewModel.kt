@@ -84,6 +84,10 @@ class PlayerViewModel @Inject constructor(
         musicPlayer.setShuffleEnabled(!currentShuffle)
     }
 
+    fun setShuffleEnabled(enabled: Boolean) {
+        musicPlayer.setShuffleEnabled(enabled)
+    }
+
     fun setQueue(songs: List<Song>, startIndex: Int = 0) {
         musicPlayer.setQueue(songs, startIndex)
     }
