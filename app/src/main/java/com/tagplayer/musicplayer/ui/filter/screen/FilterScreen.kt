@@ -329,64 +329,65 @@ fun FilterScreen(
             LazyColumn(
                 state = listState,
                 modifier = Modifier.fillMaxSize(),
-                contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp)
+                contentPadding = PaddingValues(vertical = 8.dp)
             ) {
                 // 筛选条件区域
                 item {
-                    // 逻辑公式展示
-                    FilterFormula()
+                    Column(modifier = Modifier.padding(horizontal = 16.dp)) {
+                        // 逻辑公式展示
+                        FilterFormula()
 
-                    Spacer(modifier = Modifier.height(16.dp))
+                        Spacer(modifier = Modifier.height(16.dp))
 
-                    // 框A - 包含标签
-                    FilterBoxSection(
-                        title = "框 A",
-                        subtitle = "必须包含以下所有标签",
-                        tags = filterState.boxATags,
-                        onAddClick = { showTagSelector = FilterBox.A },
-                        onRemoveTag = { tag -> viewModel.removeTagFromBox(tag, FilterBox.A) },
-                        onClear = { viewModel.clearBox(FilterBox.A) }
-                    )
+                        // 框A - 包含标签
+                        FilterBoxSection(
+                            title = "框 A",
+                            subtitle = "必须包含以下所有标签",
+                            tags = filterState.boxATags,
+                            onAddClick = { showTagSelector = FilterBox.A },
+                            onRemoveTag = { tag -> viewModel.removeTagFromBox(tag, FilterBox.A) },
+                            onClear = { viewModel.clearBox(FilterBox.A) }
+                        )
 
-                    Spacer(modifier = Modifier.height(8.dp))
+                        Spacer(modifier = Modifier.height(8.dp))
 
-                    // 并集符号
-                    OperatorSymbol("+")
+                        // 并集符号
+                        OperatorSymbol("+")
 
-                    Spacer(modifier = Modifier.height(8.dp))
+                        Spacer(modifier = Modifier.height(8.dp))
 
-                    // 框B - 可选标签
-                    FilterBoxSection(
-                        title = "框 B",
-                        subtitle = "满足任意标签即可",
-                        tags = filterState.boxBTags,
-                        onAddClick = { showTagSelector = FilterBox.B },
-                        onRemoveTag = { tag -> viewModel.removeTagFromBox(tag, FilterBox.B) },
-                        onClear = { viewModel.clearBox(FilterBox.B) }
-                    )
+                        // 框B - 可选标签
+                        FilterBoxSection(
+                            title = "框 B",
+                            subtitle = "满足任意标签即可",
+                            tags = filterState.boxBTags,
+                            onAddClick = { showTagSelector = FilterBox.B },
+                            onRemoveTag = { tag -> viewModel.removeTagFromBox(tag, FilterBox.B) },
+                            onClear = { viewModel.clearBox(FilterBox.B) }
+                        )
 
-                    Spacer(modifier = Modifier.height(8.dp))
+                        Spacer(modifier = Modifier.height(8.dp))
 
-                    // 差集符号
-                    OperatorSymbol("-")
+                        // 差集符号
+                        OperatorSymbol("-")
 
-                    Spacer(modifier = Modifier.height(8.dp))
+                        Spacer(modifier = Modifier.height(8.dp))
 
-                    // 框C - 排除标签
-                    FilterBoxSection(
-                        title = "框 C",
-                        subtitle = "排除包含以下任意标签的歌曲",
-                        tags = filterState.boxCTags,
-                        onAddClick = { showTagSelector = FilterBox.C },
-                        onRemoveTag = { tag -> viewModel.removeTagFromBox(tag, FilterBox.C) },
-                        onClear = { viewModel.clearBox(FilterBox.C) }
-                    )
+                        // 框C - 排除标签
+                        FilterBoxSection(
+                            title = "框 C",
+                            subtitle = "排除包含以下任意标签的歌曲",
+                            tags = filterState.boxCTags,
+                            onAddClick = { showTagSelector = FilterBox.C },
+                            onRemoveTag = { tag -> viewModel.removeTagFromBox(tag, FilterBox.C) },
+                            onClear = { viewModel.clearBox(FilterBox.C) }
+                        )
 
-                    Spacer(modifier = Modifier.height(16.dp))
+                        Spacer(modifier = Modifier.height(16.dp))
 
-                    HorizontalDivider()
+                        HorizontalDivider()
 
-                    Spacer(modifier = Modifier.height(16.dp))
+                        Spacer(modifier = Modifier.height(16.dp))
 
                     // 结果统计
                     FilterResultHeader(
@@ -400,6 +401,7 @@ fun FilterScreen(
                     )
 
                     Spacer(modifier = Modifier.height(16.dp))
+                    }
                 }
 
                 // 歌曲列表
