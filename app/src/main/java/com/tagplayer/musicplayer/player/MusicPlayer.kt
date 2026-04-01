@@ -105,6 +105,10 @@ class MusicPlayer @Inject constructor(
         }
 
         override fun onMediaItemTransition(mediaItem: MediaItem?, reason: Int) {
+            // 切换歌曲时重置进度和时长，避免旧值残留
+            _currentPosition.value = 0L
+            _duration.value = 0L
+
             mediaItem?.let {
                 val songId = it.mediaId.toLongOrNull() ?: return
                 // 从 Player 获取当前索引，更新内部状态

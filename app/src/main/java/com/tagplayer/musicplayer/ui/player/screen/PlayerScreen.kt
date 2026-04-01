@@ -1,6 +1,7 @@
 package com.tagplayer.musicplayer.ui.player.screen
 
 import android.content.ContentUris
+import android.content.Context
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.net.Uri
@@ -8,6 +9,7 @@ import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.gestures.detectVerticalDragGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -60,7 +62,6 @@ import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -74,17 +75,23 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.compose.material.icons.filled.List
+import android.widget.Toast
+import android.content.ClipData
+import android.content.ClipboardManager
+import androidx.core.content.ContextCompat.getSystemService
+import androidx.compose.foundation.ExperimentalFoundationApi
 import com.tagplayer.musicplayer.data.local.entity.Tag
 import com.tagplayer.musicplayer.player.RepeatMode
 import com.tagplayer.musicplayer.ui.components.TagSelectionDialog
 import com.tagplayer.musicplayer.ui.player.viewmodel.PlayerViewModel
 import com.tagplayer.musicplayer.ui.playlist.viewmodel.PlaylistViewModel
 import com.tagplayer.musicplayer.ui.tags.viewmodel.TagViewModel
+import com.tagplayer.musicplayer.util.ArtistNameParser
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import kotlin.math.max
 
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)
 @Composable
 fun PlayerScreen(
     onBackClick: () -> Unit,
@@ -211,33 +218,80 @@ fun PlayerScreen(
 
                 Spacer(modifier = Modifier.height(32.dp))
 
-                // Song Info
+                // Song Info - 长按标题复制歌曲名称
+                val context = LocalContext.current
                 Text(
                     text = currentSong.title,
                     style = MaterialTheme.typography.headlineSmall,
                     textAlign = TextAlign.Center,
                     maxLines = 2,
                     overflow = TextOverflow.Ellipsis,
-                    modifier = Modifier.fillMaxWidth()
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .combinedClickable(
+                            onClick = {},
+                            onLongClick = {
+                                // 复制歌曲名称到剪贴板
+                                val clipboardManager = getSystemService(context, ClipboardManager::class.java)
+                                val clip = ClipData.newPlainText("歌曲名称", currentSong.title)
+                                clipboardManager?.setPrimaryClip(clip)
+                                Toast.makeText(context, "已复制: ${currentSong.title}", Toast.LENGTH_SHORT).show()
+                            }
+                        )
                 )
 
                 Spacer(modifier = Modifier.height(8.dp))
 
-                Text(
-                    text = currentSong.artist,
-                    style = MaterialTheme.typography.titleMedium,
-                    color = MaterialTheme.colorScheme.primary,
-                    textAlign = TextAlign.Center,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .clickable {
-                            if (currentSong.artist.isNotBlank() && currentSong.artist != "<unknown>") {
-                                onNavigateToArtistDetail(currentSong.artist)
+                // 多歌手分离显示，每个歌手独立可点击
+                val artists = ArtistNameParser.parse(currentSong.artist)
+                if (artists.size == 1) {
+                    // 单个歌手：保持原有样式
+                    Text(
+                        text = artists.first(),
+                        style = MaterialTheme.typography.titleMedium,
+                        color = MaterialTheme.colorScheme.primary,
+                        textAlign = TextAlign.Center,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable {
+                                val artistName = artists.first()
+                                if (artistName.isNotBlank() && artistName != "Unknown Artist") {
+                                    onNavigateToArtistDetail(artistName)
+                                }
                             }
+                    )
+                } else {
+                    // 多个歌手：分别显示，每个独立可点击
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.Center,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        artists.forEachIndexed { index, artist ->
+                            if (index > 0) {
+                                Text(
+                                    text = "、",
+                                    style = MaterialTheme.typography.titleMedium,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+                            Text(
+                                text = artist,
+                                style = MaterialTheme.typography.titleMedium,
+                                color = MaterialTheme.colorScheme.primary,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis,
+                                modifier = Modifier.clickable {
+                                    if (artist.isNotBlank() && artist != "Unknown Artist") {
+                                        onNavigateToArtistDetail(artist)
+                                    }
+                                }
+                            )
                         }
-                )
+                    }
+                }
 
                 Spacer(modifier = Modifier.height(16.dp))
 
@@ -472,13 +526,12 @@ private fun ProgressBar(
     duration: Long,
     onSeek: (Long) -> Unit
 ) {
-    // 状态分离：isDragging 控制是否拦截底层进度更新
+    // 本地状态：拖拽标志和滑块值
     var isDragging by remember { mutableStateOf(false) }
-    // UI 显示的进度值（独立状态）
     var sliderValue by remember { mutableFloatStateOf(0f) }
 
-    // 监听真实进度，仅在非拖拽时同步
-    LaunchedEffect(currentPosition) {
+    // 状态同步隔离：只有非拖拽时才同步真实播放进度
+    LaunchedEffect(currentPosition, duration) {
         if (!isDragging && duration > 0) {
             sliderValue = currentPosition.toFloat() / duration
         }
@@ -488,11 +541,16 @@ private fun ProgressBar(
         Slider(
             value = sliderValue,
             onValueChange = { newValue ->
+                // 拖拽中：仅更新本地状态，绝对不调用 seekTo
                 isDragging = true
                 sliderValue = newValue
             },
             onValueChangeFinished = {
-                onSeek((sliderValue * duration).toLong())
+                // 拖拽松手：执行 seek，然后交还进度控制权
+                if (duration > 0) {
+                    val seekPosition = (sliderValue * duration).toLong()
+                    onSeek(seekPosition)
+                }
                 isDragging = false
             },
             modifier = Modifier.fillMaxWidth()

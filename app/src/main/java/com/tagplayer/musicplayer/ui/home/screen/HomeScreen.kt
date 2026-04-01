@@ -85,6 +85,7 @@ import com.tagplayer.musicplayer.data.local.entity.Song
 import com.tagplayer.musicplayer.ui.components.SongActionSheet
 import com.tagplayer.musicplayer.ui.components.SongItem
 import com.tagplayer.musicplayer.ui.components.TagSelectionDialog
+import com.tagplayer.musicplayer.ui.components.VerticalScrollbar
 import com.tagplayer.musicplayer.ui.home.viewmodel.HomeViewModel
 import com.tagplayer.musicplayer.ui.home.viewmodel.SortType
 import com.tagplayer.musicplayer.ui.player.viewmodel.PlayerViewModel
@@ -238,6 +239,11 @@ fun HomeScreen(
 
     // 批量删除确认对话框状态
     var showBatchDeleteConfirm by remember { mutableStateOf(false) }
+
+    // 多选模式下按返回键退出多选模式而非关闭软件
+    BackHandler(enabled = isMultiSelectMode) {
+        viewModel.exitMultiSelectMode()
+    }
 
     // 首次启动检查权限（只更新状态，不自动申请）
     LaunchedEffect(Unit) {
@@ -453,40 +459,50 @@ fun HomeScreen(
                     }
                 }
             } else {
-                // 非标题排序模式：普通列表
-                LazyColumn(
-                    modifier = Modifier.fillMaxSize(),
-                    contentPadding = PaddingValues(vertical = 8.dp)
-                ) {
-                    items(
-                        items = songs,
-                        key = { it.id }
-                    ) { song ->
-                        val isSelected = song in selectedSongs
-                        val isPlaying = song.id == currentPlayingSongId
-                        SongItem(
-                            song = song,
-                            isSelected = isSelected,
-                            isMultiSelectMode = isMultiSelectMode,
-                            isPlaying = isPlaying,
-                            onClick = {
-                                if (isMultiSelectMode) {
-                                    viewModel.toggleSongSelection(song)
-                                } else {
-                                    // 播放选中的歌曲
-                                    playerViewModel.setQueue(songs, songs.indexOf(song))
+                // 非标题排序模式：普通列表 + 滚动条
+                Box(modifier = Modifier.weight(1f).fillMaxWidth()) {
+                    LazyColumn(
+                        state = listState,
+                        modifier = Modifier.fillMaxSize(),
+                        contentPadding = PaddingValues(vertical = 8.dp)
+                    ) {
+                        items(
+                            items = songs,
+                            key = { it.id }
+                        ) { song ->
+                            val isSelected = song in selectedSongs
+                            val isPlaying = song.id == currentPlayingSongId
+                            SongItem(
+                                song = song,
+                                isSelected = isSelected,
+                                isMultiSelectMode = isMultiSelectMode,
+                                isPlaying = isPlaying,
+                                onClick = {
+                                    if (isMultiSelectMode) {
+                                        viewModel.toggleSongSelection(song)
+                                    } else {
+                                        // 播放选中的歌曲
+                                        playerViewModel.setQueue(songs, songs.indexOf(song))
+                                    }
+                                },
+                                onLongClick = {
+                                    if (!isMultiSelectMode) {
+                                        viewModel.enterMultiSelectMode(song)
+                                    }
+                                },
+                                onMoreClick = {
+                                    viewModel.onSongMoreClick(song)
                                 }
-                            },
-                            onLongClick = {
-                                if (!isMultiSelectMode) {
-                                    viewModel.enterMultiSelectMode(song)
-                                }
-                            },
-                            onMoreClick = {
-                                viewModel.onSongMoreClick(song)
-                            }
-                        )
+                            )
+                        }
                     }
+
+                    // 右侧滚动条
+                    VerticalScrollbar(
+                        listState = listState,
+                        itemCount = songs.size,
+                        modifier = Modifier.align(Alignment.CenterEnd)
+                    )
                 }
             }
         }
