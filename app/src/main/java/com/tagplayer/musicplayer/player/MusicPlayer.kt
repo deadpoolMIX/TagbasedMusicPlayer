@@ -105,9 +105,8 @@ class MusicPlayer @Inject constructor(
         }
 
         override fun onMediaItemTransition(mediaItem: MediaItem?, reason: Int) {
-            // 切换歌曲时重置进度和时长，避免旧值残留
+            // 切换歌曲时重置进度，时长尽量实时获取
             _currentPosition.value = 0L
-            _duration.value = 0L
 
             mediaItem?.let {
                 val songId = it.mediaId.toLongOrNull() ?: return
@@ -122,6 +121,14 @@ class MusicPlayer @Inject constructor(
                     currentSongId = songId,
                     currentIndex = playerIndex
                 )
+                
+                // 立即尝试获取新歌曲时长
+                player?.duration?.let { dur ->
+                    if (dur > 0 && dur != C.TIME_UNSET) {
+                        _duration.value = dur
+                    }
+                }
+
                 _playerEvents.trySend(PlayerEvent.TrackChanged(songId))
 
                 // 记录播放
@@ -498,6 +505,11 @@ class MusicPlayer @Inject constructor(
     fun updatePosition() {
         player?.let {
             _currentPosition.value = it.currentPosition
+            // 实时同步时长，防止切换歌曲后时长未更新
+            val dur = it.duration
+            if (dur > 0 && dur != C.TIME_UNSET) {
+                _duration.value = dur
+            }
         }
     }
 
