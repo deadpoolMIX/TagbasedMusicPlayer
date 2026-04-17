@@ -82,6 +82,7 @@ import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.tagplayer.musicplayer.data.local.entity.ScanFolder
 import com.tagplayer.musicplayer.data.local.entity.Song
+import com.tagplayer.musicplayer.ui.components.AlphabetIndexBar
 import com.tagplayer.musicplayer.ui.components.SongActionSheet
 import com.tagplayer.musicplayer.ui.components.SongItem
 import com.tagplayer.musicplayer.ui.components.TagSelectionDialog

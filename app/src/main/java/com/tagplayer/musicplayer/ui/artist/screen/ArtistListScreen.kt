@@ -52,6 +52,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.tagplayer.musicplayer.ui.artist.viewmodel.ArtistViewModel
+import com.tagplayer.musicplayer.data.repository.Artist
 import com.tagplayer.musicplayer.ui.components.AlphabetIndexBar
 import com.tagplayer.musicplayer.util.AlphabetIndexUtils
 import kotlinx.coroutines.launch

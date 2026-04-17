@@ -61,6 +61,7 @@ import androidx.compose.ui.platform.LocalFocusManager
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.tagplayer.musicplayer.data.local.entity.Song
 import com.tagplayer.musicplayer.ui.playlist.viewmodel.PlaylistViewModel
+import com.tagplayer.musicplayer.ui.components.AlphabetIndexBar
 import com.tagplayer.musicplayer.util.AlphabetIndexUtils
 import kotlinx.coroutines.launch
 
