@@ -23,3 +23,20 @@
 - Commit Message 严格遵循规范：`<type>(<scope>): <subject>`。
     - `type` 可选：feat, fix, docs, style, refactor, test, chore。
     - 示例：`feat(auth): add user login API` 或 `fix(ui): resolve button overlapping`。
+
+## 5. 总结与收尾规范
+确认功能正常运行后，进入总结收尾阶段，必须按顺序完成以下三步：
+1.  **功能简述**：总结当前已完成的功能点。
+2.  **日志维护**：更新开发日志（必须严格遵守目标开发日志文件开头所定义的内容规范）。
+3.  **提示音播放**：使用这个指令，每次播放只播放一次
+   powershell -Command "[System.Media.SystemSounds]::Beep.Play()"
+4.  **测试提示**：告知用户应当测试哪些功能。
+
+
+## 6. 日志更新触发条件
+在工作流中，只要命中以下任意一项条件，就必须触发并执行开发日志的更新（并且播放提示音）：
+- 完成阶段性任务
+- 修复 Bug
+- 添加新功能
+- 发生数据库结构变更
+- 每次执行完 Git commit 之后
