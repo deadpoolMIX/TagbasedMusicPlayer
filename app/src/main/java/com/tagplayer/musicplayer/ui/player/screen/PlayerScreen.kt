@@ -108,6 +108,7 @@ fun PlayerScreen(
     val duration by viewModel.duration.collectAsState()
 
     var showTagDialog by remember { mutableStateOf(false) }
+    var isFullScreenCover by remember { mutableStateOf(false) }
 
     val currentSong = playbackState.currentSong
 
@@ -205,7 +206,7 @@ fun PlayerScreen(
             ) {
                 Spacer(modifier = Modifier.height(32.dp))
 
-                // Album Art - 点击进入歌词
+                // Album Art - 点击进入歌词，长按全屏
                 AlbumArt(
                     filePath = currentSong.filePath,
                     albumId = currentSong.albumId,
@@ -213,7 +214,10 @@ fun PlayerScreen(
                         .fillMaxWidth(0.85f)
                         .aspectRatio(1f)
                         .clip(RoundedCornerShape(16.dp))
-                        .clickable { onNavigateToLyrics() }
+                        .combinedClickable(
+                            onClick = { onNavigateToLyrics() },
+                            onLongClick = { isFullScreenCover = true }
+                        )
                 )
 
                 Spacer(modifier = Modifier.height(32.dp))
@@ -358,6 +362,66 @@ fun PlayerScreen(
             TagSelectionDialog(
                 song = currentSong,
                 onDismiss = { showTagDialog = false }
+            )
+        }
+    }
+
+    // 全屏封面
+    if (isFullScreenCover && currentSong != null) {
+        androidx.activity.compose.BackHandler {
+            isFullScreenCover = false
+        }
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .background(androidx.compose.ui.graphics.Color.Black)
+                .clickable(
+                    interactionSource = remember { androidx.compose.foundation.interaction.MutableInteractionSource() },
+                    indication = null
+                ) { isFullScreenCover = false },
+            contentAlignment = Alignment.Center
+        ) {
+            AlbumArtFullScreen(
+                filePath = currentSong.filePath,
+                albumId = currentSong.albumId,
+                modifier = Modifier.fillMaxSize()
+            )
+        }
+    }
+}
+
+@Composable
+private fun AlbumArtFullScreen(
+    filePath: String,
+    albumId: Long,
+    modifier: Modifier = Modifier
+) {
+    val context = LocalContext.current
+
+    val bitmap = produceState<Bitmap?>(initialValue = null, filePath, albumId) {
+        value = withContext(Dispatchers.IO) {
+            loadEmbeddedAlbumArt(context, filePath)
+                ?: loadPlayerAlbumArt(context, albumId)
+        }
+    }
+
+    Box(
+        modifier = modifier,
+        contentAlignment = Alignment.Center
+    ) {
+        if (bitmap.value != null) {
+            Image(
+                bitmap = bitmap.value!!.asImageBitmap(),
+                contentDescription = "全屏封面",
+                contentScale = ContentScale.Fit,
+                modifier = Modifier.fillMaxSize()
+            )
+        } else {
+            Icon(
+                imageVector = Icons.Default.MusicNote,
+                contentDescription = null,
+                modifier = Modifier.size(120.dp),
+                tint = androidx.compose.ui.graphics.Color.White.copy(alpha = 0.5f)
             )
         }
     }

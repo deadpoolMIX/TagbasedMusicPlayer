@@ -112,11 +112,6 @@ fun LyricsScreen(
     // 是否正在手动滚动
     var isUserScrolling by remember { mutableStateOf(false) }
 
-    // 歌词项高度（用于居中计算）
-    val itemHeightPx = with(LocalDensity.current) { 48.dp.toPx() }
-    // 两行歌词的高度偏移
-    val twoLinesOffsetPx = with(LocalDensity.current) { 96.dp.toPx() }
-
     // 更新当前歌词行并自动滚动
     LaunchedEffect(currentPosition, lyrics, isUserScrolling) {
         if (lyrics.isEmpty() || isUserScrolling) return@LaunchedEffect
@@ -128,13 +123,19 @@ fun LyricsScreen(
             // 获取 LazyColumn 实际可见区域高度
             val viewportHeight = listState.layoutInfo.viewportSize.height
 
-            // 计算居中偏移：让歌词显示在可见区域中央偏上两行
-            // scrollOffset 正值表示 item 从顶部向下偏移的像素
             scope.launch {
-                val centerOffset = (viewportHeight / 2 - itemHeightPx / 2 - twoLinesOffsetPx).toInt()
+                // 因为我们在顶部加了一个 Spacer item，所以歌词项的索引是 newIndex + 1
+                val targetIndex = newIndex + 1
+                
+                // 获取目标项的可见信息，估算高度
+                val itemInfo = listState.layoutInfo.visibleItemsInfo.find { it.index == targetIndex }
+                val itemHeight = itemInfo?.size ?: 100 // 如果未显示，默认估算高度
+
+                // 负值代表将 item 从顶部向下推 viewportHeight / 2 - itemHeight / 2，从而居中
+                val targetOffset = -(viewportHeight / 2 - itemHeight / 2)
                 listState.animateScrollToItem(
-                    index = newIndex,
-                    scrollOffset = -centerOffset
+                    index = targetIndex,
+                    scrollOffset = targetOffset
                 )
             }
         }
@@ -276,7 +277,11 @@ private fun LyricsList(
         modifier = modifier.fillMaxSize(),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        // 不再需要顶部占位，居中由 scrollOffset 控制
+        // 顶部留白，让第一行歌词也能滚动到中央
+        item {
+            Spacer(modifier = Modifier.height(400.dp))
+        }
+
         itemsIndexed(
             items = lyrics,
             key = { index, line -> "${line.timestampMs}_$index" }
@@ -286,45 +291,52 @@ private fun LyricsList(
 
             // 支持多行文本（双语歌词用换行符分隔）
             val displayText = line.text
-            val lineCount = displayText.lines().filter { it.isNotBlank() }.size
+            val lines = displayText.lines().filter { it.isNotBlank() }
 
             Column(
                 modifier = Modifier
-                    .fillMaxWidth(0.85f)
-                    .padding(horizontal = 16.dp, vertical = if (lineCount > 1) 8.dp else 12.dp)
+                    .fillMaxWidth(0.9f)
+                    .padding(horizontal = 16.dp, vertical = 16.dp)
                     .alpha(
                         when {
                             isCurrentLine -> 1f
                             distance == 1 -> 0.7f
                             distance == 2 -> 0.5f
-                            else -> 0.35f
+                            else -> 0.3f
                         }
                     )
-                    .clickable(enabled = isActive) { onLineClick(line) },
+                    .clickable(
+                        interactionSource = remember { androidx.compose.foundation.interaction.MutableInteractionSource() },
+                        indication = null,
+                        enabled = isActive
+                    ) { onLineClick(line) },
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
                 // 按行显示歌词（支持双语）
-                displayText.lines().filter { it.isNotBlank() }.forEach { textLine ->
-                    // 根据文本长度自动调整字体大小
-                    val charCount = textLine.length
-                    val fontSize = when {
-                        charCount <= 20 -> if (isCurrentLine) 18.sp else 16.sp
-                        charCount <= 30 -> if (isCurrentLine) 16.sp else 14.sp
-                        charCount <= 40 -> if (isCurrentLine) 14.sp else 12.sp
-                        else -> if (isCurrentLine) 12.sp else 10.sp
+                lines.forEachIndexed { textIndex, textLine ->
+                    val isTranslation = textIndex > 0
+
+                    val fontSize = if (isTranslation) {
+                        if (isCurrentLine) 16.sp else 14.sp
+                    } else {
+                        if (isCurrentLine) 20.sp else 18.sp
                     }
+
+                    val fontWeight = if (isCurrentLine) androidx.compose.ui.text.font.FontWeight.Bold else androidx.compose.ui.text.font.FontWeight.Normal
 
                     Text(
                         text = textLine,
                         style = MaterialTheme.typography.bodyLarge.copy(
-                            fontSize = fontSize
+                            fontSize = fontSize,
+                            fontWeight = fontWeight
                         ),
                         color = if (isCurrentLine) {
                             MaterialTheme.colorScheme.primary
                         } else {
                             MaterialTheme.colorScheme.onBackground
                         },
-                        textAlign = TextAlign.Center
+                        textAlign = TextAlign.Center,
+                        modifier = Modifier.padding(vertical = 4.dp)
                     )
                 }
             }
