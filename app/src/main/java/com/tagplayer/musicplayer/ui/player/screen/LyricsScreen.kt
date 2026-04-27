@@ -126,7 +126,10 @@ fun LyricsScreen(
                 currentLineIndex = initialIndex
                 val viewportHeight = listState.layoutInfo.viewportSize.height
                 val itemHeight = 100 // 初次可能未测量出实际高度，给个默认值
-                listState.scrollToItem(initialIndex + 1, -(viewportHeight / 2 - itemHeight / 2))
+                // scrollOffset: 正值表示从顶部向下偏移。这里将它放在中间偏上一行
+                val lineOffset = 150 // 大约一行歌词的高度和偏移量
+                val targetOffset = (viewportHeight / 2 - itemHeight / 2) - lineOffset
+                listState.scrollToItem(initialIndex + 1, targetOffset)
             }
             isInitialScrollDone = true
         }
@@ -147,7 +150,9 @@ fun LyricsScreen(
                     val itemInfo = listState.layoutInfo.visibleItemsInfo.find { it.index == targetIndex }
                     val itemHeight = itemInfo?.size ?: 100
 
-                    val targetOffset = -(viewportHeight / 2 - itemHeight / 2)
+                    // scrollOffset: 正值表示从顶部向下偏移。为了让歌词在正中央偏上一行
+                    val lineOffset = 150 
+                    val targetOffset = (viewportHeight / 2 - itemHeight / 2) - lineOffset
                     listState.animateScrollToItem(
                         index = targetIndex,
                         scrollOffset = targetOffset
