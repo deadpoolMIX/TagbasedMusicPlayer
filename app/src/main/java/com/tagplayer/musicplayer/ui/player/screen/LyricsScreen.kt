@@ -111,32 +111,48 @@ fun LyricsScreen(
 
     // 是否正在手动滚动
     var isUserScrolling by remember { mutableStateOf(false) }
+    var isInitialScrollDone by remember { mutableStateOf(false) }
 
-    // 更新当前歌词行并自动滚动
-    LaunchedEffect(currentPosition, lyrics, isUserScrolling) {
-        if (lyrics.isEmpty() || isUserScrolling) return@LaunchedEffect
+    // 首次进入时，不使用动画直接定位到当前播放句
+    LaunchedEffect(lyrics) {
+        if (lyrics.isNotEmpty()) {
+            isInitialScrollDone = false
+            // 等待视图布局完成
+            while (listState.layoutInfo.viewportSize.height == 0) {
+                kotlinx.coroutines.delay(50)
+            }
+            val initialIndex = LyricsParser.getCurrentLineIndex(lyrics, currentPosition)
+            if (initialIndex >= 0) {
+                currentLineIndex = initialIndex
+                val viewportHeight = listState.layoutInfo.viewportSize.height
+                val itemHeight = 100 // 初次可能未测量出实际高度，给个默认值
+                listState.scrollToItem(initialIndex + 1, -(viewportHeight / 2 - itemHeight / 2))
+            }
+            isInitialScrollDone = true
+        }
+    }
+
+    // 更新当前歌词行并平滑滚动（跳过初始化阶段）
+    LaunchedEffect(currentPosition, lyrics, isUserScrolling, isInitialScrollDone) {
+        if (lyrics.isEmpty() || isUserScrolling || !isInitialScrollDone) return@LaunchedEffect
 
         val newIndex = LyricsParser.getCurrentLineIndex(lyrics, currentPosition)
         if (newIndex != currentLineIndex && newIndex >= 0) {
             currentLineIndex = newIndex
 
-            // 获取 LazyColumn 实际可见区域高度
             val viewportHeight = listState.layoutInfo.viewportSize.height
+            if (viewportHeight > 0) {
+                scope.launch {
+                    val targetIndex = newIndex + 1
+                    val itemInfo = listState.layoutInfo.visibleItemsInfo.find { it.index == targetIndex }
+                    val itemHeight = itemInfo?.size ?: 100
 
-            scope.launch {
-                // 因为我们在顶部加了一个 Spacer item，所以歌词项的索引是 newIndex + 1
-                val targetIndex = newIndex + 1
-                
-                // 获取目标项的可见信息，估算高度
-                val itemInfo = listState.layoutInfo.visibleItemsInfo.find { it.index == targetIndex }
-                val itemHeight = itemInfo?.size ?: 100 // 如果未显示，默认估算高度
-
-                // 负值代表将 item 从顶部向下推 viewportHeight / 2 - itemHeight / 2，从而居中
-                val targetOffset = -(viewportHeight / 2 - itemHeight / 2)
-                listState.animateScrollToItem(
-                    index = targetIndex,
-                    scrollOffset = targetOffset
-                )
+                    val targetOffset = -(viewportHeight / 2 - itemHeight / 2)
+                    listState.animateScrollToItem(
+                        index = targetIndex,
+                        scrollOffset = targetOffset
+                    )
+                }
             }
         }
     }
@@ -296,7 +312,7 @@ private fun LyricsList(
             Column(
                 modifier = Modifier
                     .fillMaxWidth(0.9f)
-                    .padding(horizontal = 16.dp, vertical = 16.dp)
+                    .padding(horizontal = 16.dp, vertical = 8.dp)
                     .alpha(
                         when {
                             isCurrentLine -> 1f
@@ -336,7 +352,7 @@ private fun LyricsList(
                             MaterialTheme.colorScheme.onBackground
                         },
                         textAlign = TextAlign.Center,
-                        modifier = Modifier.padding(vertical = 4.dp)
+                        modifier = Modifier.padding(vertical = 2.dp)
                     )
                 }
             }

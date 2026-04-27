@@ -518,7 +518,7 @@ class MusicPlayer @Inject constructor(
         positionUpdateJob = scope.launch {
             while (true) {
                 updatePosition()
-                delay(500L)
+                delay(100L)
             }
         }
     }
